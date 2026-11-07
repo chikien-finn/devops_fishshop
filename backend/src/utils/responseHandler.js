@@ -1,0 +1,11 @@
+/**
+ * Standard Success Response Helper
+ */
+export const sendSuccess = (res, data = null, message = 'Success', statusCode = 200) => {
+  return res.status(statusCode).json({
+    success: true,
+    message,
+    data,
+  });
+};
+
