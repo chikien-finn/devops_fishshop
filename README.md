@@ -118,12 +118,16 @@ npm run setup:env
 > ```
 
 ### Bước 3: Khởi chạy dự án
-Chạy đồng thời hoặc từng phần từ thư mục gốc `AquaCraft`:
+Chạy cả hai hoặc từng phần từ thư mục gốc `AquaCraft`:
 ```bash
-# Chạy Backend API (http://localhost:5000)
+# Chạy cả Backend & Frontend cùng lúc (Khuyên dùng)
+npm run dev
+
+# Hoặc chạy từng phần riêng biệt trong 2 terminal:
+# 1. Backend API (http://localhost:5000)
 npm run server
 
-# Chạy Frontend UI (http://localhost:5173)
+# 2. Frontend UI (http://localhost:5173)
 npm run client
 ```
 
