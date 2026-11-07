@@ -4,6 +4,19 @@ Dự án website thương mại điện tử chuyên cung cấp cá cảnh, th�
 
 ---
 
+## 🚀 Thông tin Triển khai Thực tế (Production Deployment)
+
+Hệ thống đã được thiết lập quy trình tự động hóa **CI/CD hoàn chỉnh bằng GitHub Actions** và triển khai trực tiếp trên cụm máy chủ **AWS EC2**:
+
+- 🌐 **Website Live (Frontend):** [http://3.27.62.149](http://3.27.62.149)
+- 🔌 **API Health Check (Backend):** [http://3.27.62.149/api/health](http://3.27.62.149/api/health)
+- 🐳 **Docker Hub Registry:**
+  - Frontend Image: `kienn11/aquacraft-frontend:latest`
+  - Backend Image: `kienn11/aquacraft-backend:latest`
+- ⚙️ **GitHub Actions Pipeline:** [Xem lịch sử CI/CD](https://github.com/chikien-finn/devops_fishshop/actions)
+
+---
+
 ## 1. Cấu trúc dự án (Directory Tree)
 
 ```text
@@ -145,3 +158,66 @@ npm run client
 | :--- | :--- | :--- |
 | **Quản trị viên (Admin)** | `admin@aquacraft.com` | `admin123` |
 | **Khách hàng (User)** | `khachhang@gmail.com` | `user123` |
+
+---
+
+## 4. Hướng dẫn Phát triển & Quy trình làm việc cho các Thành viên
+
+### ❓ Về Cơ sở dữ liệu (Database) khi code: Có cần kết nối gì không?
+- **KHÔNG CẦN CÀI ĐẶT MONGODB TRÊN MÁY**: Cả nhóm sử dụng chung cơ sở dữ liệu **MongoDB Atlas Cloud**.
+- Khi một thành viên mới clone dự án về, chỉ cần chạy đúng 1 lệnh:
+  ```bash
+  npm run setup:env
+  ```
+  File `backend/.env` sẽ tự động cấu hình chuỗi kết nối Cloud dùng chung. Mọi dữ liệu (tài khoản đăng ký, cá mới thêm, giỏ hàng, đơn hàng) được tự động đồng bộ ngay lập tức cho toàn bộ các thành viên.
+- **TUYỆT ĐỐI KHÔNG CHẠY `npm run seed:backend`** vì lệnh này sẽ xóa sạch dữ liệu chung của cả nhóm!
+
+---
+
+### 🔄 Quy trình Code, Kiểm thử & Đồng bộ lên Production (Git & CI/CD Workflow)
+
+Để hệ thống không bị lỗi và tự động triển khai mượt mà lên AWS, mỗi thành viên tuân thủ các bước sau:
+
+#### Bước 1: Kéo code mới nhất từ nhánh `main`
+```bash
+git checkout main
+git pull origin main
+```
+
+#### Bước 2: Tạo nhánh tính năng riêng theo phân công
+Mỗi thành viên làm việc độc lập trên nhánh của mình:
+- **Thành viên 1:** `git checkout -b feature/auth-users`
+- **Thành viên 2:** `git checkout -b feature/products-catalog`
+- **Thành viên 3:** `git checkout -b feature/cart-orders`
+- **Thành viên 4:** `git checkout -b feature/reviews-dashboard`
+
+#### Bước 3: Khởi chạy và code tại máy cá nhân
+Chạy đồng thời cả Frontend và Backend:
+```bash
+npm run dev
+```
+
+#### Bước 4: Tự kiểm tra lỗi trước khi Push (Bắt buộc)
+Trước khi commit & push, hãy chạy 3 lệnh sau để đảm bảo không làm fail pipeline CI:
+```bash
+# 1. Kiểm tra cú pháp mã nguồn
+npm run lint
+
+# 2. Chạy Unit Test tự động
+npm test
+
+# 3. Thử nghiệm build Frontend Vite
+npm run build:frontend
+```
+
+#### Bước 5: Đẩy nhánh lên GitHub & Mở Pull Request (PR)
+```bash
+git add .
+git commit -m "feat(<module>): mô tả tính năng vừa làm"
+git push origin <tên-nhánh-của-bạn>
+```
+Vào GitHub tạo **Pull Request** từ nhánh của bạn vào nhánh `main`.
+
+#### Bước 6: Tự động hóa CI/CD
+- **Ngay khi mở PR:** Hệ thống GitHub Actions sẽ tự động kích hoạt **Stage 1: CI (Lint, Test, Build)**. Nếu báo xanh (Pass), code của bạn đạt chuẩn.
+- **Khi PR được Merge vào `main`:** Hệ thống tự động kích hoạt **Stage 2 (Docker Build & Push)** và **Stage 3 (CD)**: Máy chủ AWS EC2 sẽ tự động kéo phiên bản mới nhất về và cập nhật trang web [http://3.27.62.149](http://3.27.62.149) trong vòng ~1 phút mà không cần bất kỳ ai phải đăng nhập vào AWS!
