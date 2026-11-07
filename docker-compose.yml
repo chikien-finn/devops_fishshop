@@ -16,7 +16,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: aquacraft-backend:latest
+    image: ${DOCKER_USERNAME:-chikienfinn}/aquacraft-backend:latest
     container_name: aquacraft-backend
     restart: unless-stopped
     ports:
@@ -37,7 +37,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    image: aquacraft-frontend:latest
+    image: ${DOCKER_USERNAME:-chikienfinn}/aquacraft-frontend:latest
     container_name: aquacraft-frontend
     restart: unless-stopped
     ports:

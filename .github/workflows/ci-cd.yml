@@ -1,0 +1,140 @@
+name: AquaCraft CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  # ========================================================
+  # STAGE 1: CONTINUOUS INTEGRATION (CI)
+  # ========================================================
+  continuous-integration:
+    name: "Stage 1: CI (Lint, Test, Build)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 2. Set up Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: 3. Install Monorepo Dependencies
+        run: |
+          npm ci
+          npm --prefix backend ci
+          npm --prefix frontend ci
+
+      - name: 4. Run Syntax Linting
+        run: npm run lint
+
+      - name: 5. Run Backend Unit Tests
+        run: npm test
+
+      - name: 6. Test Frontend Production Build
+        run: npm run build:frontend
+
+  # ========================================================
+  # STAGE 2: CONTAINERIZATION (DOCKER BUILD & PUSH)
+  # ========================================================
+  containerization:
+    name: "Stage 2: Docker Build & Push"
+    needs: continuous-integration
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 2. Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 3. Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 4. Build & Push Backend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/aquacraft-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/aquacraft-backend:${{ github.sha }}
+
+      - name: 5. Build & Push Frontend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/aquacraft-frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/aquacraft-frontend:${{ github.sha }}
+
+  # ========================================================
+  # STAGE 3: CONTINUOUS DEPLOYMENT (AWS EC2)
+  # ========================================================
+  continuous-deployment:
+    name: "Stage 3: CD (Deploy to AWS EC2)"
+    needs: containerization
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 2. Copy docker-compose to AWS EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USER || 'ubuntu' }}
+          key: ${{ secrets.AWS_EC2_SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "~/aquacraft"
+
+      - name: 3. Deploy & Run Containers on AWS EC2
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USER || 'ubuntu' }}
+          key: ${{ secrets.AWS_EC2_SSH_KEY }}
+          envs: DOCKER_USERNAME,MONGO_URI,JWT_SECRET
+          script: |
+            mkdir -p ~/aquacraft
+            cd ~/aquacraft
+            
+            # Export environment variables for docker-compose
+            echo "DOCKER_USERNAME=$DOCKER_USERNAME" > .env
+            if [ -n "$MONGO_URI" ]; then
+              echo "MONGO_URI=$MONGO_URI" >> .env
+            fi
+            if [ -n "$JWT_SECRET" ]; then
+              echo "JWT_SECRET=$JWT_SECRET" >> .env
+            fi
+
+            # Pull latest images and recreate containers
+            docker compose pull
+            docker compose up -d --remove-orphans
+
+            # Clean up old unused images
+            docker image prune -f
+
+            # Health Check
+            sleep 8
+            curl -f http://localhost:5000/api/health || exit 1
+
