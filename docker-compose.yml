@@ -1,0 +1,57 @@
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: aquacraft-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: aquacraft
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - aquacraft-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: aquacraft-backend:latest
+    container_name: aquacraft-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/aquacraft}
+      JWT_SECRET: ${JWT_SECRET:-aquacraft_super_secret_jwt_key_2026}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost}
+    depends_on:
+      - mongodb
+    networks:
+      - aquacraft-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: aquacraft-frontend:latest
+    container_name: aquacraft-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - aquacraft-network
+
+volumes:
+  mongo_data:
+    driver: local
+
+networks:
+  aquacraft-network:
+    driver: bridge
+
