@@ -1,5 +1,9 @@
+import dns from 'dns';
 import mongoose from 'mongoose';
 import { ENV } from './env.config.js';
+
+// Resolve SRV records using public DNS servers (fixes Windows / ISP ECONNREFUSED querySrv with MongoDB Atlas)
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 export const connectDB = async () => {
   try {
