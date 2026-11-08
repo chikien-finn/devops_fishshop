@@ -61,9 +61,9 @@ export default function MainLayout() {
             gap: '1.5rem',
           }}
         >
-          {/* Logo Box - Image 1 logo, AquaCraft below, red border */}
+          {/* Logo - Image 1 logo, AquaCraft below, no red border */}
           <div style={{ flexShrink: 0 }}>
-            <Logo boxed={true} size={50} showText={true} textColor="#0284c7" subText="AQUARIUM" />
+            <Logo size={52} showText={true} textColor="#0284c7" />
           </div>
 
           {/* Search Bar - Rounded pill shape */}
@@ -546,7 +546,6 @@ export default function MainLayout() {
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '1px' }}>
                   AQUACRAFT
                 </h3>
-                <span style={{ fontSize: '0.7rem', color: '#94a3b8', letterSpacing: '2px' }}>AQUARIUM PLATFORM</span>
               </div>
             </div>
             <p style={{ fontSize: '0.875rem', lineHeight: 1.6, color: '#94a3b8' }}>
@@ -593,7 +592,7 @@ export default function MainLayout() {
             color: '#64748b',
           }}
         >
-          &copy; {new Date().getFullYear()} AquaCraft Aquarium. Tất cả quyền được bảo lưu.
+          &copy; {new Date().getFullYear()} AquaCraft. Tất cả quyền được bảo lưu.
         </div>
       </footer>
 
@@ -636,7 +635,7 @@ export default function MainLayout() {
                 <div>
                   <p>AquaCraft thiết kế và thi công trọn gói các hệ thống hồ cá:</p>
                   <ul style={{ paddingLeft: '1.25rem', marginTop: '0.5rem' }}>
-                    <li>Hồ Thủy Sinh phong cách Iwagumi, Nature Aquarium Nhật Bản.</li>
+                    <li>Hồ Thủy Sinh phong cách Iwagumi, phong cách Nature Nhật Bản.</li>
                     <li>Hồ Cá Biển san hô công nghệ lọc vi sinh hiện đại.</li>
                     <li>Hồ Biotop mô phỏng dòng sông Amazon hoang dã.</li>
                   </ul>

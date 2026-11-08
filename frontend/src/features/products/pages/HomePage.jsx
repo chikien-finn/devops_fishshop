@@ -191,7 +191,7 @@ export default function HomePage() {
                   style={{
                     fontSize: '1.25rem',
                     fontWeight: 800,
-                    letterSpacing: '1.5px',
+                    letterSpacing: '1px',
                     color: '#0f172a',
                     textTransform: 'uppercase',
                     display: 'block',
@@ -199,17 +199,6 @@ export default function HomePage() {
                   }}
                 >
                   AQUACRAFT
-                </span>
-                <span
-                  style={{
-                    fontSize: '0.625rem',
-                    letterSpacing: '3px',
-                    color: '#64748b',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  AQUARIUM
                 </span>
               </div>
             </div>
@@ -294,7 +283,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. CATEGORY CIRCLES (8 FISH ITEMS EXACTLY AS IN IMAGE 2) */}
+      {/* 2. CATEGORY CIRCLES (8 FISH ITEMS - CENTERED) */}
       <section
         style={{
           backgroundColor: '#ffffff',
@@ -307,14 +296,24 @@ export default function HomePage() {
         <div
           style={{
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '1.25rem',
+            justifyContent: 'center',
+            marginBottom: '1.5rem',
+            textAlign: 'center',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              marginBottom: selectedFish ? '0.5rem' : '0',
+            }}
+          >
             <Fish color="#0284c7" size={24} />
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
               CÁC DÒNG CÁ CẢNH NỔI BẬT
             </h3>
           </div>
@@ -326,7 +325,7 @@ export default function HomePage() {
                 color: '#0284c7',
                 border: '1px solid #bfdbfe',
                 borderRadius: '4px',
-                padding: '0.25rem 0.6rem',
+                padding: '0.25rem 0.75rem',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -337,13 +336,16 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 8 Circles Row */}
+        {/* 8 Circles Row - Centered with flex */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-            gap: '1rem',
-            textAlign: 'center',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '2rem',
+            margin: '0 auto',
+            maxWidth: '1100px',
           }}
         >
           {fishCategories.map((fish) => {
