@@ -12,10 +12,13 @@ import {
   ShieldCheck,
   Truck,
   HeartHandshake,
+  Search,
+  X,
 } from 'lucide-react';
 import productService from '../services/productService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
 import { useCart } from '../../cart/hooks/useCart.jsx';
+import { thienducSections } from '../data/thienducSections.js';
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);
@@ -23,26 +26,29 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [selectedFish, setSelectedFish] = useState(null);
+  const [thuySinhTab, setThuySinhTab] = useState('tep');
+  const [quickViewProduct, setQuickViewProduct] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
   // 8 fish categories exactly as in reference image 2
   const fishCategories = [
-    { id: 'neon', name: 'Cá Neon', image: '/fish_neon.jpg', search: 'Neon' },
-    { id: 'dia', name: 'Cá Dĩa', image: '/fish_dia.jpg', search: 'Dĩa' },
-    { id: 'thantien', name: 'Cá Thần Tiên', image: '/fish_thantien.jpg', search: 'Thần Tiên' },
-    { id: 'phuonghoang', name: 'Phượng Hoàng', image: '/fish_phuonghoang.jpg', search: 'Phượng Hoàng' },
-    { id: 'cauvong', name: 'Cá Cầu Vồng', image: '/fish_cauvong.jpg', search: 'Cầu Vồng' },
-    { id: 'ali', name: 'Cá Ali Thái', image: '/fish_ali.jpg', search: 'Ali' },
-    { id: 'chuot', name: 'Cá Chuột', image: '/fish_chuot.jpg', search: 'Chuột' },
-    { id: 'betta', name: 'Cá Betta', image: '/fish_betta.jpg', search: 'Betta' },
+    { id: 'neon', name: 'Cá Neon', image: '/fish_neon.jpg?v=2', search: 'Neon' },
+    { id: 'dia', name: 'Cá Dĩa', image: '/fish_dia.jpg?v=2', search: 'Dĩa' },
+    { id: 'thantien', name: 'Cá Thần Tiên', image: '/fish_thantien.jpg?v=2', search: 'Thần Tiên' },
+    { id: 'phuonghoang', name: 'Phượng Hoàng', image: '/fish_phuonghoang.jpg?v=2', search: 'Phượng Hoàng' },
+    { id: 'cauvong', name: 'Cá Cầu Vồng', image: '/fish_cauvong.jpg?v=2', search: 'Cầu Vồng' },
+    { id: 'ali', name: 'Cá Ali Thái', image: '/fish_ali.jpg?v=2', search: 'Ali' },
+    { id: 'chuot', name: 'Cá Chuột', image: '/fish_chuot.jpg?v=2', search: 'Chuột' },
+    { id: 'betta', name: 'Cá Betta', image: '/fish_betta.jpg?v=2', search: 'Betta' },
   ];
 
   // Banner slides
   const slides = [
     {
       id: 1,
-      farmImg: '/banner_farm.jpg',
+      farmImg: '/banner_farm.jpg?v=3',
       title: 'MÔ HÌNH TRANG TRẠI NUÔI CÁ',
       bulletPoints: [
         'Trang trại xây dựng theo mô hình hiện đại',
@@ -54,7 +60,7 @@ export default function HomePage() {
     },
     {
       id: 2,
-      farmImg: '/banner_full.jpg',
+      farmImg: '/banner_fish.jpg?v=2',
       title: 'HỆ THỐNG CÁ CẢNH THUẦN CHỦNG',
       bulletPoints: [
         'Hơn 50 giống cá cảnh nhiệt đới & thủy sinh tuyển chọn',
@@ -88,6 +94,212 @@ export default function HomePage() {
     } else {
       setSelectedFish(fish.id);
     }
+  };
+
+  const handleAddToCart = (p) => {
+    if (p.soldOut) return;
+    addToCart({
+      _id: p.id,
+      name: p.name,
+      price: p.price,
+      images: [p.image],
+      category: 'fish',
+      stock: 50,
+    });
+    setToastMessage(`Đã thêm "${p.name}" vào giỏ hàng!`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const renderProductCard = (p) => {
+    return (
+      <div
+        key={p.id}
+        className="thienduc-card"
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '6px',
+          border: '1px solid #f1f5f9',
+          padding: '0.625rem',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.06)';
+          e.currentTarget.style.borderColor = '#e2e8f0';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = 'none';
+          e.currentTarget.style.borderColor = '#f1f5f9';
+        }}
+      >
+        <div>
+          {/* Thumbnail Image Container */}
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              aspectRatio: '1/1',
+              borderRadius: '4px',
+              overflow: 'hidden',
+              backgroundColor: '#f8fafc',
+              cursor: 'pointer',
+            }}
+            onClick={() => setQuickViewProduct(p)}
+          >
+            {p.discount && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '6px',
+                  left: '6px',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                  zIndex: 2,
+                }}
+              >
+                {p.discount}
+              </span>
+            )}
+
+            <img
+              src={p.image}
+              alt={p.name}
+              loading="lazy"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+                transition: 'transform 0.3s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            />
+
+            {/* Quick View Search Icon Overlay (Matching screenshots) */}
+            <div
+              className="thienduc-search-overlay"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                opacity: 0,
+                transition: 'opacity 0.2s ease',
+                zIndex: 2,
+              }}
+            >
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                }}
+              >
+                <Search size={16} color="#dc2626" />
+              </div>
+            </div>
+          </div>
+
+          {/* Product Name */}
+          <h4
+            title={p.name}
+            onClick={() => setQuickViewProduct(p)}
+            style={{
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              color: '#1e293b',
+              marginTop: '0.6rem',
+              marginBottom: '0.35rem',
+              lineHeight: 1.35,
+              height: '2.4rem',
+              overflow: 'hidden',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              cursor: 'pointer',
+            }}
+          >
+            {p.name}
+          </h4>
+
+          {/* Price Row */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <span style={{ color: '#dc2626', fontSize: '0.95rem', fontWeight: 800 }}>
+              {p.priceFormatted}
+            </span>
+            {p.oldPriceFormatted && (
+              <span style={{ color: '#94a3b8', fontSize: '0.75rem', textDecoration: 'line-through' }}>
+                {p.oldPriceFormatted}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <div style={{ marginTop: '0.65rem' }}>
+          {p.soldOut ? (
+            <button
+              disabled
+              style={{
+                width: '100%',
+                padding: '0.4rem 0',
+                border: '1px solid #fecaca',
+                backgroundColor: '#ffffff',
+                color: '#ef4444',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'not-allowed',
+                textTransform: 'uppercase',
+              }}
+            >
+              HẾT HÀNG
+            </button>
+          ) : (
+            <button
+              onClick={() => handleAddToCart(p)}
+              style={{
+                width: '100%',
+                padding: '0.4rem 0',
+                border: '1.5px solid #dc2626',
+                backgroundColor: '#ffffff',
+                color: '#dc2626',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                textTransform: 'uppercase',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#dc2626';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.color = '#dc2626';
+              }}
+            >
+              {p.actionText || 'TÙY CHỌN'}
+            </button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   // Filter products
@@ -361,6 +573,8 @@ export default function HomePage() {
                   cursor: 'pointer',
                   transition: 'transform 0.2s',
                   transform: isSelected ? 'scale(1.06)' : 'scale(1)',
+                  minWidth: '95px',
+                  textAlign: 'center',
                 }}
               >
                 <div
@@ -373,8 +587,11 @@ export default function HomePage() {
                     boxShadow: isSelected
                       ? '0 6px 14px rgba(2, 132, 199, 0.35)'
                       : '0 3px 6px rgba(0,0,0,0.06)',
-                    backgroundColor: '#0f172a',
+                    backgroundColor: '#ffffff',
                     transition: 'border-color 0.2s, box-shadow 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = '#0284c7';
@@ -395,6 +612,7 @@ export default function HomePage() {
                       height: '100%',
                       objectFit: 'cover',
                       display: 'block',
+                      transform: 'scale(1.05)',
                     }}
                   />
                 </div>
@@ -415,7 +633,55 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. PRODUCT CATALOG (FETCHED LIVE FROM MONGO ONLINE) */}
+      {/* 4 PHẦN CÁ CẢNH THEO THIÊN ĐỨC AQUARIUM */}
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '80px',
+            right: '20px',
+            backgroundColor: '#059669',
+            color: '#ffffff',
+            padding: '0.75rem 1.25rem',
+            borderRadius: '6px',
+            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+          }}
+        >
+          <CheckCircle2 size={18} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Responsive 5-column grid style matching Thiên Đức */}
+      <style>{`
+        @media (min-width: 1024px) {
+          .thienduc-grid {
+            grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+          }
+        }
+        @media (min-width: 640px) and (max-width: 1023px) {
+          .thienduc-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          }
+        }
+        @media (max-width: 639px) {
+          .thienduc-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+        }
+        .thienduc-card:hover .thienduc-search-overlay {
+          opacity: 1 !important;
+        }
+      `}</style>
+
+      {/* 1. CÁ CHUỘT VỆ SINH HỒ */}
       <section
         style={{
           backgroundColor: '#ffffff',
@@ -425,7 +691,174 @@ export default function HomePage() {
           border: '1px solid #e2e8f0',
         }}
       >
-        {/* Header & Filter Tabs */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h2
+            style={{
+              fontSize: '1.45rem',
+              fontWeight: 800,
+              color: '#1e293b',
+              fontFamily: "'Playfair Display', Georgia, serif",
+              margin: 0,
+            }}
+          >
+            Cá Chuột Vệ Sinh Hồ
+          </h2>
+        </div>
+
+        <div
+          className="thienduc-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: '1rem',
+          }}
+        >
+          {thienducSections.chuot.map((p) => renderProductCard(p))}
+        </div>
+      </section>
+
+      {/* 2. CÁ DĨA */}
+      <section
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '8px',
+          padding: '1.75rem 1.5rem',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          border: '1px solid #e2e8f0',
+        }}
+      >
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h2
+            style={{
+              fontSize: '1.45rem',
+              fontWeight: 800,
+              color: '#1e293b',
+              fontFamily: "'Playfair Display', Georgia, serif",
+              margin: 0,
+            }}
+          >
+            Cá Dĩa
+          </h2>
+        </div>
+
+        <div
+          className="thienduc-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: '1rem',
+          }}
+        >
+          {thienducSections.dia.map((p) => renderProductCard(p))}
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <Link
+            to="/products?search=Dĩa"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              border: '1.5px solid #dc2626',
+              color: '#dc2626',
+              borderRadius: '9999px',
+              padding: '0.45rem 1.75rem',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#dc2626';
+              e.currentTarget.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#dc2626';
+            }}
+          >
+            <span>Xem tất cả</span>
+            <ChevronRight size={16} />
+          </Link>
+        </div>
+      </section>
+
+      {/* 3. CÁ PHƯỢNG HOÀNG – CÁ CẢNH DỄ NUÔI */}
+      <section
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '8px',
+          padding: '1.75rem 1.5rem',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          border: '1px solid #e2e8f0',
+        }}
+      >
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h2
+            style={{
+              fontSize: '1.45rem',
+              fontWeight: 800,
+              color: '#1e293b',
+              fontFamily: "'Playfair Display', Georgia, serif",
+              margin: 0,
+            }}
+          >
+            Cá Phượng Hoàng – Cá Cảnh Dễ Nuôi
+          </h2>
+        </div>
+
+        <div
+          className="thienduc-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: '1rem',
+          }}
+        >
+          {thienducSections.phuonghoang.map((p) => renderProductCard(p))}
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <Link
+            to="/products?search=Phượng Hoàng"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              border: '1.5px solid #dc2626',
+              color: '#dc2626',
+              borderRadius: '9999px',
+              padding: '0.45rem 1.75rem',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#dc2626';
+              e.currentTarget.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#dc2626';
+            }}
+          >
+            <span>Xem tất cả</span>
+            <ChevronRight size={16} />
+          </Link>
+        </div>
+      </section>
+
+      {/* 4. CÁ CẢNH THỦY SINH GIÁ RẺ (VỚI TABS) */}
+      <section
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '8px',
+          padding: '1.75rem 1.5rem',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          border: '1px solid #e2e8f0',
+        }}
+      >
         <div
           style={{
             display: 'flex',
@@ -433,50 +866,37 @@ export default function HomePage() {
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '1rem',
-            borderBottom: '2px solid #f1f5f9',
-            paddingBottom: '1rem',
-            marginBottom: '1.5rem',
+            marginBottom: '1.25rem',
           }}
         >
-          <div>
-            <h3
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 800,
-                color: '#0f172a',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-              }}
-            >
-              <Sparkles size={20} color="#eab308" />
-              <span>SẢN PHẨM & CÁ CẢNH MỚI NHẤT</span>
-            </h3>
-            <span style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-              Dữ liệu đồng bộ trực tiếp từ hệ sinh thái AquaCraft
-            </span>
-          </div>
+          <h2
+            style={{
+              fontSize: '1.45rem',
+              fontWeight: 800,
+              color: '#1e293b',
+              fontFamily: "'Playfair Display', Georgia, serif",
+              margin: 0,
+            }}
+          >
+            Cá Cảnh Thủy Sinh Giá Rẻ
+          </h2>
 
-          {/* Category Tabs */}
+          {/* Filter Tabs */}
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {[
-              { id: 'all', label: 'Tất cả' },
-              { id: 'fish', label: 'Cá cảnh' },
-              { id: 'plant', label: 'Cây thủy sinh' },
-              { id: 'food', label: 'Thức ăn & Phụ kiện' },
+              { id: 'tep', label: 'Tép Thủy Sinh' },
+              { id: 'cauvong', label: 'Cá Cầu Vồng' },
+              { id: 'phuonghoang', label: 'Cá Phượng Hoàng' },
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => {
-                  setActiveCategory(tab.id);
-                  setSelectedFish(null);
-                }}
+                onClick={() => setThuySinhTab(tab.id)}
                 style={{
-                  padding: '0.4rem 0.9rem',
-                  borderRadius: '20px',
-                  border: activeCategory === tab.id && !selectedFish ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
-                  backgroundColor: activeCategory === tab.id && !selectedFish ? '#0284c7' : '#ffffff',
-                  color: activeCategory === tab.id && !selectedFish ? '#ffffff' : '#475569',
+                  padding: '0.4rem 1.15rem',
+                  borderRadius: '9999px',
+                  border: 'none',
+                  backgroundColor: thuySinhTab === tab.id ? '#dc2626' : '#f1f5f9',
+                  color: thuySinhTab === tab.id ? '#ffffff' : '#475569',
                   fontSize: '0.8125rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -489,165 +909,126 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Product Cards Grid */}
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '3.5rem', color: '#64748b' }}>
-            <Fish size={36} color="#0284c7" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
-            <p>Đang tải danh sách cá cảnh & thủy sinh từ máy chủ...</p>
-          </div>
-        ) : filteredProducts.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-            <p>Không có sản phẩm nào phù hợp với bộ lọc hiện tại.</p>
-          </div>
-        ) : (
+        <div
+          className="thienduc-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: '1rem',
+          }}
+        >
+          {thienducSections.thuysinh[thuySinhTab].map((p) => renderProductCard(p))}
+        </div>
+      </section>
+
+      {/* Quick View Modal */}
+      {quickViewProduct && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+          onClick={() => setQuickViewProduct(null)}
+        >
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-              gap: '1.5rem',
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              maxWidth: '560px',
+              width: '100%',
+              padding: '1.75rem',
+              position: 'relative',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            {filteredProducts.map((item) => (
-              <div
-                key={item._id}
-                style={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 10px 20px -3px rgba(0,0,0,0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                {/* Product Image */}
-                <div style={{ height: '180px', backgroundColor: '#f1f5f9', position: 'relative', overflow: 'hidden' }}>
-                  {item.images && item.images[0] ? (
-                    <img
-                      src={item.images[0]}
-                      alt={item.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#94a3b8',
-                      }}
-                    >
-                      <Fish size={40} />
-                    </div>
-                  )}
+            <button
+              onClick={() => setQuickViewProduct(null)}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#64748b',
+              }}
+            >
+              <X size={20} />
+            </button>
 
-                  {/* Water type badge */}
-                  {item.waterType && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: '8px',
-                        left: '8px',
-                        backgroundColor: item.waterType === 'saltwater' ? '#1e40af' : '#065f46',
-                        color: '#ffffff',
-                        fontSize: '0.6875rem',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                      }}
-                    >
-                      {item.waterType === 'saltwater' ? 'Cá biển' : 'Nước ngọt'}
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+              <div style={{ width: '220px', height: '220px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
+                <img
+                  src={quickViewProduct.image}
+                  alt={quickViewProduct.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem' }}>
+                  {quickViewProduct.name}
+                </h3>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem', marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#dc2626' }}>
+                    {quickViewProduct.priceFormatted}
+                  </span>
+                  {quickViewProduct.oldPriceFormatted && (
+                    <span style={{ fontSize: '0.875rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                      {quickViewProduct.oldPriceFormatted}
+                    </span>
+                  )}
+                  {quickViewProduct.discount && (
+                    <span style={{ backgroundColor: '#dc2626', color: '#ffffff', fontSize: '0.75rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px' }}>
+                      {quickViewProduct.discount}
                     </span>
                   )}
                 </div>
 
-                {/* Content */}
-                <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <h4
+                <div style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+                  <p style={{ margin: '0 0 0.25rem' }}>✓ Tình trạng: <strong>{quickViewProduct.soldOut ? 'Hết hàng' : 'Còn hàng'}</strong></p>
+                  <p style={{ margin: 0 }}>✓ Bảo hành cá khỏe mạnh 100%, đóng oxy chuyển phát an toàn.</p>
+                </div>
+
+                {!quickViewProduct.soldOut && (
+                  <button
+                    onClick={() => {
+                      handleAddToCart(quickViewProduct);
+                      setQuickViewProduct(null);
+                    }}
                     style={{
-                      fontSize: '0.95rem',
+                      width: '100%',
+                      padding: '0.65rem 1rem',
+                      backgroundColor: '#dc2626',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
                       fontWeight: 700,
-                      color: '#0f172a',
-                      marginBottom: '0.4rem',
-                      lineHeight: 1.35,
-                      minHeight: '2.7em',
-                    }}
-                  >
-                    {item.name}
-                  </h4>
-
-                  <p
-                    style={{
-                      fontSize: '0.8rem',
-                      color: '#64748b',
-                      marginBottom: '1rem',
-                      lineHeight: 1.5,
-                      flex: 1,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {item.description || 'Giống cá cảnh khỏe mạnh, màu sắc rực rỡ, thích hợp cho hồ thủy sinh gia đình.'}
-                  </p>
-
-                  {/* Price & Action */}
-                  <div
-                    style={{
+                      cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      borderTop: '1px solid #f1f5f9',
-                      paddingTop: '0.75rem',
-                      marginTop: 'auto',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
                     }}
                   >
-                    <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#dc2626' }}>
-                      {formatCurrency(item.price)}
-                    </span>
-
-                    <button
-                      onClick={() => addToCart(item, 1)}
-                      title="Thêm vào giỏ hàng"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        padding: '0.4rem 0.75rem',
-                        backgroundColor: '#dc2626',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: '#ffffff',
-                        fontSize: '0.8125rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'background-color 0.15s',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#b91c1c')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#dc2626')}
-                    >
-                      <ShoppingBag size={14} />
-                      <span>Mua</span>
-                    </button>
-                  </div>
-                </div>
+                    <ShoppingBag size={18} />
+                    <span>Thêm Vào Giỏ Hàng</span>
+                  </button>
+                )}
               </div>
-            ))}
+            </div>
           </div>
-        )}
-      </section>
+        </div>
+      )}
 
       {/* 4. VALUE PROPOSITION / TRUST BADGES */}
       <section

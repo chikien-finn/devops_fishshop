@@ -24,10 +24,17 @@ export default function ProductListPage() {
   }, []);
 
   const filteredProducts = products.filter((item) => {
+    const searchTerms = searchQuery
+      ? searchQuery.toLowerCase().split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+
     const matchesSearch =
-      !searchQuery ||
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      searchTerms.length === 0 ||
+      searchTerms.some(
+        (term) =>
+          item.name.toLowerCase().includes(term) ||
+          (item.description && item.description.toLowerCase().includes(term))
+      );
 
     const matchesCategory =
       currentCategory === 'all' || item.category === currentCategory;

@@ -26,6 +26,22 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const productCategoriesMenu = [
+    { name: 'Cá Neon', link: '/products?search=Neon' },
+    { name: 'Cá Dĩa', link: '/products?search=Dĩa' },
+    { name: 'Cá Thần Tiên', link: '/products?search=Thần Tiên' },
+    { name: 'Cá Chuột', link: '/products?search=Chuột' },
+    { name: 'Cá Phượng Hoàng', link: '/products?search=Phượng Hoàng' },
+    { name: 'Cá Ali Thái', link: '/products?search=Ali' },
+    { name: 'Cá Molly, Bình Tích', link: '/products?search=Molly, Bình Tích' },
+    { name: 'Cá Betta', link: '/products?search=Betta' },
+    { name: 'Cá Bảy Màu', link: '/products?search=Bảy Màu' },
+    { name: 'Cá Cầu Vồng', link: '/products?search=Cầu Vồng' },
+    { name: 'Tép Thủy Sinh', link: '/products?search=Tép' },
+    { name: 'Lau Kiếng, Vệ Sinh Hồ', link: '/products?search=Lau Kiếng, Vệ Sinh Hồ' },
+    { name: 'Thức Ăn Cá', link: '/products?category=food' },
+  ];
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {
@@ -61,9 +77,9 @@ export default function MainLayout() {
             gap: '1.5rem',
           }}
         >
-          {/* Logo - Image 1 logo, AquaCraft below, no red border */}
+          {/* Logo - No red border, clean AquaCraft branding */}
           <div style={{ flexShrink: 0 }}>
-            <Logo size={52} showText={true} textColor="#0284c7" />
+            <Logo size={46} showText={true} textColor="#0284c7" />
           </div>
 
           {/* Search Bar - Rounded pill shape */}
@@ -141,12 +157,12 @@ export default function MainLayout() {
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
-                  backgroundColor: '#dc2626',
+                  backgroundColor: '#0284c7',
                   color: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)',
+                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
                 }}
               >
                 <Phone size={18} />
@@ -164,11 +180,12 @@ export default function MainLayout() {
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
-                  backgroundColor: '#dc2626',
+                  backgroundColor: '#0284c7',
                   color: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
                 }}
               >
                 <User size={18} />
@@ -266,19 +283,19 @@ export default function MainLayout() {
                 textDecoration: 'none',
                 padding: '0.45rem 0.85rem',
                 borderRadius: '6px',
-                border: '1.5px solid #dc2626',
+                border: '1.5px solid #0284c7',
                 backgroundColor: '#ffffff',
-                color: '#dc2626',
+                color: '#0284c7',
                 fontWeight: 700,
                 fontSize: '0.875rem',
                 transition: 'background-color 0.2s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
             >
               <div
                 style={{
-                  backgroundColor: '#dc2626',
+                  backgroundColor: '#0284c7',
                   color: '#ffffff',
                   padding: '4px',
                   borderRadius: '4px',
@@ -369,84 +386,44 @@ export default function MainLayout() {
                   position: 'absolute',
                   top: '100%',
                   left: 0,
-                  marginTop: '0.5rem',
+                  marginTop: '0.25rem',
                   backgroundColor: '#ffffff',
                   border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-                  minWidth: '200px',
+                  borderRadius: '4px',
+                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.06)',
+                  minWidth: '220px',
                   zIndex: 50,
-                  padding: '0.5rem 0',
+                  padding: '0.4rem 0',
                 }}
               >
-                <Link
-                  to="/products?category=all"
-                  onClick={() => setDropdownOpen(false)}
-                  style={{
-                    display: 'block',
-                    padding: '0.5rem 1rem',
-                    textDecoration: 'none',
-                    color: '#334155',
-                    fontSize: '0.8125rem',
-                    textTransform: 'none',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  Tất cả sinh vật cảnh
-                </Link>
-                <Link
-                  to="/products?category=fish"
-                  onClick={() => setDropdownOpen(false)}
-                  style={{
-                    display: 'block',
-                    padding: '0.5rem 1rem',
-                    textDecoration: 'none',
-                    color: '#334155',
-                    fontSize: '0.8125rem',
-                    textTransform: 'none',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  Cá Cảnh Thuần Chủng
-                </Link>
-                <Link
-                  to="/products?category=plant"
-                  onClick={() => setDropdownOpen(false)}
-                  style={{
-                    display: 'block',
-                    padding: '0.5rem 1rem',
-                    textDecoration: 'none',
-                    color: '#334155',
-                    fontSize: '0.8125rem',
-                    textTransform: 'none',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  Cây Thủy Sinh & Lũa Đá
-                </Link>
-                <Link
-                  to="/products?category=food"
-                  onClick={() => setDropdownOpen(false)}
-                  style={{
-                    display: 'block',
-                    padding: '0.5rem 1rem',
-                    textDecoration: 'none',
-                    color: '#334155',
-                    fontSize: '0.8125rem',
-                    textTransform: 'none',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  Thức Ăn & Dinh Dưỡng
-                </Link>
+                {productCategoriesMenu.map((item, idx) => (
+                  <Link
+                    key={idx}
+                    to={item.link}
+                    onClick={() => setDropdownOpen(false)}
+                    style={{
+                      display: 'block',
+                      padding: '0.55rem 1.25rem',
+                      textDecoration: 'none',
+                      color: '#1e293b',
+                      fontSize: '0.875rem',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      lineHeight: 1.3,
+                      transition: 'background-color 0.15s, color 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f1f5f9';
+                      e.currentTarget.style.color = '#0284c7';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = '#1e293b';
+                    }}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
               </div>
             )}
           </div>

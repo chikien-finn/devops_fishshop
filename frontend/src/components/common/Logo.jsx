@@ -1,20 +1,24 @@
 import { Link } from 'react-router-dom';
 
 export default function Logo({
-  size = 56,
+  size = 46,
   showText = true,
   textColor = '#0284c7',
+  layout = 'horizontal',
 }) {
+  const isHorizontal = layout === 'horizontal';
+
   return (
     <Link
       to="/"
       style={{
         textDecoration: 'none',
         display: 'inline-flex',
-        flexDirection: 'column',
+        flexDirection: isHorizontal ? 'row' : 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2px 4px',
+        gap: isHorizontal ? '0.65rem' : '0.25rem',
+        padding: '2px 0',
         backgroundColor: 'transparent',
       }}
     >
@@ -32,15 +36,14 @@ export default function Logo({
         <span
           style={{
             fontFamily: "'Segoe UI', Roboto, sans-serif",
-            fontSize: '1.1rem',
+            fontSize: isHorizontal ? '1.35rem' : '1.1rem',
             fontWeight: 800,
             letterSpacing: '0.5px',
             color: textColor || '#0284c7',
             textTransform: 'uppercase',
-            marginTop: '3px',
             lineHeight: 1,
             display: 'block',
-            textAlign: 'center',
+            textAlign: isHorizontal ? 'left' : 'center',
           }}
         >
           AquaCraft
