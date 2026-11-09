@@ -3,6 +3,7 @@ import MainLayout from '../components/layout/MainLayout.jsx';
 import AdminLayout from '../components/layout/AdminLayout.jsx';
 import HomePage from '../features/products/pages/HomePage.jsx';
 import ProductListPage from '../features/products/pages/ProductListPage.jsx';
+import ProductDetailPage from '../features/products/pages/ProductDetailPage.jsx';
 import AdminProductsPage from '../features/products/pages/AdminProductsPage.jsx';
 import AdminDashboardPage from '../features/dashboard/pages/AdminDashboardPage.jsx';
 import CartPage from '../features/cart/pages/CartPage.jsx';
@@ -23,6 +24,14 @@ export const router = createBrowserRouter([
       {
         path: 'products',
         element: <ProductListPage />,
+      },
+      {
+        path: 'products/:slug',
+        element: <ProductDetailPage />,
+      },
+      {
+        path: 'product/:slug',
+        element: <ProductDetailPage />,
       },
       {
         path: 'cart',

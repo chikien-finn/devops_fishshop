@@ -111,6 +111,8 @@ export default function HomePage() {
   };
 
   const renderProductCard = (p) => {
+    const productDetailUrl = `/products/${p.slug || p.id}`;
+
     return (
       <div
         key={p.id}
@@ -144,9 +146,7 @@ export default function HomePage() {
               borderRadius: '4px',
               overflow: 'hidden',
               backgroundColor: '#f8fafc',
-              cursor: 'pointer',
             }}
-            onClick={() => setQuickViewProduct(p)}
           >
             {p.discount && (
               <span
@@ -167,24 +167,35 @@ export default function HomePage() {
               </span>
             )}
 
-            <img
-              src={p.image}
-              alt={p.name}
-              loading="lazy"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block',
-                transition: 'transform 0.3s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-            />
+            <Link
+              to={productDetailUrl}
+              style={{ display: 'block', width: '100%', height: '100%' }}
+            >
+              <img
+                src={p.image}
+                alt={p.name}
+                loading="lazy"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                  transition: 'transform 0.3s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+              />
+            </Link>
 
-            {/* Quick View Search Icon Overlay (Matching screenshots) */}
+            {/* Quick View Search Icon Overlay (Clicking opens Quick View Modal) */}
             <div
               className="thienduc-search-overlay"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setQuickViewProduct(p);
+              }}
+              title="Xem nhanh"
               style={{
                 position: 'absolute',
                 inset: 0,
@@ -195,6 +206,7 @@ export default function HomePage() {
                 opacity: 0,
                 transition: 'opacity 0.2s ease',
                 zIndex: 2,
+                cursor: 'pointer',
               }}
             >
               <div
@@ -214,27 +226,34 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Product Name */}
-          <h4
-            title={p.name}
-            onClick={() => setQuickViewProduct(p)}
-            style={{
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              color: '#1e293b',
-              marginTop: '0.6rem',
-              marginBottom: '0.35rem',
-              lineHeight: 1.35,
-              height: '2.4rem',
-              overflow: 'hidden',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              cursor: 'pointer',
-            }}
+          {/* Product Name (Click navigates to Detail Page) */}
+          <Link
+            to={productDetailUrl}
+            style={{ textDecoration: 'none' }}
           >
-            {p.name}
-          </h4>
+            <h4
+              title={p.name}
+              style={{
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                color: '#1e293b',
+                marginTop: '0.6rem',
+                marginBottom: '0.35rem',
+                lineHeight: 1.35,
+                height: '2.4rem',
+                overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                cursor: 'pointer',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#1e293b')}
+            >
+              {p.name}
+            </h4>
+          </Link>
 
           {/* Price Row */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -249,12 +268,13 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Action Button */}
+        {/* Action Button: Luồng TÙY CHỌN click vào chuyển đến trang chi tiết sản phẩm */}
         <div style={{ marginTop: '0.65rem' }}>
           {p.soldOut ? (
-            <button
-              disabled
+            <Link
+              to={productDetailUrl}
               style={{
+                display: 'block',
                 width: '100%',
                 padding: '0.4rem 0',
                 border: '1px solid #fecaca',
@@ -263,13 +283,14 @@ export default function HomePage() {
                 borderRadius: '4px',
                 fontSize: '0.75rem',
                 fontWeight: 700,
-                cursor: 'not-allowed',
+                textAlign: 'center',
+                textDecoration: 'none',
                 textTransform: 'uppercase',
               }}
             >
               HẾT HÀNG
-            </button>
-          ) : (
+            </Link>
+          ) : p.actionText === 'CHỌN MUA' ? (
             <button
               onClick={() => handleAddToCart(p)}
               style={{
@@ -294,8 +315,37 @@ export default function HomePage() {
                 e.currentTarget.style.color = '#dc2626';
               }}
             >
-              {p.actionText || 'TÙY CHỌN'}
+              CHỌN MUA
             </button>
+          ) : (
+            <Link
+              to={productDetailUrl}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '0.4rem 0',
+                border: '1.5px solid #dc2626',
+                backgroundColor: '#ffffff',
+                color: '#dc2626',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                textAlign: 'center',
+                textDecoration: 'none',
+                textTransform: 'uppercase',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#dc2626';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.color = '#dc2626';
+              }}
+            >
+              TÙY CHỌN
+            </Link>
           )}
         </div>
       </div>
@@ -998,32 +1048,59 @@ export default function HomePage() {
                   <p style={{ margin: 0 }}>✓ Bảo hành cá khỏe mạnh 100%, đóng oxy chuyển phát an toàn.</p>
                 </div>
 
-                {!quickViewProduct.soldOut && (
-                  <button
-                    onClick={() => {
-                      handleAddToCart(quickViewProduct);
-                      setQuickViewProduct(null);
-                    }}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {!quickViewProduct.soldOut && (
+                    <button
+                      onClick={() => {
+                        handleAddToCart(quickViewProduct);
+                        setQuickViewProduct(null);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 1rem',
+                        backgroundColor: '#dc2626',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      <ShoppingBag size={18} />
+                      <span>Thêm Vào Giỏ Hàng</span>
+                    </button>
+                  )}
+
+                  <Link
+                    to={`/products/${quickViewProduct.slug || quickViewProduct.id}`}
+                    onClick={() => setQuickViewProduct(null)}
                     style={{
                       width: '100%',
-                      padding: '0.65rem 1rem',
-                      backgroundColor: '#dc2626',
-                      color: '#ffffff',
-                      border: 'none',
+                      padding: '0.6rem 1rem',
+                      border: '1.5px solid #0284c7',
+                      backgroundColor: '#f0f9ff',
+                      color: '#0284c7',
                       borderRadius: '6px',
-                      fontSize: '0.875rem',
+                      fontSize: '0.85rem',
                       fontWeight: 700,
-                      cursor: 'pointer',
+                      textAlign: 'center',
+                      textDecoration: 'none',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.5rem',
+                      gap: '0.4rem',
+                      boxSizing: 'border-box',
                     }}
                   >
-                    <ShoppingBag size={18} />
-                    <span>Thêm Vào Giỏ Hàng</span>
-                  </button>
-                )}
+                    <span>Xem Chi Tiết Đầy Đủ</span>
+                    <ChevronRight size={16} />
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
