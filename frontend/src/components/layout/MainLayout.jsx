@@ -534,8 +534,8 @@ export default function MainLayout() {
             <h4 style={{ color: '#ffffff', fontWeight: 700, marginBottom: '0.75rem', fontSize: '1rem' }}>
               THÔNG TIN LIÊN HỆ
             </h4>
-            <p style={{ fontSize: '0.875rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>
-              📍 <strong>Trang trại:</strong> Khu công nghệ nông nghiệp thủy sinh AquaCraft
+            <p style={{ fontSize: '0.875rem', marginBottom: '0.5rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+              📍 <strong>Địa chỉ:</strong> 57 Lê Thị Siêng, Ấp Tiền, Tân Thông Hội, Củ Chi, TP. Hồ Chí Minh
             </p>
             <p style={{ fontSize: '0.875rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>
               📞 <strong>Hotline:</strong> 0332127582 (Zalo 24/7)

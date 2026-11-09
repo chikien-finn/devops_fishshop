@@ -385,7 +385,7 @@ export default function ProductDetailPage() {
               </h1>
 
               <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                Thương hiệu: <strong style={{ color: '#0f172a' }}>AquaCraft</strong> | Trại cá: <span style={{ color: '#0284c7' }}>Thiên Đức</span>
+                Thương hiệu: <strong style={{ color: '#0f172a' }}>AquaCraft</strong> | <span style={{ color: '#059669', fontWeight: 600 }}>Cá khỏe mạnh 100%</span>
               </div>
             </div>
 
@@ -995,3 +995,4 @@ export default function ProductDetailPage() {
     </div>
   );
 }
+
