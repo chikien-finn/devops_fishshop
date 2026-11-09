@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout.jsx';
 import AdminLayout from '../components/layout/AdminLayout.jsx';
+import HomePage from '../features/products/pages/HomePage.jsx';
 import ProductListPage from '../features/products/pages/ProductListPage.jsx';
 import AdminProductsPage from '../features/products/pages/AdminProductsPage.jsx';
 import AdminDashboardPage from '../features/dashboard/pages/AdminDashboardPage.jsx';
@@ -17,7 +18,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <ProductListPage />,
+        element: <HomePage />,
       },
       {
         path: 'products',
