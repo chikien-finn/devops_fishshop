@@ -107,25 +107,50 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_ROOT_USER: ${{ secrets.MONGO_ROOT_USER }}
+          MONGO_ROOT_PASSWORD: ${{ secrets.MONGO_ROOT_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
           username: ${{ secrets.AWS_EC2_USER || 'ubuntu' }}
           key: ${{ secrets.AWS_EC2_SSH_KEY }}
-          envs: DOCKER_USERNAME,MONGO_URI,JWT_SECRET
+          envs: DOCKER_USERNAME,MONGO_ROOT_USER,MONGO_ROOT_PASSWORD,JWT_SECRET
           script: |
             mkdir -p ~/aquacraft
             cd ~/aquacraft
-            
-            # Export environment variables for docker-compose
-            echo "DOCKER_USERNAME=$DOCKER_USERNAME" > .env
-            if [ -n "$MONGO_URI" ]; then
-              echo "MONGO_URI=$MONGO_URI" >> .env
+
+            if [ -z "$MONGO_ROOT_USER" ] || [ -z "$MONGO_ROOT_PASSWORD" ]; then
+              echo "Missing MONGO_ROOT_USER or MONGO_ROOT_PASSWORD in GitHub Secrets"
+              exit 1
             fi
-            if [ -n "$JWT_SECRET" ]; then
-              echo "JWT_SECRET=$JWT_SECRET" >> .env
-            fi
+
+            # Generate .env safely for docker-compose (URL-encode credentials for MONGO_URI)
+            python3 - <<'EOF'
+            import os, sys, urllib.parse
+
+            user = os.environ["MONGO_ROOT_USER"]
+            pwd = os.environ["MONGO_ROOT_PASSWORD"]
+            if "'" in user or "'" in pwd or "\n" in user or "\n" in pwd:
+                print("MONGO_ROOT_USER / MONGO_ROOT_PASSWORD cannot contain single quotes or newlines", file=sys.stderr)
+                sys.exit(1)
+
+            mongo_uri = (
+                f"mongodb://{urllib.parse.quote(user, safe='')}"
+                f":{urllib.parse.quote(pwd, safe='')}"
+                f"@mongodb:27017/aquacraft?authSource=admin"
+            )
+            lines = [
+                f"DOCKER_USERNAME={os.environ.get('DOCKER_USERNAME', '')}",
+                f"MONGO_ROOT_USER='{user}'",
+                f"MONGO_ROOT_PASSWORD='{pwd}'",
+                f"MONGO_URI='{mongo_uri}'",
+            ]
+            jwt = os.environ.get("JWT_SECRET", "")
+            if jwt:
+                lines.append(f"JWT_SECRET={jwt}")
+            with open(".env", "w") as f:
+                f.write("\n".join(lines) + "\n")
+            EOF
 
             # Pull latest images and recreate containers
             docker compose pull
