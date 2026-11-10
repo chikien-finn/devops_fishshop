@@ -633,7 +633,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4 PHẦN CÁ CẢNH THEO THIÊN ĐỨC AQUARIUM */}
+      {/* 4 PHẦN CÁ CẢNH NỔI BẬT */}
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -659,7 +659,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Responsive 5-column grid style matching Thiên Đức */}
+      {/* Responsive 5-column grid style */}
       <style>{`
         @media (min-width: 1024px) {
           .thienduc-grid {
