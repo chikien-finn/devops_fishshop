@@ -168,8 +168,7 @@ export default function HomePage() {
     productService
       .getProducts(
         {
-          fishSubCategory: targetFish.subCategory,
-          fishKeyword: targetFish.search,
+          subCategory: targetFish.subCategory,
           page: selectedFishPage,
           limit: SELECTED_FISH_PAGE_SIZE,
         },
