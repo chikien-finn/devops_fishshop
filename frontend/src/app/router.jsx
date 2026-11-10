@@ -3,6 +3,8 @@ import MainLayout from '../components/layout/MainLayout.jsx';
 import AdminLayout from '../components/layout/AdminLayout.jsx';
 import HomePage from '../features/products/pages/HomePage.jsx';
 import ProductListPage from '../features/products/pages/ProductListPage.jsx';
+import ProductDetailPage from '../features/products/pages/ProductDetailPage.jsx';
+import CollectionPage from '../features/products/pages/CollectionPage.jsx';
 import AdminProductsPage from '../features/products/pages/AdminProductsPage.jsx';
 import AdminDashboardPage from '../features/dashboard/pages/AdminDashboardPage.jsx';
 import CartPage from '../features/cart/pages/CartPage.jsx';
@@ -23,6 +25,42 @@ export const router = createBrowserRouter([
       {
         path: 'products',
         element: <ProductListPage />,
+      },
+      {
+        path: 'products/:slug',
+        element: <ProductDetailPage />,
+      },
+      {
+        path: 'product/:slug',
+        element: <ProductDetailPage />,
+      },
+      {
+        path: 'ca-chuot',
+        element: <CollectionPage />,
+      },
+      {
+        path: 'ca-dia',
+        element: <CollectionPage />,
+      },
+      {
+        path: 'ca-dia-dong-ca-nhieu-mau-sac-nhat-hoa-van-tren-than-an-tuong',
+        element: <CollectionPage />,
+      },
+      {
+        path: 'ca-phuong-hoang',
+        element: <CollectionPage />,
+      },
+      {
+        path: 'tep',
+        element: <CollectionPage />,
+      },
+      {
+        path: 'tep-thuy-sinh',
+        element: <CollectionPage />,
+      },
+      {
+        path: 'collections/:slug',
+        element: <CollectionPage />,
       },
       {
         path: 'cart',
