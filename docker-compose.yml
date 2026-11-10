@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
     ports:
-      - "127.0.0.1:27017:27017"
+      - "27017:27017"
     environment:
       MONGO_INITDB_DATABASE: aquacraft
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?MONGO_ROOT_USER is required}
