@@ -127,28 +127,27 @@ export default function HomePage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    productService
-      .getHomeProducts({ signal: controller.signal })
-      .then((data) => {
-        if (!data || typeof data !== 'object') return;
-        setHomeSections((prev) => {
-          const next = { ...prev };
-          for (const key of Object.keys(INITIAL_SECTION_COUNTS)) {
-            const sec = data[key];
-            if (sec && Array.isArray(sec.items) && sec.totalItems > 0) {
-              next[key] = {
-                items: sec.items.map(formatCatalogProduct),
-                total: sec.totalItems,
-                fromDb: true,
-              };
-            }
-          }
-          return next;
+    for (const [key, limit] of Object.entries(INITIAL_SECTION_COUNTS)) {
+      productService
+        .getProducts(
+          { sectionGroup: key, page: 1, limit },
+          { signal: controller.signal }
+        )
+        .then((res) => {
+          if (!res?.items?.length || !(res.pagination?.totalItems > 0)) return;
+          setHomeSections((prev) => ({
+            ...prev,
+            [key]: {
+              items: res.items.map(formatCatalogProduct),
+              total: res.pagination.totalItems,
+              fromDb: true,
+            },
+          }));
+        })
+        .catch((err) => {
+          if (!isRequestCanceled(err)) console.error(`Error loading section ${key}:`, err);
         });
-      })
-      .catch((err) => {
-        if (!isRequestCanceled(err)) console.error(err);
-      });
+    }
 
     return () => controller.abort();
   }, []);

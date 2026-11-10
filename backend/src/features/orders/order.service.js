@@ -109,6 +109,10 @@ export const getAllOrders = async (filters = {}) => {
   const limit = Math.min(100, Math.max(1, parseInt(filters.limit, 10) || 10));
   const skip = (page - 1) * limit;
 
+  const countQuery = Object.keys(query).length === 0
+    ? Order.estimatedDocumentCount()
+    : Order.countDocuments(query);
+
   const [items, totalItems] = await Promise.all([
     Order.find(query)
       .populate('user', 'name email')
@@ -116,7 +120,7 @@ export const getAllOrders = async (filters = {}) => {
       .skip(skip)
       .limit(limit)
       .lean(),
-    Order.countDocuments(query),
+    countQuery,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(totalItems / limit));

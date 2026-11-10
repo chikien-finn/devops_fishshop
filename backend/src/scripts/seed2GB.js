@@ -21,6 +21,7 @@ const parseArgs = (argv = []) => {
     targetGb: 2.05,
     batchSize: 1000,
     entropyBytes: 3300,
+    delayMs: 0,
   };
 
   for (const arg of argv) {
@@ -32,6 +33,7 @@ const parseArgs = (argv = []) => {
     else if (arg.startsWith('--target-gb=')) opts.targetGb = Math.max(0.01, Number(arg.slice(12)) || 2.05);
     else if (arg.startsWith('--batch-size=')) opts.batchSize = Math.min(5000, Math.max(100, parseInt(arg.slice(13), 10) || 1000));
     else if (arg.startsWith('--entropy-bytes=')) opts.entropyBytes = Math.min(12000, Math.max(512, parseInt(arg.slice(16), 10) || 3300));
+    else if (arg.startsWith('--delay-ms=')) opts.delayMs = Math.min(5000, Math.max(0, parseInt(arg.slice(11), 10) || 0));
   }
 
   return opts;
@@ -46,6 +48,7 @@ const formatMB = (bytes) => `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 const formatGB = (bytes) => `${(bytes / GB_BYTES).toFixed(3)} GB`;
 
 const makeEntropy = (bytes) => crypto.randomBytes(bytes).toString('base64');
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const buildBulkProductDoc = (template, runTag, seq, entropyBytes, baseTimestamp) => {
   const skuCode = `DN-${runTag}-${String(seq).padStart(7, '0')}`;
@@ -235,6 +238,9 @@ const run = async () => {
     round++;
     if (round % 9 === 0) {
       stats = await printStats(`[Seed2GB Round ${round} | ${(Date.now() - startTime) / 1000}s]`);
+    }
+    if (opts.delayMs > 0) {
+      await sleep(opts.delayMs);
     }
   }
 

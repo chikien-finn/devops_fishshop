@@ -2,6 +2,43 @@ import mongoose from 'mongoose';
 import Product from './product.model.js';
 import { ApiError } from '../../utils/apiError.js';
 
+const QUERY_CACHE_TTL_MS = 60_000;
+const MAX_COUNT_CACHE_ENTRIES = 100;
+const countCache = new Map();
+let homeSectionsCache = null;
+let homeSectionsInFlight = null;
+let statsCache = null;
+let statsInFlight = null;
+
+const serializeQueryKey = (query) =>
+  JSON.stringify(query, (_k, v) => (v instanceof RegExp ? `re:${v.source}:${v.flags}` : v));
+
+const invalidateProductCaches = () => {
+  countCache.clear();
+  homeSectionsCache = null;
+  statsCache = null;
+};
+
+const cachedCountDocuments = async (query) => {
+  if (Object.keys(query).length === 0) {
+    return await Product.estimatedDocumentCount();
+  }
+
+  const key = serializeQueryKey(query);
+  const now = Date.now();
+  const cached = countCache.get(key);
+  if (cached && now - cached.timestamp < QUERY_CACHE_TTL_MS) {
+    return cached.value;
+  }
+
+  const value = await Product.countDocuments(query);
+  if (countCache.size >= MAX_COUNT_CACHE_ENTRIES) {
+    countCache.delete(countCache.keys().next().value);
+  }
+  countCache.set(key, { value, timestamp: Date.now() });
+  return value;
+};
+
 const LIST_PROJECTION =
   'name slug description price oldPrice discount category subCategory categoryName homeSections stock soldOut actionText images origin waterType isActive createdAt';
 
@@ -158,7 +195,7 @@ export const buildSortOption = (sortBy = 'newest') => {
     case 'newest':
     case 'default':
     default:
-      return { createdAt: -1, _id: 1 };
+      return { createdAt: -1 };
   }
 };
 
@@ -177,7 +214,7 @@ export const getAllProducts = async (filters = {}) => {
       .skip(skip)
       .limit(limit)
       .lean(),
-    Product.countDocuments(query),
+    cachedCountDocuments(query),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(totalItems / limit));
@@ -194,123 +231,144 @@ export const getAllProducts = async (filters = {}) => {
 };
 
 export const getHomeSections = async () => {
-  const entries = await Promise.all(
-    Object.entries(HOME_SECTION_CONFIG).map(async ([key, cfg]) => {
-      const query = {
-        isActive: true,
-        $or: [{ homeSections: cfg.homeSection }, { subCategory: cfg.subCategory }],
-      };
+  if (homeSectionsCache && Date.now() - homeSectionsCache.timestamp < QUERY_CACHE_TTL_MS) {
+    return homeSectionsCache.data;
+  }
+  if (homeSectionsInFlight) {
+    return await homeSectionsInFlight;
+  }
 
-      const [rawItems, totalItems] = await Promise.all([
-        Product.find(query)
-          .select(LIST_PROJECTION)
-          .sort({ createdAt: -1, _id: 1 })
-          .limit(cfg.initialLimit)
-          .lean(),
-        Product.countDocuments(query),
-      ]);
+  homeSectionsInFlight = (async () => {
+    const entries = await Promise.all(
+      Object.entries(HOME_SECTION_CONFIG).map(async ([key, cfg]) => {
+        const query = {
+          isActive: true,
+          $or: [{ homeSections: cfg.homeSection }, { subCategory: cfg.subCategory }],
+        };
 
-      return [
-        key,
-        {
-          items: rawItems.map(formatListItem),
-          totalItems,
-        },
-      ];
-    })
-  );
+        const [rawItems, totalItems] = await Promise.all([
+          Product.find(query)
+            .select(LIST_PROJECTION)
+            .sort({ createdAt: -1 })
+            .limit(cfg.initialLimit)
+            .lean(),
+          cachedCountDocuments(query),
+        ]);
 
-  return Object.fromEntries(entries);
+        return [
+          key,
+          {
+            items: rawItems.map(formatListItem),
+            totalItems,
+          },
+        ];
+      })
+    );
+
+    const data = Object.fromEntries(entries);
+    homeSectionsCache = { data, timestamp: Date.now() };
+    return data;
+  })();
+
+  try {
+    return await homeSectionsInFlight;
+  } finally {
+    homeSectionsInFlight = null;
+  }
 };
 
 export const getProductStats = async () => {
-  const [facetResult] = await Product.aggregate([
-    {
-      $facet: {
-        byCategory: [
-          {
-            $group: {
-              _id: '$category',
-              count: { $sum: 1 },
-            },
-          },
-        ],
-        overall: [
-          {
-            $group: {
-              _id: null,
-              total: { $sum: 1 },
-              totalStock: { $sum: { $ifNull: ['$stock', 0] } },
-              totalInventoryValue: {
-                $sum: {
-                  $multiply: [{ $ifNull: ['$price', 0] }, { $ifNull: ['$stock', 0] }],
-                },
-              },
-              freshwaterCount: {
-                $sum: { $cond: [{ $eq: ['$waterType', 'freshwater'] }, 1, 0] },
-              },
-              saltwaterCount: {
-                $sum: { $cond: [{ $eq: ['$waterType', 'saltwater'] }, 1, 0] },
-              },
-              lowStockCount: {
-                $sum: { $cond: [{ $lte: [{ $ifNull: ['$stock', 0] }, 5] }, 1, 0] },
-              },
-            },
-          },
-        ],
-        fishStats: [
-          { $match: { category: 'fish' } },
-          {
-            $group: {
-              _id: null,
-              total: { $sum: 1 },
-              freshFish: {
-                $sum: { $cond: [{ $eq: ['$waterType', 'freshwater'] }, 1, 0] },
-              },
-              saltFish: {
-                $sum: { $cond: [{ $eq: ['$waterType', 'saltwater'] }, 1, 0] },
-              },
-              fishStock: { $sum: { $ifNull: ['$stock', 0] } },
-              fishOutOfStock: {
-                $sum: { $cond: [{ $lte: [{ $ifNull: ['$stock', 0] }, 0] }, 1, 0] },
-              },
-            },
-          },
-        ],
-      },
-    },
-  ]);
-
-  const catMap = {};
-  for (const row of facetResult?.byCategory || []) {
-    catMap[row._id] = row.count;
+  if (statsCache && Date.now() - statsCache.timestamp < QUERY_CACHE_TTL_MS) {
+    return statsCache.data;
+  }
+  if (statsInFlight) {
+    return await statsInFlight;
   }
 
-  const overall = facetResult?.overall?.[0] || {};
-  const fishStats = facetResult?.fishStats?.[0] || {};
+  statsInFlight = (async () => {
+    const rows = await Product.aggregate([
+      { $match: { category: { $gte: '' } } },
+      { $project: { _id: 0, category: 1, waterType: 1, stock: 1, price: 1 } },
+      {
+        $group: {
+          _id: { category: '$category', waterType: '$waterType' },
+          count: { $sum: 1 },
+          totalStock: { $sum: { $ifNull: ['$stock', 0] } },
+          totalInventoryValue: {
+            $sum: {
+              $multiply: [{ $ifNull: ['$price', 0] }, { $ifNull: ['$stock', 0] }],
+            },
+          },
+          lowStockCount: {
+            $sum: { $cond: [{ $lte: [{ $ifNull: ['$stock', 0] }, 5] }, 1, 0] },
+          },
+          outOfStockCount: {
+            $sum: { $cond: [{ $lte: [{ $ifNull: ['$stock', 0] }, 0] }, 1, 0] },
+          },
+        },
+      },
+    ]);
 
-  const fish = catMap.fish || 0;
-  const plant = catMap.plant || 0;
-  const food = catMap.food || 0;
-  const accessory = (catMap.tank || 0) + (catMap.accessory || 0);
+    const summary = {
+      total: 0,
+      all: 0,
+      fish: 0,
+      plant: 0,
+      food: 0,
+      accessory: 0,
+      freshFish: 0,
+      saltFish: 0,
+      fishStock: 0,
+      fishOutOfStock: 0,
+      totalStock: 0,
+      totalInventoryValue: 0,
+      freshwaterCount: 0,
+      saltwaterCount: 0,
+      lowStockCount: 0,
+    };
 
-  return {
-    total: overall.total || 0,
-    all: overall.total || 0,
-    fish,
-    plant,
-    food,
-    accessory,
-    freshFish: fishStats.freshFish || 0,
-    saltFish: fishStats.saltFish || 0,
-    fishStock: fishStats.fishStock || 0,
-    fishOutOfStock: fishStats.fishOutOfStock || 0,
-    totalStock: overall.totalStock || 0,
-    totalInventoryValue: overall.totalInventoryValue || 0,
-    freshwaterCount: overall.freshwaterCount || 0,
-    saltwaterCount: overall.saltwaterCount || 0,
-    lowStockCount: overall.lowStockCount || 0,
-  };
+    for (const row of rows) {
+      const cat = row._id?.category;
+      const water = row._id?.waterType;
+      const count = row.count || 0;
+      const stock = row.totalStock || 0;
+      const value = row.totalInventoryValue || 0;
+      const low = row.lowStockCount || 0;
+      const out = row.outOfStockCount || 0;
+
+      summary.total += count;
+      summary.all += count;
+      summary.totalStock += stock;
+      summary.totalInventoryValue += value;
+      summary.lowStockCount += low;
+
+      if (water === 'freshwater') summary.freshwaterCount += count;
+      if (water === 'saltwater') summary.saltwaterCount += count;
+
+      if (cat === 'fish') {
+        summary.fish += count;
+        summary.fishStock += stock;
+        summary.fishOutOfStock += out;
+        if (water === 'freshwater') summary.freshFish += count;
+        if (water === 'saltwater') summary.saltFish += count;
+      } else if (cat === 'plant') {
+        summary.plant += count;
+      } else if (cat === 'food') {
+        summary.food += count;
+      } else if (cat === 'tank' || cat === 'accessory') {
+        summary.accessory += count;
+      }
+    }
+
+    statsCache = { data: summary, timestamp: Date.now() };
+    return summary;
+  })();
+
+  try {
+    return await statsInFlight;
+  } finally {
+    statsInFlight = null;
+  }
 };
 
 export const getProductById = async (idOrSlug) => {
@@ -333,7 +391,9 @@ export const createProduct = async (productData) => {
   if (data.stock !== undefined && data.soldOut === undefined) {
     data.soldOut = Number(data.stock) <= 0;
   }
-  return await Product.create(data);
+  const created = await Product.create(data);
+  invalidateProductCaches();
+  return created;
 };
 
 export const updateProduct = async (id, updateData) => {
@@ -343,6 +403,7 @@ export const updateProduct = async (id, updateData) => {
   }
   const product = await Product.findByIdAndUpdate(id, data, { returnDocument: 'after' });
   if (!product) throw new ApiError(404, 'Không tìm thấy sản phẩm');
+  invalidateProductCaches();
   return product;
 };
 
@@ -354,5 +415,6 @@ export const deleteProduct = async (id, hard = false) => {
     product = await Product.findByIdAndUpdate(id, { isActive: false }, { returnDocument: 'after' });
   }
   if (!product) throw new ApiError(404, 'Không tìm thấy sản phẩm');
+  invalidateProductCaches();
   return product;
 };

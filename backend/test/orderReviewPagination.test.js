@@ -8,6 +8,26 @@ import Review from '../src/features/reviews/review.model.js';
 test('Product, Order, and Review schemas define indexes for paginated queries', () => {
   const productIndexes = Product.schema.indexes().map(([spec]) => spec);
   assert.ok(
+    productIndexes.some((spec) => spec.isActive === 1 && spec.createdAt === -1),
+    'Product should index { isActive: 1, createdAt: -1 }'
+  );
+  assert.ok(
+    productIndexes.some((spec) => spec.isActive === 1 && spec.category === 1 && spec.createdAt === -1),
+    'Product should index { isActive: 1, category: 1, createdAt: -1 }'
+  );
+  assert.ok(
+    productIndexes.some((spec) => spec.category === 1 && spec.createdAt === -1),
+    'Product should index { category: 1, createdAt: -1 }'
+  );
+  assert.ok(
+    productIndexes.some((spec) => spec.stock === 1 && spec.createdAt === -1),
+    'Product should index { stock: 1, createdAt: -1 }'
+  );
+  assert.ok(
+    productIndexes.some((spec) => spec.category === 1 && spec.waterType === 1 && spec.stock === 1 && spec.price === 1),
+    'Product should index { category: 1, waterType: 1, stock: 1, price: 1 }'
+  );
+  assert.ok(
     productIndexes.some((spec) => spec.isActive === 1 && spec.subCategory === 1 && spec.createdAt === -1),
     'Product should index { isActive: 1, subCategory: 1, createdAt: -1 }'
   );

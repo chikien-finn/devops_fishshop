@@ -92,10 +92,15 @@ const productSchema = new mongoose.Schema(
   }
 );
 
+productSchema.index({ isActive: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, category: 1, createdAt: -1 });
 productSchema.index({ isActive: 1, category: 1, subCategory: 1, createdAt: -1 });
 productSchema.index({ isActive: 1, subCategory: 1, createdAt: -1 });
 productSchema.index({ isActive: 1, homeSections: 1, createdAt: -1 });
 productSchema.index({ isActive: 1, stock: 1 });
+productSchema.index({ category: 1, createdAt: -1 });
+productSchema.index({ stock: 1, createdAt: -1 });
+productSchema.index({ category: 1, waterType: 1, stock: 1, price: 1 });
 productSchema.index({ createdAt: -1 });
 
 export default mongoose.model('Product', productSchema);

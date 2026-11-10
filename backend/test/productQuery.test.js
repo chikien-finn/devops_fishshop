@@ -41,7 +41,7 @@ test('buildSortOption maps supported sort modes', () => {
   assert.deepStrictEqual(buildSortOption('price-asc'), { price: 1, createdAt: -1 });
   assert.deepStrictEqual(buildSortOption('price-desc'), { price: -1, createdAt: -1 });
   assert.deepStrictEqual(buildSortOption('stock-asc'), { stock: 1, createdAt: -1 });
-  assert.deepStrictEqual(buildSortOption('newest'), { createdAt: -1, _id: 1 });
+  assert.deepStrictEqual(buildSortOption('newest'), { createdAt: -1 });
 });
 
 test('GET /api/products/stats is matched before /:id and protected by auth', async () => {
