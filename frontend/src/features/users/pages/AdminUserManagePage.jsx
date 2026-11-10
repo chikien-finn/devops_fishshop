@@ -20,6 +20,7 @@ import {
 import userService from '../services/userService.js';
 import { useAuth } from '../../auth/hooks/useAuth.jsx';
 import { formatDate } from '../../../utils/formatters.js';
+import Pagination from '../../../components/common/Pagination.jsx';
 
 export default function AdminUserManagePage() {
   const { user: currentAdmin } = useAuth();
@@ -31,6 +32,8 @@ export default function AdminUserManagePage() {
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Modal actions
   const [roleModal, setRoleModal] = useState({ open: false, user: null, targetRole: '' });
@@ -72,6 +75,15 @@ export default function AdminUserManagePage() {
       return matchesSearch && matchesRole;
     });
   }, [users, searchTerm, roleFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter]);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredUsers.slice(start, start + pageSize);
+  }, [filteredUsers, currentPage, pageSize]);
 
   const stats = useMemo(() => {
     const total = users.length;
@@ -388,7 +400,7 @@ export default function AdminUserManagePage() {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u) => {
+                paginatedUsers.map((u) => {
                   const isCurrentAdmin = u._id === currentAdmin?._id || u.email === currentAdmin?.email;
                   return (
                     <tr
@@ -531,23 +543,17 @@ export default function AdminUserManagePage() {
           </table>
         </div>
 
-        <div
-          style={{
-            padding: '0.75rem 1rem',
-            backgroundColor: '#f8fafc',
-            borderTop: '1px solid #e2e8f0',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '0.8125rem',
-            color: '#64748b',
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredUsers.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
           }}
-        >
-          <div>
-            Hiển thị <strong>{filteredUsers.length}</strong> / <strong>{users.length}</strong> tài khoản
-          </div>
-          <div>Cơ sở dữ liệu MongoDB Atlas</div>
-        </div>
+          itemLabel="tài khoản"
+        />
       </div>
 
       {/* Modal Đổi Phân Quyền */}

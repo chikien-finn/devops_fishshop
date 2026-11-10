@@ -1,47 +1,99 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Fish,
-  Droplets,
   ShoppingBag,
   ChevronLeft,
   ChevronRight,
-  Flame,
+  ChevronDown,
+  ChevronUp,
   CheckCircle2,
-  Sparkles,
   ShieldCheck,
   Truck,
   HeartHandshake,
   Search,
   X,
 } from 'lucide-react';
-import productService from '../services/productService.js';
-import { formatCurrency } from '../../../utils/formatters.js';
+import productService, { isRequestCanceled } from '../services/productService.js';
 import { useCart } from '../../cart/hooks/useCart.jsx';
 import { thienducSections } from '../data/thienducSections.js';
+import { collectionsData } from '../data/collectionsData.js';
+import { formatCatalogProduct } from '../utils/productMapper.js';
+
+const INITIAL_SECTION_COUNTS = {
+  chuot: 10,
+  dia: 5,
+  phuonghoang: 5,
+  tep: 5,
+};
+
+const LOAD_MORE_STEP = 5;
+const SELECTED_FISH_PAGE_SIZE = 15;
+
+const mergeCatalogItems = (primary = [], extra = []) => {
+  const seen = new Set();
+  const merged = [];
+  for (const item of [...primary, ...extra]) {
+    const key = item.slug || item.name || item.id;
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      merged.push(item);
+    }
+  }
+  return merged;
+};
+
+const fallbackSections = {
+  chuot: mergeCatalogItems(thienducSections.chuot, collectionsData['ca-chuot']?.items),
+  dia: mergeCatalogItems(thienducSections.dia, collectionsData['ca-dia']?.items),
+  phuonghoang: mergeCatalogItems(thienducSections.phuonghoang, collectionsData['ca-phuong-hoang']?.items),
+  tep: mergeCatalogItems(thienducSections.thuysinh.tep, collectionsData.tep?.items),
+};
+
+const buildInitialHomeSections = () => ({
+  chuot: { items: fallbackSections.chuot, total: fallbackSections.chuot.length, fromDb: false },
+  dia: { items: fallbackSections.dia, total: fallbackSections.dia.length, fromDb: false },
+  phuonghoang: { items: fallbackSections.phuonghoang, total: fallbackSections.phuonghoang.length, fromDb: false },
+  tep: { items: fallbackSections.tep, total: fallbackSections.tep.length, fromDb: false },
+});
+
+const mergeUniqueById = (existing, incoming) => {
+  const seen = new Set(existing.map((item) => item._id || item.id));
+  const next = [...existing];
+  for (const item of incoming) {
+    const key = item._id || item.id;
+    if (!seen.has(key)) {
+      seen.add(key);
+      next.push(item);
+    }
+  }
+  return next;
+};
 
 export default function HomePage() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [homeSections, setHomeSections] = useState(buildInitialHomeSections);
+  const [loadingMoreSection, setLoadingMoreSection] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [selectedFish, setSelectedFish] = useState(null);
-  const [thuySinhTab, setThuySinhTab] = useState('tep');
+  const [selectedFishItems, setSelectedFishItems] = useState([]);
+  const [selectedFishTotal, setSelectedFishTotal] = useState(0);
+  const [selectedFishPage, setSelectedFishPage] = useState(1);
+  const [selectedFishLoading, setSelectedFishLoading] = useState(false);
+  const [visibleCounts, setVisibleCounts] = useState(INITIAL_SECTION_COUNTS);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
   const { addToCart } = useCart();
-  const navigate = useNavigate();
 
   // 8 fish categories exactly as in reference image 2
   const fishCategories = [
-    { id: 'neon', name: 'Cá Neon', image: '/fish_neon.jpg?v=2', search: 'Neon' },
-    { id: 'dia', name: 'Cá Dĩa', image: '/fish_dia.jpg?v=2', search: 'Dĩa' },
-    { id: 'thantien', name: 'Cá Thần Tiên', image: '/fish_thantien.jpg?v=2', search: 'Thần Tiên' },
-    { id: 'phuonghoang', name: 'Phượng Hoàng', image: '/fish_phuonghoang.jpg?v=2', search: 'Phượng Hoàng' },
-    { id: 'cauvong', name: 'Cá Cầu Vồng', image: '/fish_cauvong.jpg?v=2', search: 'Cầu Vồng' },
-    { id: 'ali', name: 'Cá Ali Thái', image: '/fish_ali.jpg?v=2', search: 'Ali' },
-    { id: 'chuot', name: 'Cá Chuột', image: '/fish_chuot.jpg?v=2', search: 'Chuột' },
-    { id: 'betta', name: 'Cá Betta', image: '/fish_betta.jpg?v=2', search: 'Betta' },
+    { id: 'neon', name: 'Cá Neon', image: '/fish_neon.jpg?v=2', search: 'Neon', subCategory: 'ca-neon' },
+    { id: 'dia', name: 'Cá Dĩa', image: '/fish_dia.jpg?v=2', search: 'Dĩa', subCategory: 'ca-dia' },
+    { id: 'thantien', name: 'Cá Thần Tiên', image: '/fish_thantien.jpg?v=2', search: 'Thần Tiên', subCategory: 'ca-than-tien' },
+    { id: 'phuonghoang', name: 'Phượng Hoàng', image: '/fish_phuonghoang.jpg?v=2', search: 'Phượng Hoàng', subCategory: 'ca-phuong-hoang' },
+    { id: 'cauvong', name: 'Cá Cầu Vồng', image: '/fish_cauvong.jpg?v=2', search: 'Cầu Vồng', subCategory: 'ca-cau-vong' },
+    { id: 'ali', name: 'Cá Ali Thái', image: '/fish_ali.jpg?v=2', search: 'Ali', subCategory: 'ca-ali' },
+    { id: 'chuot', name: 'Cá Chuột', image: '/fish_chuot.jpg?v=2', search: 'Chuột', subCategory: 'ca-chuot' },
+    { id: 'betta', name: 'Cá Betta', image: '/fish_betta.jpg?v=2', search: 'Betta', subCategory: 'ca-betta' },
   ];
 
   // Banner slides
@@ -73,12 +125,179 @@ export default function HomePage() {
   ];
 
   useEffect(() => {
+    const controller = new AbortController();
+
     productService
-      .getProducts()
-      .then((data) => setProducts(data))
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+      .getHomeProducts({ signal: controller.signal })
+      .then((data) => {
+        if (!data || typeof data !== 'object') return;
+        setHomeSections((prev) => {
+          const next = { ...prev };
+          for (const key of Object.keys(INITIAL_SECTION_COUNTS)) {
+            const sec = data[key];
+            if (sec && Array.isArray(sec.items) && sec.totalItems > 0) {
+              next[key] = {
+                items: sec.items.map(formatCatalogProduct),
+                total: sec.totalItems,
+                fromDb: true,
+              };
+            }
+          }
+          return next;
+        });
+      })
+      .catch((err) => {
+        if (!isRequestCanceled(err)) console.error(err);
+      });
+
+    return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!selectedFish) {
+      setSelectedFishItems([]);
+      setSelectedFishTotal(0);
+      return;
+    }
+
+    const targetFish = fishCategories.find((f) => f.id === selectedFish);
+    if (!targetFish) return;
+
+    const controller = new AbortController();
+    setSelectedFishLoading(true);
+
+    productService
+      .getProducts(
+        {
+          fishSubCategory: targetFish.subCategory,
+          fishKeyword: targetFish.search,
+          page: selectedFishPage,
+          limit: SELECTED_FISH_PAGE_SIZE,
+        },
+        { signal: controller.signal }
+      )
+      .then((res) => {
+        const formatted = res.items.map(formatCatalogProduct);
+        setSelectedFishItems((prev) =>
+          selectedFishPage === 1 ? formatted : mergeUniqueById(prev, formatted)
+        );
+        setSelectedFishTotal(res.pagination.totalItems);
+        setSelectedFishLoading(false);
+      })
+      .catch((err) => {
+        if (isRequestCanceled(err)) return;
+        console.error(err);
+        setSelectedFishLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [selectedFish, selectedFishPage]);
+
+  const handleLoadMore = async (sectionKey, total) => {
+    const currentVisible = visibleCounts[sectionKey] || INITIAL_SECTION_COUNTS[sectionKey];
+    const nextVisible = Math.min(currentVisible + LOAD_MORE_STEP, total);
+    const sectionState = homeSections[sectionKey];
+
+    if (
+      sectionState?.fromDb &&
+      sectionState.items.length < nextVisible &&
+      sectionState.items.length < sectionState.total
+    ) {
+      try {
+        setLoadingMoreSection(sectionKey);
+        const nextPage = Math.floor(sectionState.items.length / LOAD_MORE_STEP) + 1;
+        const res = await productService.getProducts({
+          sectionGroup: sectionKey,
+          page: nextPage,
+          limit: LOAD_MORE_STEP,
+        });
+        const formatted = res.items.map(formatCatalogProduct);
+        setHomeSections((prev) => ({
+          ...prev,
+          [sectionKey]: {
+            ...prev[sectionKey],
+            items: mergeUniqueById(prev[sectionKey].items, formatted),
+            total: res.pagination.totalItems,
+          },
+        }));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingMoreSection(null);
+      }
+    }
+
+    setVisibleCounts((prev) => ({
+      ...prev,
+      [sectionKey]: nextVisible,
+    }));
+  };
+
+  const handleCollapseSection = (sectionKey) => {
+    setVisibleCounts((prev) => ({
+      ...prev,
+      [sectionKey]: INITIAL_SECTION_COUNTS[sectionKey],
+    }));
+  };
+
+  const renderLoadMoreButton = (sectionKey, total) => {
+    const initial = INITIAL_SECTION_COUNTS[sectionKey] || 5;
+    const visible = visibleCounts[sectionKey] ?? initial;
+    const remaining = Math.max(0, total - visible);
+    const canCollapse = remaining === 0 && total > initial;
+    const isLoadingMore = loadingMoreSection === sectionKey;
+
+    if (remaining === 0 && !canCollapse) return null;
+
+    return (
+      <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+        <button
+          type="button"
+          disabled={isLoadingMore}
+          onClick={() =>
+            remaining > 0 ? handleLoadMore(sectionKey, total) : handleCollapseSection(sectionKey)
+          }
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            backgroundColor: 'transparent',
+            border: '1.5px solid #dc2626',
+            color: '#dc2626',
+            borderRadius: '9999px',
+            padding: '0.45rem 1.75rem',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            cursor: isLoadingMore ? 'wait' : 'pointer',
+            opacity: isLoadingMore ? 0.7 : 1,
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#dc2626';
+            e.currentTarget.style.color = '#ffffff';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = '#dc2626';
+          }}
+        >
+          {isLoadingMore ? (
+            <span>Đang tải...</span>
+          ) : remaining > 0 ? (
+            <>
+              <span>Xem thêm</span>
+              <ChevronDown size={16} />
+            </>
+          ) : (
+            <>
+              <span>Thu gọn</span>
+              <ChevronUp size={16} />
+            </>
+          )}
+        </button>
+      </div>
+    );
+  };
 
   const handlePrevSlide = () => {
     setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
@@ -91,20 +310,22 @@ export default function HomePage() {
   const handleFishClick = (fish) => {
     if (selectedFish === fish.id) {
       setSelectedFish(null);
+      setSelectedFishPage(1);
     } else {
       setSelectedFish(fish.id);
+      setSelectedFishPage(1);
     }
   };
 
   const handleAddToCart = (p) => {
     if (p.soldOut) return;
     addToCart({
-      _id: p.id,
+      _id: p._id || p.id,
       name: p.name,
       price: p.price,
-      images: [p.image],
-      category: 'fish',
-      stock: 50,
+      images: p.gallery && p.gallery.length > 0 ? p.gallery : [p.image],
+      category: p.category || 'fish',
+      stock: typeof p.stock === 'number' ? p.stock : 25,
     });
     setToastMessage(`Đã thêm "${p.name}" vào giỏ hàng!`);
     setTimeout(() => setToastMessage(null), 3000);
@@ -351,18 +572,6 @@ export default function HomePage() {
       </div>
     );
   };
-
-  // Filter products
-  const filteredProducts = products.filter((item) => {
-    if (selectedFish) {
-      const targetFish = fishCategories.find((f) => f.id === selectedFish);
-      if (targetFish) {
-        return item.name.toLowerCase().includes(targetFish.search.toLowerCase());
-      }
-    }
-    if (activeCategory === 'all') return true;
-    return item.category === activeCategory;
-  });
 
   return (
     <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -683,6 +892,100 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Kết quả lọc theo dòng cá nổi bật (khi chọn 1 trong 8 hình tròn) */}
+      {selectedFish && (
+        <section
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '8px',
+            padding: '1.75rem 1.5rem',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            border: '2px solid #0284c7',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <h2
+              style={{
+                fontSize: '1.35rem',
+                fontWeight: 800,
+                color: '#0284c7',
+                margin: 0,
+              }}
+            >
+              Kết quả lọc: {fishCategories.find((f) => f.id === selectedFish)?.name} ({selectedFishTotal} sản phẩm)
+            </h2>
+            <button
+              onClick={() => {
+                setSelectedFish(null);
+                setSelectedFishPage(1);
+              }}
+              style={{
+                backgroundColor: '#f1f5f9',
+                color: '#475569',
+                border: '1px solid #cbd5e1',
+                borderRadius: '4px',
+                padding: '0.35rem 0.85rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Đóng bộ lọc
+            </button>
+          </div>
+          {selectedFishLoading && selectedFishItems.length === 0 ? (
+            <p style={{ color: '#64748b', textAlign: 'center', padding: '1.5rem 0' }}>
+              Đang tìm sản phẩm phù hợp...
+            </p>
+          ) : selectedFishItems.length === 0 ? (
+            <p style={{ color: '#64748b', textAlign: 'center', padding: '1.5rem 0' }}>
+              Chưa có sản phẩm nào thuộc dòng này trong kho.
+            </p>
+          ) : (
+            <>
+              <div
+                className="thienduc-grid"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  gap: '1rem',
+                }}
+              >
+                {selectedFishItems.map((p) => renderProductCard(p))}
+              </div>
+              {selectedFishItems.length < selectedFishTotal && (
+                <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+                  <button
+                    type="button"
+                    disabled={selectedFishLoading}
+                    onClick={() => setSelectedFishPage((prev) => prev + 1)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      backgroundColor: 'transparent',
+                      border: '1.5px solid #0284c7',
+                      color: '#0284c7',
+                      borderRadius: '9999px',
+                      padding: '0.45rem 1.75rem',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      cursor: selectedFishLoading ? 'wait' : 'pointer',
+                    }}
+                  >
+                    <span>
+                      {selectedFishLoading
+                        ? 'Đang tải...'
+                        : `Xem thêm (${selectedFishTotal - selectedFishItems.length} sản phẩm)`}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
       {/* 4 PHẦN CÁ CẢNH NỔI BẬT */}
       {/* Toast Notification */}
       {toastMessage && (
@@ -747,7 +1050,6 @@ export default function HomePage() {
               fontSize: '1.45rem',
               fontWeight: 800,
               color: '#1e293b',
-              fontFamily: "'Playfair Display', Georgia, serif",
               margin: 0,
             }}
           >
@@ -763,38 +1065,10 @@ export default function HomePage() {
             gap: '1rem',
           }}
         >
-          {thienducSections.chuot.map((p) => renderProductCard(p))}
+          {homeSections.chuot.items.slice(0, visibleCounts.chuot).map((p) => renderProductCard(p))}
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          <Link
-            to="/ca-chuot"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              border: '1.5px solid #dc2626',
-              color: '#dc2626',
-              borderRadius: '9999px',
-              padding: '0.45rem 1.75rem',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#dc2626';
-              e.currentTarget.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#dc2626';
-            }}
-          >
-            <span>Xem tất cả</span>
-            <ChevronRight size={16} />
-          </Link>
-        </div>
+        {renderLoadMoreButton('chuot', homeSections.chuot.total)}
       </section>
 
       {/* 2. CÁ DĨA */}
@@ -813,7 +1087,6 @@ export default function HomePage() {
               fontSize: '1.45rem',
               fontWeight: 800,
               color: '#1e293b',
-              fontFamily: "'Playfair Display', Georgia, serif",
               margin: 0,
             }}
           >
@@ -829,38 +1102,10 @@ export default function HomePage() {
             gap: '1rem',
           }}
         >
-          {thienducSections.dia.map((p) => renderProductCard(p))}
+          {homeSections.dia.items.slice(0, visibleCounts.dia).map((p) => renderProductCard(p))}
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          <Link
-            to="/ca-dia"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              border: '1.5px solid #dc2626',
-              color: '#dc2626',
-              borderRadius: '9999px',
-              padding: '0.45rem 1.75rem',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#dc2626';
-              e.currentTarget.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#dc2626';
-            }}
-          >
-            <span>Xem tất cả</span>
-            <ChevronRight size={16} />
-          </Link>
-        </div>
+        {renderLoadMoreButton('dia', homeSections.dia.total)}
       </section>
 
       {/* 3. CÁ PHƯỢNG HOÀNG – CÁ CẢNH DỄ NUÔI */}
@@ -879,7 +1124,6 @@ export default function HomePage() {
               fontSize: '1.45rem',
               fontWeight: 800,
               color: '#1e293b',
-              fontFamily: "'Playfair Display', Georgia, serif",
               margin: 0,
             }}
           >
@@ -895,41 +1139,13 @@ export default function HomePage() {
             gap: '1rem',
           }}
         >
-          {thienducSections.phuonghoang.map((p) => renderProductCard(p))}
+          {homeSections.phuonghoang.items.slice(0, visibleCounts.phuonghoang).map((p) => renderProductCard(p))}
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          <Link
-            to="/ca-phuong-hoang"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              border: '1.5px solid #dc2626',
-              color: '#dc2626',
-              borderRadius: '9999px',
-              padding: '0.45rem 1.75rem',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#dc2626';
-              e.currentTarget.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#dc2626';
-            }}
-          >
-            <span>Xem tất cả</span>
-            <ChevronRight size={16} />
-          </Link>
-        </div>
+        {renderLoadMoreButton('phuonghoang', homeSections.phuonghoang.total)}
       </section>
 
-      {/* 4. CÁ CẢNH THỦY SINH GIÁ RẺ (VỚI TABS) */}
+      {/* 4. TÉP THỦY SINH */}
       <section
         style={{
           backgroundColor: '#ffffff',
@@ -939,54 +1155,17 @@ export default function HomePage() {
           border: '1px solid #e2e8f0',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            marginBottom: '1.25rem',
-          }}
-        >
+        <div style={{ marginBottom: '1.25rem' }}>
           <h2
             style={{
               fontSize: '1.45rem',
               fontWeight: 800,
               color: '#1e293b',
-              fontFamily: "'Playfair Display', Georgia, serif",
               margin: 0,
             }}
           >
-            Cá Cảnh Thủy Sinh Giá Rẻ
+            Tép Thủy Sinh
           </h2>
-
-          {/* Filter Tabs */}
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            {[
-              { id: 'tep', label: 'Tép Thủy Sinh' },
-              { id: 'cauvong', label: 'Cá Cầu Vồng' },
-              { id: 'phuonghoang', label: 'Cá Phượng Hoàng' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setThuySinhTab(tab.id)}
-                style={{
-                  padding: '0.4rem 1.15rem',
-                  borderRadius: '9999px',
-                  border: 'none',
-                  backgroundColor: thuySinhTab === tab.id ? '#dc2626' : '#f1f5f9',
-                  color: thuySinhTab === tab.id ? '#ffffff' : '#475569',
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div
@@ -997,38 +1176,12 @@ export default function HomePage() {
             gap: '1rem',
           }}
         >
-          {thienducSections.thuysinh[thuySinhTab].map((p) => renderProductCard(p))}
+          {homeSections.tep.items
+            .slice(0, visibleCounts.tep)
+            .map((p) => renderProductCard(p))}
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-          <Link
-            to={thuySinhTab === 'tep' ? '/tep' : thuySinhTab === 'phuonghoang' ? '/ca-phuong-hoang' : '/products?search=Cầu Vồng'}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              border: '1.5px solid #dc2626',
-              color: '#dc2626',
-              borderRadius: '9999px',
-              padding: '0.45rem 1.75rem',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#dc2626';
-              e.currentTarget.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#dc2626';
-            }}
-          >
-            <span>Xem tất cả</span>
-            <ChevronRight size={16} />
-          </Link>
-        </div>
+        {renderLoadMoreButton('tep', homeSections.tep.total)}
       </section>
 
       {/* Quick View Modal */}

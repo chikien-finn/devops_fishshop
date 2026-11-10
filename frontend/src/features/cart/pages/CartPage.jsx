@@ -1,10 +1,109 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useCart } from '../hooks/useCart.jsx';
+import { useAuth } from '../../auth/hooks/useAuth.jsx';
+import orderService from '../../orders/services/orderService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, clearCart, totalAmount, totalItems } = useCart();
+  const { user, isAuthenticated } = useAuth();
+
+  const [shippingAddress, setShippingAddress] = useState(user?.address || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone || '');
+  const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [createdOrder, setCreatedOrder] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      if (!shippingAddress && user.address) setShippingAddress(user.address);
+      if (!phoneNumber && user.phone) setPhoneNumber(user.phone);
+    }
+  }, [user]);
+
+  const handleCheckout = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+
+    if (!isAuthenticated) {
+      setErrorMsg('Vui lòng đăng nhập để tiến hành đặt hàng và lưu lịch sử đơn hàng.');
+      return;
+    }
+    if (!shippingAddress.trim() || !phoneNumber.trim()) {
+      setErrorMsg('Vui lòng nhập đầy đủ địa chỉ giao hàng và số điện thoại.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const items = cart.map((item) => ({
+        product: item._id || item.id,
+        slug: item.slug,
+        name: item.name,
+        quantity: item.quantity || 1,
+      }));
+      const order = await orderService.createOrder({
+        shippingAddress: shippingAddress.trim(),
+        phoneNumber: phoneNumber.trim(),
+        paymentMethod,
+        items,
+      });
+      setCreatedOrder(order);
+      clearCart();
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Không thể tạo đơn hàng, vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (createdOrder) {
+    return (
+      <div
+        style={{
+          maxWidth: '600px',
+          margin: '3rem auto',
+          textAlign: 'center',
+          backgroundColor: '#ffffff',
+          padding: '3rem 2rem',
+          borderRadius: '8px',
+          border: '1px solid #bbf7d0',
+          boxShadow: '0 4px 12px rgba(5, 150, 105, 0.08)',
+        }}
+      >
+        <CheckCircle size={56} color="#059669" style={{ margin: '0 auto 1rem', display: 'block' }} />
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+          Đặt hàng thành công!
+        </h2>
+        <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '0.75rem' }}>
+          Mã đơn hàng của bạn: <strong>#{createdOrder._id?.slice(-6).toUpperCase()}</strong>
+        </p>
+        <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+          Tổng thanh toán: <strong style={{ color: '#dc2626' }}>{formatCurrency(createdOrder.totalAmount)}</strong>. Trại cá AquaCraft sẽ đóng oxy và giao hàng trong 24-48h!
+        </p>
+        <Link
+          to="/"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            backgroundColor: '#0284c7',
+            color: '#ffffff',
+            padding: '0.625rem 1.25rem',
+            borderRadius: '6px',
+            textDecoration: 'none',
+            fontWeight: 600,
+            fontSize: '0.875rem',
+          }}
+        >
+          <ArrowLeft size={16} /> Tiếp tục mua sắm
+        </Link>
+      </div>
+    );
+  }
 
   if (cart.length === 0) {
     return (
@@ -259,26 +358,105 @@ export default function CartPage() {
             <span style={{ color: '#dc2626' }}>{formatCurrency(totalAmount)}</span>
           </div>
 
-          <button
-            onClick={() => alert(`Đặt hàng thành công! Đơn hàng trị giá ${formatCurrency(totalAmount)} sẽ được giao trong 24-48h.`)}
-            style={{
-              width: '100%',
-              backgroundColor: '#dc2626',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.75rem',
-              fontSize: '1rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <CheckCircle size={18} /> Tiến Hành Đặt Hàng
-          </button>
+          <form onSubmit={handleCheckout} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.25rem' }}>
+                Số điện thoại nhận hàng *
+              </label>
+              <input
+                type="tel"
+                required
+                placeholder="0901234567"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.25rem' }}>
+                Địa chỉ giao hàng *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Số nhà, tên đường, Quận/Huyện..."
+                value={shippingAddress}
+                onChange={(e) => setShippingAddress(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.25rem' }}>
+                Phương thức thanh toán
+              </label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  backgroundColor: '#ffffff',
+                  outline: 'none',
+                }}
+              >
+                <option value="cod">Thanh toán khi nhận hàng (COD)</option>
+                <option value="banking">Chuyển khoản ngân hàng / QR</option>
+              </select>
+            </div>
+
+            {errorMsg && (
+              <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', fontSize: '0.8rem' }}>
+                {errorMsg}{' '}
+                {!isAuthenticated && (
+                  <Link to="/login" style={{ fontWeight: 700, color: '#0284c7', textDecoration: 'underline' }}>
+                    Đăng nhập ngay
+                  </Link>
+                )}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                width: '100%',
+                backgroundColor: submitting ? '#94a3b8' : '#dc2626',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '0.75rem',
+                fontSize: '1rem',
+                fontWeight: 700,
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                marginTop: '0.5rem',
+              }}
+            >
+              <CheckCircle size={18} /> {submitting ? 'Đang xử lý...' : 'Tiến Hành Đặt Hàng'}
+            </button>
+          </form>
         </div>
       </div>
     </div>

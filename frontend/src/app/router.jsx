@@ -12,6 +12,7 @@ import LoginPage from '../features/auth/pages/LoginPage.jsx';
 import RegisterPage from '../features/auth/pages/RegisterPage.jsx';
 import ProfilePage from '../features/users/pages/ProfilePage.jsx';
 import AdminUserManagePage from '../features/users/pages/AdminUserManagePage.jsx';
+import AdminOrdersPage from '../features/orders/pages/AdminOrdersPage.jsx';
 
 export const router = createBrowserRouter([
   {
@@ -94,12 +95,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'orders',
-        element: (
-          <div style={{ backgroundColor: '#ffffff', padding: '1.5rem', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#0f172a' }}>Quản lý đơn hàng</h1>
-            <p style={{ color: '#64748b', marginTop: '0.5rem', fontSize: '0.875rem' }}>Tính năng theo dõi và xử lý đơn hàng đang được kết nối.</p>
-          </div>
-        ),
+        element: <AdminOrdersPage />,
       },
       {
         path: 'users',

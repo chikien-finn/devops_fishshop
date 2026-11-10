@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Package,
   Plus,
   Search,
-  Filter,
   Edit2,
   Trash2,
   Eye,
@@ -13,14 +12,13 @@ import {
   AlertTriangle,
   X,
   Droplets,
-  Layers,
-  Sparkles,
   RotateCcw,
   Fish,
 } from 'lucide-react';
-import productService from '../services/productService.js';
-import authService from '../../auth/services/authService.js';
+import productService, { isRequestCanceled } from '../services/productService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
+import { FISH_SUBCATEGORIES, stripHtml, getSubCategoryLabel } from '../utils/productMapper.js';
+import Pagination from '../../../components/common/Pagination.jsx';
 
 // Các tab danh mục phân loại rõ ràng
 const CATEGORY_TABS = [
@@ -42,6 +40,7 @@ const DEFAULT_FORM_DATA = {
   description: '',
   price: '',
   category: 'fish',
+  subCategory: 'ca-chuot',
   waterType: 'freshwater',
   stock: 10,
   origin: 'Việt Nam',
@@ -55,6 +54,18 @@ export default function AdminProductsPage() {
   const urlAction = searchParams.get('action');
 
   const [products, setProducts] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [counts, setCounts] = useState({
+    fish: 0,
+    plant: 0,
+    food: 0,
+    accessory: 0,
+    all: 0,
+    freshFish: 0,
+    saltFish: 0,
+    fishStock: 0,
+    fishOutOfStock: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState(null);
@@ -62,24 +73,30 @@ export default function AdminProductsPage() {
   // Mặc định tab Cá cảnh (fish) để "bên cá chỉ hiển thị cá"
   const [selectedCategory, setSelectedCategory] = useState(urlCategory || 'fish');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedWaterType, setSelectedWaterType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all'); // all, active, inactive
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit' | 'view'
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [currentId, setCurrentId] = useState(null);
 
   // Modal Xóa
   const [deleteModal, setDeleteModal] = useState({ open: false, product: null });
   const [deleting, setDeleting] = useState(false);
+  const detailRequestRef = useRef(0);
 
   // Đồng bộ khi URL param thay đổi
   useEffect(() => {
     if (urlCategory) {
       setSelectedCategory(urlCategory);
+      setCurrentPage(1);
     }
   }, [urlCategory]);
 
@@ -89,24 +106,95 @@ export default function AdminProductsPage() {
     }
   }, [urlAction]);
 
-  // Tải danh sách sản phẩm từ backend
-  const fetchProducts = async () => {
+  // Debounce ô tìm kiếm 350ms để không spam request mỗi lần gõ phím
+  useEffect(() => {
+    if (searchTerm === debouncedSearch) return;
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchTerm, debouncedSearch]);
+
+  const fetchStats = useCallback(async (signal) => {
     try {
-      setLoading(true);
-      setError('');
-      const data = await productService.getProducts({ all: 'true' });
-      setProducts(data);
+      const stats = await productService.getProductStats({ signal });
+      setCounts((prev) => ({
+        ...prev,
+        fish: stats.fish || 0,
+        plant: stats.plant || 0,
+        food: stats.food || 0,
+        accessory: stats.accessory || 0,
+        all: stats.all || 0,
+        freshFish: stats.freshFish || 0,
+        saltFish: stats.saltFish || 0,
+        fishStock: stats.fishStock || 0,
+        fishOutOfStock: stats.fishOutOfStock || 0,
+      }));
     } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Không thể tải danh sách dữ liệu.');
-    } finally {
-      setLoading(false);
+      if (!isRequestCanceled(err)) {
+        console.error('Error fetching product stats:', err);
+      }
     }
-  };
+  }, []);
+
+  const fetchProducts = useCallback(
+    async ({ signal, useCache = true } = {}) => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const params = {
+          page: currentPage,
+          limit: pageSize,
+          all: 'true',
+        };
+        if (selectedCategory === 'accessory') {
+          params.categories = 'accessory,tank';
+        } else if (selectedCategory !== 'all') {
+          params.category = selectedCategory;
+        }
+        if (debouncedSearch.trim()) {
+          params.search = debouncedSearch.trim();
+        }
+        if (selectedWaterType !== 'all') {
+          params.waterType = selectedWaterType;
+        }
+        if (selectedStatus === 'active') {
+          params.isActive = 'true';
+        } else if (selectedStatus === 'inactive') {
+          params.isActive = 'false';
+        }
+
+        const res = await productService.getProducts(params, { signal, useCache });
+        if (currentPage > res.pagination.totalPages) {
+          setCurrentPage(res.pagination.totalPages);
+          return;
+        }
+        setProducts(res.items);
+        setTotalItems(res.pagination.totalItems);
+        setLoading(false);
+      } catch (err) {
+        if (isRequestCanceled(err)) return;
+        console.error(err);
+        setError(err.response?.data?.message || 'Không thể tải danh sách dữ liệu.');
+        setLoading(false);
+      }
+    },
+    [currentPage, pageSize, selectedCategory, debouncedSearch, selectedWaterType, selectedStatus]
+  );
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    const controller = new AbortController();
+    fetchProducts({ signal: controller.signal });
+    return () => controller.abort();
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchStats(controller.signal);
+    return () => controller.abort();
+  }, [fetchStats]);
 
   useEffect(() => {
     if (feedback) {
@@ -115,57 +203,16 @@ export default function AdminProductsPage() {
     }
   }, [feedback]);
 
-  // Bộ lọc dữ liệu phía Client
-  const filteredProducts = useMemo(() => {
-    return products.filter((item) => {
-      const matchesSearch =
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.origin && item.origin.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      let matchesCategory = true;
-      if (selectedCategory === 'accessory') {
-        matchesCategory = item.category === 'accessory' || item.category === 'tank';
-      } else if (selectedCategory !== 'all') {
-        matchesCategory = item.category === selectedCategory;
-      }
-
-      const matchesWaterType =
-        selectedWaterType === 'all' || item.waterType === selectedWaterType;
-
-      const matchesStatus =
-        selectedStatus === 'all' ||
-        (selectedStatus === 'active' && item.isActive) ||
-        (selectedStatus === 'inactive' && !item.isActive);
-
-      return matchesSearch && matchesCategory && matchesWaterType && matchesStatus;
-    });
-  }, [products, searchTerm, selectedCategory, selectedWaterType, selectedStatus]);
-
-  // Số lượng đếm cho từng danh mục
-  const counts = useMemo(() => {
-    const fish = products.filter((p) => p.category === 'fish').length;
-    const plant = products.filter((p) => p.category === 'plant').length;
-    const food = products.filter((p) => p.category === 'food').length;
-    const accessory = products.filter((p) => p.category === 'tank' || p.category === 'accessory').length;
-    const all = products.length;
-
-    // Chi tiết cá
-    const fishItems = products.filter((p) => p.category === 'fish');
-    const freshFish = fishItems.filter((p) => p.waterType === 'freshwater').length;
-    const saltFish = fishItems.filter((p) => p.waterType === 'saltwater').length;
-    const fishStock = fishItems.reduce((acc, p) => acc + (p.stock || 0), 0);
-    const fishOutOfStock = fishItems.filter((p) => (p.stock || 0) <= 0).length;
-
-    return { fish, plant, food, accessory, all, freshFish, saltFish, fishStock, fishOutOfStock };
-  }, [products]);
-
   const handleTabChange = (catValue) => {
     setSelectedCategory(catValue);
+    setCurrentPage(1);
     setSearchParams(catValue === 'all' ? {} : { category: catValue });
   };
 
   // Mở modal Thêm mới
   const handleOpenCreate = () => {
+    detailRequestRef.current += 1;
+    setLoadingDetail(false);
     setModalMode('create');
     setFormData({
       ...DEFAULT_FORM_DATA,
@@ -175,45 +222,55 @@ export default function AdminProductsPage() {
     setIsModalOpen(true);
   };
 
+  const toModalFormData = (product) => ({
+    name: product.name || '',
+    description: product.description || '',
+    price: product.price ?? '',
+    category: product.category || 'fish',
+    subCategory: product.subCategory || 'ca-chuot',
+    waterType: product.waterType || 'freshwater',
+    stock: product.stock ?? 0,
+    origin: product.origin || 'Việt Nam',
+    imageUrl: product.images && product.images[0] ? product.images[0] : '',
+    isActive: product.isActive !== undefined ? product.isActive : true,
+  });
+
+  const openProductModalWithFullDetail = async (product, mode) => {
+    const reqId = ++detailRequestRef.current;
+    setModalMode(mode);
+    setCurrentId(product._id);
+    setFormData(toModalFormData(product));
+    setLoadingDetail(true);
+    setIsModalOpen(true);
+
+    try {
+      const fullProduct = await productService.getProductById(product._id);
+      if (detailRequestRef.current === reqId && fullProduct) {
+        setFormData(toModalFormData(fullProduct));
+      }
+    } catch (err) {
+      console.error('Error loading full product detail:', err);
+    } finally {
+      if (detailRequestRef.current === reqId) {
+        setLoadingDetail(false);
+      }
+    }
+  };
+
   // Mở modal Chỉnh sửa
   const handleOpenEdit = (product) => {
-    setModalMode('edit');
-    setCurrentId(product._id);
-    setFormData({
-      name: product.name || '',
-      description: product.description || '',
-      price: product.price ?? '',
-      category: product.category || 'fish',
-      waterType: product.waterType || 'freshwater',
-      stock: product.stock ?? 0,
-      origin: product.origin || 'Việt Nam',
-      imageUrl: product.images && product.images[0] ? product.images[0] : '',
-      isActive: product.isActive !== undefined ? product.isActive : true,
-    });
-    setIsModalOpen(true);
+    openProductModalWithFullDetail(product, 'edit');
   };
 
   // Mở modal Xem chi tiết
   const handleOpenView = (product) => {
-    setModalMode('view');
-    setCurrentId(product._id);
-    setFormData({
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      category: product.category,
-      waterType: product.waterType,
-      stock: product.stock,
-      origin: product.origin,
-      imageUrl: product.images && product.images[0] ? product.images[0] : '',
-      isActive: product.isActive,
-    });
-    setIsModalOpen(true);
+    openProductModalWithFullDetail(product, 'view');
   };
 
   // Lưu sản phẩm (Thêm hoặc Sửa)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loadingDetail) return;
     if (!formData.name.trim()) {
       alert('Vui lòng nhập tên sản phẩm / cá cảnh');
       return;
@@ -223,26 +280,19 @@ export default function AdminProductsPage() {
       return;
     }
 
-    if (!authService.getToken()) {
-      const confirmLogin = window.confirm(
-        'Bạn cần quyền Admin để thêm/sửa sản phẩm. Bạn có muốn đăng nhập tự động bằng tài khoản Admin ngay không?'
-      );
-      if (confirmLogin) {
-        await authService.quickAdminLogin();
-      } else {
-        return;
-      }
-    }
-
     try {
       setSubmitting(true);
+      const stockNum = Number(formData.stock) || 0;
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim(),
         price: Number(formData.price),
         category: formData.category,
+        subCategory: formData.category === 'fish' ? formData.subCategory : '',
+        categoryName: formData.category === 'fish' ? getSubCategoryLabel(formData.subCategory) : '',
         waterType: formData.waterType,
-        stock: Number(formData.stock) || 0,
+        stock: stockNum,
+        soldOut: stockNum <= 0,
         origin: formData.origin.trim() || 'Việt Nam',
         images: formData.imageUrl.trim() ? [formData.imageUrl.trim()] : [],
         isActive: formData.isActive,
@@ -250,15 +300,15 @@ export default function AdminProductsPage() {
 
       if (modalMode === 'create') {
         const created = await productService.createProduct(payload);
-        setProducts([created, ...products]);
         setFeedback({ type: 'success', message: `Đã thêm cá/sản phẩm "${created.name}" thành công!` });
       } else if (modalMode === 'edit') {
         const updated = await productService.updateProduct(currentId, payload);
-        setProducts(products.map((p) => (p._id === currentId ? updated : p)));
         setFeedback({ type: 'success', message: `Đã cập nhật "${updated.name}" thành công!` });
       }
 
       setIsModalOpen(false);
+      fetchProducts({ useCache: false });
+      fetchStats();
     } catch (err) {
       console.error(err);
       alert('Lỗi: ' + (err.response?.data?.message || 'Có lỗi xảy ra khi lưu'));
@@ -270,9 +320,6 @@ export default function AdminProductsPage() {
   // Thực hiện Xóa
   const handleConfirmDelete = async (hard = false) => {
     if (!deleteModal.product) return;
-    if (!authService.getToken()) {
-      await authService.quickAdminLogin();
-    }
 
     try {
       setDeleting(true);
@@ -280,13 +327,11 @@ export default function AdminProductsPage() {
       await productService.deleteProduct(targetId, hard);
 
       if (hard) {
-        setProducts(products.filter((p) => p._id !== targetId));
         setFeedback({
           type: 'success',
           message: `Đã xóa vĩnh viễn "${deleteModal.product.name}".`,
         });
       } else {
-        setProducts(products.map((p) => (p._id === targetId ? { ...p, isActive: false } : p)));
         setFeedback({
           type: 'success',
           message: `Đã tạm ẩn "${deleteModal.product.name}" khỏi gian hàng.`,
@@ -294,6 +339,8 @@ export default function AdminProductsPage() {
       }
 
       setDeleteModal({ open: false, product: null });
+      fetchProducts({ useCache: false });
+      fetchStats();
     } catch (err) {
       console.error(err);
       alert('Lỗi khi xóa: ' + (err.response?.data?.message || 'Không thể thực hiện'));
@@ -305,15 +352,13 @@ export default function AdminProductsPage() {
   // Khôi phục
   const handleRestore = async (product) => {
     try {
-      if (!authService.getToken()) {
-        await authService.quickAdminLogin();
-      }
       const updated = await productService.updateProduct(product._id, { isActive: true });
-      setProducts(products.map((p) => (p._id === product._id ? updated : p)));
       setFeedback({
         type: 'success',
         message: `Đã mở bán lại "${updated.name}".`,
       });
+      fetchProducts({ useCache: false });
+      fetchStats();
     } catch (err) {
       console.error(err);
       alert('Lỗi: ' + (err.response?.data?.message || 'Không thể phục hồi'));
@@ -422,7 +467,10 @@ export default function AdminProductsPage() {
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button
-            onClick={fetchProducts}
+            onClick={() => {
+              fetchProducts({ useCache: false });
+              fetchStats();
+            }}
             title="Làm mới danh sách"
             style={{
               display: 'flex',
@@ -637,7 +685,10 @@ export default function AdminProductsPage() {
           {/* Lọc hệ sinh thái nước */}
           <select
             value={selectedWaterType}
-            onChange={(e) => setSelectedWaterType(e.target.value)}
+            onChange={(e) => {
+              setSelectedWaterType(e.target.value);
+              setCurrentPage(1);
+            }}
             style={{
               padding: '0.5rem 0.75rem',
               fontSize: '0.875rem',
@@ -659,7 +710,10 @@ export default function AdminProductsPage() {
           {/* Lọc trạng thái kinh doanh */}
           <select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
+            onChange={(e) => {
+              setSelectedStatus(e.target.value);
+              setCurrentPage(1);
+            }}
             style={{
               padding: '0.5rem 0.75rem',
               fontSize: '0.875rem',
@@ -682,8 +736,10 @@ export default function AdminProductsPage() {
           <button
             onClick={() => {
               setSearchTerm('');
+              setDebouncedSearch('');
               setSelectedWaterType('all');
               setSelectedStatus('all');
+              setCurrentPage(1);
             }}
             style={{
               padding: '0.5rem 0.75rem',
@@ -747,7 +803,7 @@ export default function AdminProductsPage() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredProducts.length === 0 ? (
+              ) : products.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
@@ -757,7 +813,7 @@ export default function AdminProductsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((product) => {
+                products.map((product) => {
                   const catBadge = getCategoryBadge(product.category);
                   const isLowStock = product.stock > 0 && product.stock <= 5;
                   const isOutOfStock = product.stock <= 0;
@@ -792,6 +848,7 @@ export default function AdminProductsPage() {
                             <img
                               src={product.images[0]}
                               alt={product.name}
+                              loading="lazy"
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                               onError={(e) => {
                                 e.target.style.display = 'none';
@@ -821,7 +878,7 @@ export default function AdminProductsPage() {
                                   textOverflow: 'ellipsis',
                                 }}
                               >
-                                {product.description}
+                                {stripHtml(product.description)}
                               </span>
                             </>
                           )}
@@ -1017,24 +1074,18 @@ export default function AdminProductsPage() {
           </table>
         </div>
 
-        {/* Footer bảng dữ liệu */}
-        <div
-          style={{
-            padding: '0.75rem 1rem',
-            backgroundColor: '#f8fafc',
-            borderTop: '1px solid #e2e8f0',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '0.8125rem',
-            color: '#64748b',
+        {/* Footer phân trang bảng dữ liệu */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
           }}
-        >
-          <div>
-            Hiển thị <strong>{filteredProducts.length}</strong> / <strong>{products.length}</strong> sản phẩm
-          </div>
-          <div>Cơ sở dữ liệu MongoDB Atlas</div>
-        </div>
+          itemLabel="sản phẩm"
+        />
       </div>
 
       {/* Modal Thêm Mới / Sửa / Chi Tiết */}
@@ -1177,7 +1228,7 @@ export default function AdminProductsPage() {
                       border: '1px solid #e2e8f0',
                     }}
                   >
-                    {formData.description || 'Chưa có thông tin mô tả chi tiết.'}
+                    {stripHtml(formData.description) || 'Chưa có thông tin mô tả chi tiết.'}
                   </div>
                 </div>
 
@@ -1287,6 +1338,34 @@ export default function AdminProductsPage() {
                     </select>
                   </div>
                 </div>
+
+                {formData.category === 'fish' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                      Nhóm cá hiển thị trên Trang chủ & Bộ sưu tập
+                    </label>
+                    <select
+                      value={formData.subCategory}
+                      onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem 0.75rem',
+                        fontSize: '0.875rem',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '4px',
+                        backgroundColor: '#ffffff',
+                        outline: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {FISH_SUBCATEGORIES.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '1rem' }}>
                   <div>
@@ -1452,7 +1531,7 @@ export default function AdminProductsPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || loadingDetail}
                     style={{
                       padding: '0.5rem 1.25rem',
                       backgroundColor: '#0284c7',
@@ -1461,10 +1540,17 @@ export default function AdminProductsPage() {
                       borderRadius: '4px',
                       fontSize: '0.875rem',
                       fontWeight: 600,
-                      cursor: submitting ? 'not-allowed' : 'pointer',
+                      cursor: submitting || loadingDetail ? 'not-allowed' : 'pointer',
+                      opacity: loadingDetail ? 0.7 : 1,
                     }}
                   >
-                    {submitting ? 'Đang lưu...' : modalMode === 'create' ? 'Tạo sản phẩm' : 'Lưu thay đổi'}
+                    {loadingDetail
+                      ? 'Đang tải chi tiết...'
+                      : submitting
+                      ? 'Đang lưu...'
+                      : modalMode === 'create'
+                      ? 'Tạo sản phẩm'
+                      : 'Lưu thay đổi'}
                   </button>
                 </div>
               </form>

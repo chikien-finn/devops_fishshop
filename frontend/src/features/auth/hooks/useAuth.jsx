@@ -44,13 +44,6 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const quickAdminLogin = async () => {
-    const data = await authService.quickAdminLogin();
-    setUser(data.user);
-    setToken(data.token);
-    return data;
-  };
-
   const logout = () => {
     authService.logout();
     setUser(null);
@@ -71,7 +64,6 @@ export function AuthProvider({ children }) {
     isAdmin: user?.role === 'admin',
     login,
     register,
-    quickAdminLogin,
     logout,
     updateProfile,
   };

@@ -1,4 +1,4 @@
-import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Package,
@@ -7,16 +7,26 @@ import {
   ArrowLeft,
   Fish,
   LogOut,
-  LogIn,
   Layers,
-  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/hooks/useAuth.jsx';
 
 export default function AdminLayout() {
-  const { user, isAdmin, logout, quickAdminLogin } = useAuth();
+  const { isAuthenticated, isAdmin, loading, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  if (loading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
   const getPageTitle = () => {
     if (location.pathname === '/admin') return 'Bảng điều khiển tổng quan (Dashboard)';
@@ -24,14 +34,6 @@ export default function AdminLayout() {
     if (location.pathname.startsWith('/admin/orders')) return 'Quản lý đơn đặt hàng';
     if (location.pathname.startsWith('/admin/users')) return 'Quản lý khách hàng & người dùng';
     return 'Quản trị hệ thống';
-  };
-
-  const handleQuickAdminLogin = async () => {
-    try {
-      await quickAdminLogin();
-    } catch (err) {
-      alert('Không thể đăng nhập admin tự động: ' + (err.message || 'Lỗi server'));
-    }
   };
 
   const handleLogout = () => {
@@ -71,38 +73,36 @@ export default function AdminLayout() {
         }}
       >
         {/* Brand */}
-        <div
+        <Link
+          to="/admin"
           style={{
-            padding: '1.25rem 1.5rem',
+            padding: '1.15rem 1.5rem',
             borderBottom: '1px solid #e2e8f0',
             display: 'flex',
             alignItems: 'center',
             gap: '0.625rem',
+            textDecoration: 'none',
           }}
         >
-          <div
+          <img
+            src="/logo.png"
+            alt="AquaCraft Logo"
             style={{
-              width: '36px',
-              height: '36px',
-              backgroundColor: '#0284c7',
-              color: '#ffffff',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              height: '40px',
+              width: 'auto',
+              objectFit: 'contain',
+              display: 'block',
             }}
-          >
-            <Fish size={22} />
-          </div>
+          />
           <div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0284c7', letterSpacing: '0.5px', textTransform: 'uppercase', lineHeight: 1.1 }}>
               AquaCraft
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500, marginTop: '2px' }}>
               Hệ thống Quản Trị
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Navigation */}
         <nav
@@ -195,72 +195,27 @@ export default function AdminLayout() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {isAdmin ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <button
-                  onClick={handleLogout}
-                  title="Đăng xuất"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.375rem',
-                    padding: '0.375rem 0.625rem',
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '4px',
-                    fontSize: '0.8125rem',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <LogOut size={14} />
-                  <span>Đăng xuất</span>
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.8125rem', color: '#e11d48', fontWeight: 500 }}>
-                  Chưa có quyền Admin
-                </span>
-                <button
-                  onClick={handleQuickAdminLogin}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.375rem',
-                    padding: '0.375rem 0.75rem',
-                    backgroundColor: '#0284c7',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: '#ffffff',
-                    fontSize: '0.8125rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Sparkles size={14} />
-                  <span>Kích hoạt Admin 1-Click</span>
-                </button>
-                <Link
-                  to="/login"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.375rem',
-                    padding: '0.375rem 0.625rem',
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '4px',
-                    fontSize: '0.8125rem',
-                    color: '#475569',
-                    textDecoration: 'none',
-                  }}
-                >
-                  <LogIn size={14} />
-                  <span>Đăng nhập</span>
-                </Link>
-              </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button
+                onClick={handleLogout}
+                title="Đăng xuất"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.375rem',
+                  padding: '0.375rem 0.625rem',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  fontSize: '0.8125rem',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                }}
+              >
+                <LogOut size={14} />
+                <span>Đăng xuất</span>
+              </button>
+            </div>
           </div>
         </header>
 

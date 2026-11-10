@@ -9,8 +9,8 @@ export const userService = {
   async updateProfile(profileData) {
     const response = await api.put('/users/profile', profileData);
     if (response.data?.data) {
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      localStorage.setItem('user', JSON.stringify({ ...currentUser, ...response.data.data }));
+      const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+      sessionStorage.setItem('user', JSON.stringify({ ...currentUser, ...response.data.data }));
     }
     return response.data?.data;
   },

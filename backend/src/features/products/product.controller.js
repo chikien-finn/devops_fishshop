@@ -3,8 +3,26 @@ import * as productService from './product.service.js';
 
 export const getProducts = async (req, res, next) => {
   try {
-    const products = await productService.getAllProducts(req.query);
-    sendSuccess(res, products, 'Lấy danh sách sản phẩm thành công');
+    const result = await productService.getAllProducts(req.query);
+    sendSuccess(res, result, 'Lấy danh sách sản phẩm thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getHomeProducts = async (req, res, next) => {
+  try {
+    const sections = await productService.getHomeSections();
+    sendSuccess(res, sections, 'Lấy sản phẩm trang chủ thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getProductStats = async (req, res, next) => {
+  try {
+    const stats = await productService.getProductStats();
+    sendSuccess(res, stats, 'Lấy thống kê sản phẩm thành công');
   } catch (error) {
     next(error);
   }

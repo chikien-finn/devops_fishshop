@@ -12,7 +12,7 @@ export const createOrder = async (req, res, next) => {
 
 export const getMyOrders = async (req, res, next) => {
   try {
-    const orders = await orderService.getUserOrders(req.user.id);
+    const orders = await orderService.getUserOrders(req.user.id, req.query);
     sendSuccess(res, orders, 'Lấy danh sách đơn hàng thành công');
   } catch (error) {
     next(error);
@@ -21,8 +21,8 @@ export const getMyOrders = async (req, res, next) => {
 
 export const getAllOrders = async (req, res, next) => {
   try {
-    const orders = await orderService.getAllOrders();
-    sendSuccess(res, orders, 'Lấy toàn bộ đơn hàng thành công');
+    const result = await orderService.getAllOrders(req.query);
+    sendSuccess(res, result, 'Lấy danh sách đơn hàng thành công');
   } catch (error) {
     next(error);
   }

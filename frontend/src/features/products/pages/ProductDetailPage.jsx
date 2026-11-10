@@ -22,8 +22,9 @@ import {
 import { useCart } from '../../cart/hooks/useCart.jsx';
 import { thienducSections } from '../data/thienducSections.js';
 import { collectionsData } from '../data/collectionsData.js';
-import productService from '../services/productService.js';
+import productService, { isRequestCanceled } from '../services/productService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
+import { formatCatalogProduct } from '../utils/productMapper.js';
 
 // Flatten all thienduc and collection products for fast lookup
 function getAllThienducProducts() {
@@ -62,74 +63,83 @@ export default function ProductDetailPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setLoading(true);
+    const controller = new AbortController();
 
-    const allThienduc = getAllThienducProducts();
-    const found = allThienduc.find(
-      (item) => item.slug === targetKey || item.id === targetKey
-    );
-
-    if (found) {
-      setProduct(found);
-      setActiveImage(found.gallery && found.gallery.length > 0 ? found.gallery[0] : found.image);
-      setSelectedSize(found.sizes && found.sizes.length > 0 ? found.sizes[0] : 'Tiêu chuẩn');
-      setQuantity(1);
-
-      // Find related products in same category
-      const related = allThienduc
-        .filter((item) => item.category === found.category && item.id !== found.id)
-        .slice(0, 5);
-      setRelatedProducts(related);
+    const loadFromFallback = () => {
+      const allThienduc = getAllThienducProducts();
+      const found = allThienduc.find(
+        (item) => item.slug === targetKey || item.id === targetKey
+      );
+      if (found) {
+        const formatted = formatCatalogProduct(found);
+        setProduct(formatted);
+        setActiveImage(formatted.image);
+        setSelectedSize(formatted.sizes[0]);
+        setQuantity(1);
+        const related = allThienduc
+          .filter((item) => item.category === found.category && item.id !== found.id)
+          .slice(0, 5)
+          .map(formatCatalogProduct);
+        setRelatedProducts(related);
+      }
       setLoading(false);
-    } else {
-      // Fallback: fetch from backend API
-      productService
-        .getById(targetKey)
-        .then((data) => {
-          const formatted = {
-            id: data._id || data.id,
-            name: data.name,
-            image: data.image,
-            gallery: [data.image],
-            price: data.price,
-            priceFormatted: formatCurrency(data.price),
-            oldPrice: data.price * 1.1,
-            oldPriceFormatted: formatCurrency(data.price * 1.1),
-            discount: '- 9%',
-            soldOut: data.stock <= 0,
-            sizes: ['Size Tiêu Chuẩn'],
-            category: data.category,
-            categoryName: 'Cá Cảnh',
-            specs: {
-              ph: '6.5 - 7.5',
-              temp: '26 - 28°C',
-              food: 'Cám cá cảnh, trùn chỉ',
-              habit: 'Hiền lành, bơi theo đàn',
-            },
-            description: data.description || 'Dòng cá cảnh thủy sinh khỏe mạnh từ trại AquaCraft.',
-          };
-          setProduct(formatted);
-          setActiveImage(formatted.image);
-          setSelectedSize('Size Tiêu Chuẩn');
-          setLoading(false);
-        })
-        .catch(() => {
-          setLoading(false);
-        });
-    }
+    };
+
+    productService
+      .getProductById(targetKey, { signal: controller.signal })
+      .then((data) => {
+        if (!data) {
+          loadFromFallback();
+          return;
+        }
+        const formatted = formatCatalogProduct(data);
+        setProduct(formatted);
+        setActiveImage(formatted.image);
+        setSelectedSize(formatted.sizes[0]);
+        setQuantity(1);
+
+        // Fetch only matching related products with small limit from backend DB
+        const relatedParams = { limit: 6 };
+        if (formatted.subCategory) {
+          relatedParams.subCategory = formatted.subCategory;
+        } else if (formatted.category) {
+          relatedParams.category = formatted.category;
+        }
+
+        productService
+          .getProducts(relatedParams, { signal: controller.signal })
+          .then((res) => {
+            const related = res.items
+              .map(formatCatalogProduct)
+              .filter((item) => item._id !== formatted._id)
+              .slice(0, 5);
+            setRelatedProducts(related);
+          })
+          .catch(() => {});
+
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (isRequestCanceled(err)) return;
+        loadFromFallback();
+      });
+
+    return () => controller.abort();
   }, [targetKey]);
 
   const handleAddToCart = () => {
     if (!product || product.soldOut) return;
-    for (let i = 0; i < quantity; i++) {
-      addToCart({
-        id: product.id,
-        name: `${product.name} (${selectedSize})`,
+    addToCart(
+      {
+        _id: product._id || product.id,
+        name: selectedSize && selectedSize !== 'Tiêu chuẩn' ? `${product.name} (${selectedSize})` : product.name,
         price: product.price,
-        image: activeImage || product.image,
+        images: [activeImage || product.image],
         category: product.category || 'fish',
-        stock: 50,
-      });
-    }
+        stock: typeof product.stock === 'number' ? product.stock : 25,
+      },
+      quantity
+    );
     setToastMessage(`Đã thêm ${quantity} x "${product.name}" (${selectedSize}) vào giỏ hàng!`);
     setTimeout(() => setToastMessage(null), 3000);
   };
@@ -843,7 +853,6 @@ export default function ProductDetailPage() {
                 fontSize: '1.3rem',
                 fontWeight: 800,
                 color: '#1e293b',
-                fontFamily: "'Playfair Display', Georgia, serif",
                 margin: 0,
               }}
             >

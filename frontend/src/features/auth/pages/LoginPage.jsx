@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, LogIn, AlertCircle, Sparkles } from 'lucide-react';
+import { ShieldCheck, LogIn, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth.jsx';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, quickAdminLogin } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,19 +24,6 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Email hoặc mật khẩu không chính xác');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuickAdmin = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      await quickAdminLogin();
-      navigate('/admin');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Không thể đăng nhập admin tự động');
     } finally {
       setLoading(false);
     }
@@ -173,31 +160,6 @@ export default function LoginPage() {
           <Link to="/register" style={{ color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}>
             Đăng ký tài khoản mới
           </Link>
-        </div>
-
-        <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: '0.5rem' }}>
-          <button
-            type="button"
-            onClick={handleQuickAdmin}
-            style={{
-              width: '100%',
-              padding: '0.5rem',
-              backgroundColor: '#f8fafc',
-              border: '1px dashed #cbd5e1',
-              borderRadius: '4px',
-              fontSize: '0.8125rem',
-              color: '#0284c7',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.375rem',
-            }}
-          >
-            <Sparkles size={14} />
-            <span>Đăng nhập nhanh với quyền Admin mẫu</span>
-          </button>
         </div>
       </form>
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Package,
@@ -9,61 +9,98 @@ import {
   ArrowRight,
   TrendingUp,
   Droplets,
-  Layers,
-  Sparkles,
   RefreshCw,
   Plus,
 } from 'lucide-react';
-import productService from '../../products/services/productService.js';
+import productService, { isRequestCanceled } from '../../products/services/productService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
+import Pagination from '../../../components/common/Pagination.jsx';
+
+const EMPTY_STATS = {
+  total: 0,
+  fishCount: 0,
+  plantCount: 0,
+  foodCount: 0,
+  otherCount: 0,
+  totalStock: 0,
+  totalInventoryValue: 0,
+  freshwaterCount: 0,
+  saltwaterCount: 0,
+  lowStockCount: 0,
+};
 
 export default function AdminDashboardPage() {
-  const [products, setProducts] = useState([]);
+  const [stats, setStats] = useState(EMPTY_STATS);
+  const [lowStockItems, setLowStockItems] = useState([]);
+  const [lowStockTotal, setLowStockTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [lowStockPage, setLowStockPage] = useState(1);
+  const [lowStockPageSize, setLowStockPageSize] = useState(10);
 
-  const fetchDashboardData = async () => {
+  const fetchStatsData = useCallback(async (signal) => {
     try {
-      setLoading(true);
-      const data = await productService.getProducts({ all: 'true' });
-      setProducts(data);
+      const data = await productService.getProductStats({ signal });
+      setStats({
+        total: data.total || 0,
+        fishCount: data.fish || 0,
+        plantCount: data.plant || 0,
+        foodCount: data.food || 0,
+        otherCount: data.accessory || 0,
+        totalStock: data.totalStock || 0,
+        totalInventoryValue: data.totalInventoryValue || 0,
+        freshwaterCount: data.freshwaterCount || 0,
+        saltwaterCount: data.saltwaterCount || 0,
+        lowStockCount: data.lowStockCount || 0,
+      });
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-    } finally {
-      setLoading(false);
+      if (!isRequestCanceled(err)) {
+        console.error('Error fetching dashboard stats:', err);
+      }
     }
-  };
-
-  useEffect(() => {
-    fetchDashboardData();
   }, []);
 
-  const stats = useMemo(() => {
-    const total = products.length;
-    const fishProducts = products.filter((p) => p.category === 'fish');
-    const plantProducts = products.filter((p) => p.category === 'plant');
-    const foodProducts = products.filter((p) => p.category === 'food');
-    const otherProducts = products.filter((p) => p.category === 'tank' || p.category === 'accessory');
+  const fetchLowStockData = useCallback(
+    async ({ signal, useCache = true } = {}) => {
+      try {
+        setLoading(true);
+        const res = await productService.getProducts(
+          {
+            all: 'true',
+            maxStock: 5,
+            sort: 'stock-asc',
+            page: lowStockPage,
+            limit: lowStockPageSize,
+          },
+          { signal, useCache }
+        );
+        setLowStockItems(res.items);
+        setLowStockTotal(res.pagination.totalItems);
+        setLoading(false);
+      } catch (err) {
+        if (isRequestCanceled(err)) return;
+        console.error('Error fetching low stock items:', err);
+        setLoading(false);
+      }
+    },
+    [lowStockPage, lowStockPageSize]
+  );
 
-    const totalStock = products.reduce((acc, p) => acc + (p.stock || 0), 0);
-    const totalInventoryValue = products.reduce((acc, p) => acc + (p.price || 0) * (p.stock || 0), 0);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchStatsData(controller.signal);
+    return () => controller.abort();
+  }, [fetchStatsData]);
 
-    const lowStockItems = products.filter((p) => (p.stock || 0) <= 5);
-    const freshwaterCount = products.filter((p) => p.waterType === 'freshwater').length;
-    const saltwaterCount = products.filter((p) => p.waterType === 'saltwater').length;
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchLowStockData({ signal: controller.signal });
+    return () => controller.abort();
+  }, [fetchLowStockData]);
 
-    return {
-      total,
-      fishCount: fishProducts.length,
-      plantCount: plantProducts.length,
-      foodCount: foodProducts.length,
-      otherCount: otherProducts.length,
-      totalStock,
-      totalInventoryValue,
-      lowStockItems,
-      freshwaterCount,
-      saltwaterCount,
-    };
-  }, [products]);
+  const fetchDashboardData = () => {
+    fetchStatsData();
+    fetchLowStockData({ useCache: false });
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -270,8 +307,8 @@ export default function AdminDashboardPage() {
                 width: '32px',
                 height: '32px',
                 borderRadius: '4px',
-                backgroundColor: stats.lowStockItems.length > 0 ? '#fef2f2' : '#f0fdf4',
-                color: stats.lowStockItems.length > 0 ? '#dc2626' : '#16a34a',
+                backgroundColor: stats.lowStockCount > 0 ? '#fef2f2' : '#f0fdf4',
+                color: stats.lowStockCount > 0 ? '#dc2626' : '#16a34a',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -284,15 +321,15 @@ export default function AdminDashboardPage() {
             style={{
               fontSize: '1.75rem',
               fontWeight: 700,
-              color: stats.lowStockItems.length > 0 ? '#dc2626' : '#16a34a',
+              color: stats.lowStockCount > 0 ? '#dc2626' : '#16a34a',
               marginTop: '0.5rem',
             }}
           >
-            {stats.lowStockItems.length}{' '}
+            {stats.lowStockCount}{' '}
             <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#64748b' }}>mục cần chú ý</span>
           </div>
           <div style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '0.35rem' }}>
-            {stats.lowStockItems.length > 0 ? 'Cần nhập thêm đợt mới' : 'Kho hàng dồi dào'}
+            {stats.lowStockCount > 0 ? 'Cần nhập thêm đợt mới' : 'Kho hàng dồi dào'}
           </div>
         </div>
       </div>
@@ -414,58 +451,73 @@ export default function AdminDashboardPage() {
               </Link>
             </div>
 
-            {stats.lowStockItems.length === 0 ? (
+            {lowStockTotal === 0 ? (
               <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
                 Tất cả các dòng cá và sản phẩm đều đang duy trì mức tồn kho tốt!
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {stats.lowStockItems.map((item) => (
-                  <div
-                    key={item._id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.625rem 0.75rem',
-                      backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '4px',
-                      fontSize: '0.875rem',
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {lowStockItems.map((item) => (
+                    <div
+                      key={item._id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.625rem 0.75rem',
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</span>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>({item.origin})</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            padding: '0.15rem 0.45rem',
+                            borderRadius: '3px',
+                            backgroundColor: item.stock === 0 ? '#fef2f2' : '#fffbeb',
+                            color: item.stock === 0 ? '#dc2626' : '#b45309',
+                          }}
+                        >
+                          Tồn: {item.stock}
+                        </span>
+                        <Link
+                          to="/admin/products"
+                          style={{
+                            fontSize: '0.75rem',
+                            color: '#0284c7',
+                            textDecoration: 'none',
+                            fontWeight: 500,
+                          }}
+                        >
+                          Cập nhật
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                  <Pagination
+                    currentPage={lowStockPage}
+                    totalItems={lowStockTotal}
+                    pageSize={lowStockPageSize}
+                    onPageChange={setLowStockPage}
+                    onPageSizeChange={(size) => {
+                      setLowStockPageSize(size);
+                      setLowStockPage(1);
                     }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>({item.origin})</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          padding: '0.15rem 0.45rem',
-                          borderRadius: '3px',
-                          backgroundColor: item.stock === 0 ? '#fef2f2' : '#fffbeb',
-                          color: item.stock === 0 ? '#dc2626' : '#b45309',
-                        }}
-                      >
-                        Tồn: {item.stock}
-                      </span>
-                      <Link
-                        to="/admin/products"
-                        style={{
-                          fontSize: '0.75rem',
-                          color: '#0284c7',
-                          textDecoration: 'none',
-                          fontWeight: 500,
-                        }}
-                      >
-                        Cập nhật
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    itemLabel="sản phẩm"
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>

@@ -3,7 +3,7 @@ import * as reviewService from './review.service.js';
 
 export const getProductReviews = async (req, res, next) => {
   try {
-    const reviews = await reviewService.getReviewsByProduct(req.params.productId);
+    const reviews = await reviewService.getReviewsByProduct(req.params.productId, req.query);
     sendSuccess(res, reviews, 'Lấy danh sách đánh giá thành công');
   } catch (error) {
     next(error);

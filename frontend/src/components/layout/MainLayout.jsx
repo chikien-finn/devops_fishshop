@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Phone,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/hooks/useAuth.jsx';
 import { useCart } from '../../features/cart/hooks/useCart.jsx';
+import { FISH_SUBCATEGORIES } from '../../features/products/utils/productMapper.js';
 import Logo from '../common/Logo.jsx';
 import FloatingActions from '../common/FloatingActions.jsx';
 
@@ -23,22 +24,48 @@ export default function MainLayout() {
   const [searchTerm, setSearchTerm] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [infoModal, setInfoModal] = useState(null); // 'models' | 'knowledge' | 'about'
+  const closeDropdownTimer = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
+  useEffect(() => {
+    return () => {
+      if (closeDropdownTimer.current) {
+        clearTimeout(closeDropdownTimer.current);
+      }
+    };
+  }, []);
+
+  const openDropdown = () => {
+    if (closeDropdownTimer.current) {
+      clearTimeout(closeDropdownTimer.current);
+      closeDropdownTimer.current = null;
+    }
+    setDropdownOpen(true);
+  };
+
+  const closeDropdownDelayed = () => {
+    if (closeDropdownTimer.current) {
+      clearTimeout(closeDropdownTimer.current);
+    }
+    closeDropdownTimer.current = setTimeout(() => {
+      setDropdownOpen(false);
+    }, 150);
+  };
+
+  const closeDropdownNow = () => {
+    if (closeDropdownTimer.current) {
+      clearTimeout(closeDropdownTimer.current);
+      closeDropdownTimer.current = null;
+    }
+    setDropdownOpen(false);
+  };
+
   const productCategoriesMenu = [
-    { name: 'Cá Neon', link: '/products?search=Neon' },
-    { name: 'Cá Dĩa', link: '/ca-dia' },
-    { name: 'Cá Thần Tiên', link: '/products?search=Thần Tiên' },
-    { name: 'Cá Chuột', link: '/ca-chuot' },
-    { name: 'Cá Phượng Hoàng', link: '/ca-phuong-hoang' },
-    { name: 'Cá Ali Thái', link: '/products?search=Ali' },
-    { name: 'Cá Molly, Bình Tích', link: '/products?search=Molly, Bình Tích' },
-    { name: 'Cá Betta', link: '/products?search=Betta' },
-    { name: 'Cá Bảy Màu', link: '/products?search=Bảy Màu' },
-    { name: 'Cá Cầu Vồng', link: '/products?search=Cầu Vồng' },
-    { name: 'Tép Thủy Sinh', link: '/tep' },
-    { name: 'Lau Kiếng, Vệ Sinh Hồ', link: '/products?search=Lau Kiếng, Vệ Sinh Hồ' },
+    ...FISH_SUBCATEGORIES.filter((c) => c.value !== 'ca-canh').map((c) => ({
+      name: c.menuLabel,
+      link: c.route || `/products?subCategory=${c.value}`,
+    })),
     { name: 'Thức Ăn Cá', link: '/products?category=food' },
   ];
 
@@ -87,7 +114,7 @@ export default function MainLayout() {
             onSubmit={handleSearch}
             style={{
               flex: '1',
-              maxWidth: '460px',
+              maxWidth: '400px',
               position: 'relative',
               display: 'flex',
               alignItems: 'center',
@@ -140,7 +167,7 @@ export default function MainLayout() {
           </form>
 
           {/* Right Action Icons & Links */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
             {/* Hotline */}
             <a
               href="tel:0332127582"
@@ -173,106 +200,6 @@ export default function MainLayout() {
               </div>
             </a>
 
-            {/* Account */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-              <div
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  backgroundColor: '#0284c7',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
-                }}
-              >
-                <User size={18} />
-              </div>
-              {isAuthenticated ? (
-                <div style={{ lineHeight: 1.2 }}>
-                  <Link
-                    to="/profile"
-                    style={{
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      color: '#0f172a',
-                      textDecoration: 'none',
-                      display: 'block',
-                    }}
-                  >
-                    {user?.name || 'Tài khoản'}
-                  </Link>
-                  <button
-                    onClick={logout}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      fontSize: '0.75rem',
-                      color: '#dc2626',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '2px',
-                    }}
-                  >
-                    <LogOut size={11} /> Đăng xuất
-                  </button>
-                </div>
-              ) : (
-                <div style={{ lineHeight: 1.25 }}>
-                  <Link
-                    to="/login"
-                    style={{
-                      fontSize: '0.8125rem',
-                      fontWeight: 600,
-                      color: '#0f172a',
-                      textDecoration: 'none',
-                      display: 'block',
-                    }}
-                  >
-                    Đăng Nhập
-                  </Link>
-                  <Link
-                    to="/register"
-                    style={{
-                      fontSize: '0.75rem',
-                      color: '#64748b',
-                      textDecoration: 'none',
-                      display: 'block',
-                    }}
-                  >
-                    Đăng Ký
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Admin Badge if admin */}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  textDecoration: 'none',
-                  color: '#0284c7',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  padding: '0.4rem 0.6rem',
-                  backgroundColor: '#eff6ff',
-                  borderRadius: '6px',
-                  border: '1px solid #bfdbfe',
-                }}
-              >
-                <ShieldCheck size={16} />
-                <span>Admin</span>
-              </Link>
-            )}
-
             {/* Cart Button with badge count */}
             <Link
               to="/cart"
@@ -288,6 +215,7 @@ export default function MainLayout() {
                 color: '#0284c7',
                 fontWeight: 700,
                 fontSize: '0.875rem',
+                whiteSpace: 'nowrap',
                 transition: 'background-color 0.2s',
               }}
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
@@ -320,6 +248,135 @@ export default function MainLayout() {
                 {totalItems}
               </span>
             </Link>
+
+            {/* Admin Badge if admin */}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  textDecoration: 'none',
+                  color: '#0284c7',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  padding: '0.45rem 0.65rem',
+                  backgroundColor: '#eff6ff',
+                  borderRadius: '6px',
+                  border: '1px solid #bfdbfe',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <ShieldCheck size={16} />
+                <span>Admin</span>
+              </Link>
+            )}
+
+            {/* Account / Separate Login & Register Buttons (at the end) */}
+            {isAuthenticated ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    backgroundColor: '#0284c7',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
+                  }}
+                >
+                  <User size={18} />
+                </div>
+                <div style={{ lineHeight: 1.2 }}>
+                  <Link
+                    to="/profile"
+                    style={{
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      color: '#0f172a',
+                      textDecoration: 'none',
+                      display: 'block',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {user?.name || 'Tài khoản'}
+                  </Link>
+                  <button
+                    onClick={logout}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      fontSize: '0.75rem',
+                      color: '#dc2626',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '2px',
+                    }}
+                  >
+                    <LogOut size={11} /> Đăng xuất
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Link
+                  to="/register"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.5rem 0.9rem',
+                    borderRadius: '6px',
+                    border: '1.5px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    color: '#334155',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    transition: 'border-color 0.2s, color 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#0284c7';
+                    e.currentTarget.style.color = '#0284c7';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                    e.currentTarget.style.color = '#334155';
+                  }}
+                >
+                  Đăng Ký
+                </Link>
+                <Link
+                  to="/login"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '6px',
+                    border: '1.5px solid #0284c7',
+                    backgroundColor: '#0284c7',
+                    color: '#ffffff',
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0369a1')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0284c7')}
+                >
+                  Đăng Nhập
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -363,8 +420,8 @@ export default function MainLayout() {
           {/* Danh Sách Sản Phẩm with Dropdown */}
           <div
             style={{ position: 'relative' }}
-            onMouseEnter={() => setDropdownOpen(true)}
-            onMouseLeave={() => setDropdownOpen(false)}
+            onMouseEnter={openDropdown}
+            onMouseLeave={closeDropdownDelayed}
           >
             <Link
               to="/products"
@@ -386,44 +443,51 @@ export default function MainLayout() {
                   position: 'absolute',
                   top: '100%',
                   left: 0,
-                  marginTop: '0.25rem',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '4px',
-                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.06)',
-                  minWidth: '220px',
+                  paddingTop: '0.25rem',
                   zIndex: 50,
-                  padding: '0.4rem 0',
                 }}
               >
-                {productCategoriesMenu.map((item, idx) => (
-                  <Link
-                    key={idx}
-                    to={item.link}
-                    onClick={() => setDropdownOpen(false)}
-                    style={{
-                      display: 'block',
-                      padding: '0.55rem 1.25rem',
-                      textDecoration: 'none',
-                      color: '#1e293b',
-                      fontSize: '0.875rem',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      lineHeight: 1.3,
-                      transition: 'background-color 0.15s, color 0.15s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f1f5f9';
-                      e.currentTarget.style.color = '#0284c7';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = '#1e293b';
-                    }}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
+                <div
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.06)',
+                    minWidth: '230px',
+                    maxHeight: '70vh',
+                    overflowY: 'auto',
+                    padding: '0.4rem 0',
+                  }}
+                >
+                  {productCategoriesMenu.map((item, idx) => (
+                    <Link
+                      key={idx}
+                      to={item.link}
+                      onClick={closeDropdownNow}
+                      style={{
+                        display: 'block',
+                        padding: '0.55rem 1.25rem',
+                        textDecoration: 'none',
+                        color: '#1e293b',
+                        fontSize: '0.875rem',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        lineHeight: 1.3,
+                        transition: 'background-color 0.15s, color 0.15s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        e.currentTarget.style.color = '#0284c7';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = '#1e293b';
+                      }}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -535,7 +599,7 @@ export default function MainLayout() {
               THÔNG TIN LIÊN HỆ
             </h4>
             <p style={{ fontSize: '0.875rem', marginBottom: '0.5rem', color: '#cbd5e1', lineHeight: 1.5 }}>
-              📍 <strong>Địa chỉ:</strong> 57 Lê Thị Siêng, Ấp Tiền, Tân Thông Hội, Củ Chi, TP. Hồ Chí Minh
+              📍 <strong>Khu vực:</strong> TP. Đà Nẵng (Giao hỏa tốc nội thành & 48h toàn quốc)
             </p>
             <p style={{ fontSize: '0.875rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>
               📞 <strong>Hotline:</strong> 0332127582 (Zalo 24/7)

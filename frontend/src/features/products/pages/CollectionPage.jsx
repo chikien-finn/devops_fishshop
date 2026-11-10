@@ -1,20 +1,22 @@
-import { useState, useMemo } from 'react';
-import { useParams, useLocation, Link } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, useLocation, useSearchParams, Link } from 'react-router-dom';
 import {
   ChevronRight,
   Search,
   X,
   ShoppingBag,
   CheckCircle2,
-  ArrowUpDown,
-  Fish,
 } from 'lucide-react';
 import { collectionsData } from '../data/collectionsData.js';
 import { useCart } from '../../cart/hooks/useCart.jsx';
+import productService, { isRequestCanceled } from '../services/productService.js';
+import { FISH_SUBCATEGORIES, formatCatalogProduct, getSubCategoryLabel } from '../utils/productMapper.js';
+import Pagination from '../../../components/common/Pagination.jsx';
 
 export default function CollectionPage() {
   const { slug } = useParams();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { addToCart } = useCart();
 
   // Determine collection key from path or slug parameter
@@ -27,34 +29,97 @@ export default function CollectionPage() {
     colKey = 'ca-chuot';
   } else if (colKey.includes('phuong-hoang')) {
     colKey = 'ca-phuong-hoang';
-  } else if (colKey.includes('tep')) {
+  } else if (colKey === 'tep' || colKey === 'tep-thuy-sinh') {
     colKey = 'tep';
-  } else {
+  } else if (!FISH_SUBCATEGORIES.some((c) => c.value === colKey)) {
     colKey = 'ca-chuot';
   }
 
-  const collection = collectionsData[colKey] || collectionsData['ca-chuot'];
+  const collection = collectionsData[colKey] || {
+    title: getSubCategoryLabel(colKey),
+    description: `Danh sách ${getSubCategoryLabel(colKey)} tuyển chọn, khỏe mạnh, giao hỏa tốc nội thành Đà Nẵng và toàn quốc.`,
+    items: [],
+  };
 
+  const [dbItems, setDbItems] = useState([]);
+  const [totalDbItems, setTotalDbItems] = useState(0);
+  const [useStaticFallback, setUseStaticFallback] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('default');
+  const [pageSize, setPageSize] = useState(20);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+
+  useEffect(() => {
+    setSortBy('default');
+  }, [colKey]);
+
+  const currentPage = Math.max(1, parseInt(searchParams.get('page'), 10) || 1);
+
+  const updatePageParam = (nextPage) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (nextPage <= 1) {
+      newParams.delete('page');
+    } else {
+      newParams.set('page', String(nextPage));
+    }
+    setSearchParams(newParams);
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setUseStaticFallback(false);
+
+    productService
+      .getProducts(
+        {
+          collection: colKey,
+          sort: sortBy,
+          page: currentPage,
+          limit: pageSize,
+        },
+        { signal: controller.signal }
+      )
+      .then((res) => {
+        if (res.pagination.totalItems > 0) {
+          setDbItems(res.items.map(formatCatalogProduct));
+          setTotalDbItems(res.pagination.totalItems);
+          setUseStaticFallback(false);
+        } else {
+          setDbItems([]);
+          setTotalDbItems(0);
+          setUseStaticFallback(collection.items.length > 0);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (isRequestCanceled(err)) return;
+        console.error('Error fetching collection products:', err);
+        setUseStaticFallback(collection.items.length > 0);
+        setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [colKey, sortBy, currentPage, pageSize, collection.items.length]);
 
   const handleAddToCart = (p) => {
     if (p.soldOut) return;
     addToCart({
-      id: p.id,
+      _id: p._id || p.id,
       name: p.name,
       price: p.price,
-      image: p.image,
+      images: p.gallery && p.gallery.length > 0 ? p.gallery : [p.image],
       category: p.category || 'fish',
-      stock: 50,
+      stock: typeof p.stock === 'number' ? p.stock : 25,
     });
     setToastMessage(`Đã thêm "${p.name}" vào giỏ hàng!`);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Sort products based on active sort option
-  const sortedProducts = useMemo(() => {
+  // Fallback static sorting & pagination only when DB has no items for this collection
+  const fallbackSorted = useMemo(() => {
+    if (!useStaticFallback) return [];
     const list = [...collection.items];
     switch (sortBy) {
       case 'name-asc':
@@ -70,7 +135,14 @@ export default function CollectionPage() {
       default:
         return list;
     }
-  }, [collection.items, sortBy]);
+  }, [useStaticFallback, collection.items, sortBy]);
+
+  const totalItems = useStaticFallback ? fallbackSorted.length : totalDbItems;
+  const displayedProducts = useMemo(() => {
+    if (!useStaticFallback) return dbItems;
+    const start = (currentPage - 1) * pageSize;
+    return fallbackSorted.slice(start, start + pageSize);
+  }, [useStaticFallback, dbItems, fallbackSorted, currentPage, pageSize]);
 
   return (
     <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '3rem' }}>
@@ -177,7 +249,10 @@ export default function CollectionPage() {
           ].map((s) => (
             <button
               key={s.id}
-              onClick={() => setSortBy(sortBy === s.id ? 'default' : s.id)}
+              onClick={() => {
+                setSortBy(sortBy === s.id ? 'default' : s.id);
+                updatePageParam(1);
+              }}
               style={{
                 padding: '0.35rem 0.85rem',
                 borderRadius: '4px',
@@ -230,7 +305,7 @@ export default function CollectionPage() {
       >
         <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '0.875rem', color: '#64748b' }}>
-            Hiển thị <strong>{sortedProducts.length}</strong> sản phẩm
+            Hiển thị <strong>{totalItems}</strong> sản phẩm
           </span>
         </div>
 
@@ -240,9 +315,11 @@ export default function CollectionPage() {
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
             gap: '1rem',
+            opacity: loading ? 0.55 : 1,
+            transition: 'opacity 0.15s',
           }}
         >
-          {sortedProducts.map((p) => {
+          {displayedProducts.map((p) => {
             const productDetailUrl = `/products/${p.slug || p.id}`;
 
             return (
@@ -483,6 +560,23 @@ export default function CollectionPage() {
               </div>
             );
           })}
+        </div>
+
+        <div style={{ marginTop: '1.5rem', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={(page) => {
+              updatePageParam(page);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              updatePageParam(1);
+            }}
+            itemLabel="sản phẩm"
+          />
         </div>
       </section>
 

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import {
   getProducts,
+  getHomeProducts,
+  getProductStats,
   getProduct,
   createProduct,
   updateProduct,
@@ -10,8 +12,10 @@ import { verifyToken, verifyAdmin } from '../../middlewares/auth.middleware.js';
 
 const router = Router();
 
-// Public routes
+// Public routes (static paths must come before /:id)
 router.get('/', getProducts);
+router.get('/home', getHomeProducts);
+router.get('/stats', verifyToken, verifyAdmin, getProductStats);
 router.get('/:id', getProduct);
 
 // Admin-protected routes

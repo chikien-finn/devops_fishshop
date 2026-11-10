@@ -7,6 +7,11 @@ const productSchema = new mongoose.Schema(
       required: [true, 'Tên sản phẩm không được để trống'],
       trim: true,
     },
+    slug: {
+      type: String,
+      trim: true,
+      index: true,
+    },
     description: {
       type: String,
       default: '',
@@ -16,18 +21,57 @@ const productSchema = new mongoose.Schema(
       required: [true, 'Giá sản phẩm không được để trống'],
       min: 0,
     },
+    oldPrice: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+    discount: {
+      type: String,
+      default: '',
+    },
     category: {
       type: String,
       enum: ['fish', 'plant', 'accessory', 'tank', 'food'],
       default: 'fish',
     },
+    subCategory: {
+      type: String,
+      default: '',
+    },
+    categoryName: {
+      type: String,
+      default: '',
+    },
+    homeSections: {
+      type: [String],
+      default: [],
+    },
     stock: {
       type: Number,
       default: 0,
     },
+    soldOut: {
+      type: Boolean,
+      default: false,
+    },
+    actionText: {
+      type: String,
+      default: 'TÙY CHỌN',
+    },
     images: {
       type: [String],
       default: [],
+    },
+    sizes: {
+      type: [String],
+      default: [],
+    },
+    specs: {
+      ph: { type: String, default: '6.5 - 7.5' },
+      temp: { type: String, default: '26 - 28°C' },
+      food: { type: String, default: 'Cám, trùn chỉ, bobo...' },
+      habit: { type: String, default: 'Hiền lành, bơi theo đàn' },
     },
     origin: {
       type: String,
@@ -48,5 +92,10 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.model('Product', productSchema);
+productSchema.index({ isActive: 1, category: 1, subCategory: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, subCategory: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, homeSections: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, stock: 1 });
+productSchema.index({ createdAt: -1 });
 
+export default mongoose.model('Product', productSchema);
