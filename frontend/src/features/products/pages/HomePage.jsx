@@ -765,6 +765,36 @@ export default function HomePage() {
         >
           {thienducSections.chuot.map((p) => renderProductCard(p))}
         </div>
+
+        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <Link
+            to="/ca-chuot"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              border: '1.5px solid #dc2626',
+              color: '#dc2626',
+              borderRadius: '9999px',
+              padding: '0.45rem 1.75rem',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#dc2626';
+              e.currentTarget.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#dc2626';
+            }}
+          >
+            <span>Xem tất cả</span>
+            <ChevronRight size={16} />
+          </Link>
+        </div>
       </section>
 
       {/* 2. CÁ DĨA */}
@@ -804,7 +834,7 @@ export default function HomePage() {
 
         <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
           <Link
-            to="/products?search=Dĩa"
+            to="/ca-dia"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -870,7 +900,7 @@ export default function HomePage() {
 
         <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
           <Link
-            to="/products?search=Phượng Hoàng"
+            to="/ca-phuong-hoang"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -968,6 +998,36 @@ export default function HomePage() {
           }}
         >
           {thienducSections.thuysinh[thuySinhTab].map((p) => renderProductCard(p))}
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <Link
+            to={thuySinhTab === 'tep' ? '/tep' : thuySinhTab === 'phuonghoang' ? '/ca-phuong-hoang' : '/products?search=Cầu Vồng'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              border: '1.5px solid #dc2626',
+              color: '#dc2626',
+              borderRadius: '9999px',
+              padding: '0.45rem 1.75rem',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#dc2626';
+              e.currentTarget.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#dc2626';
+            }}
+          >
+            <span>Xem tất cả</span>
+            <ChevronRight size={16} />
+          </Link>
         </div>
       </section>
 

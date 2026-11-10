@@ -21,10 +21,11 @@ import {
 } from 'lucide-react';
 import { useCart } from '../../cart/hooks/useCart.jsx';
 import { thienducSections } from '../data/thienducSections.js';
+import { collectionsData } from '../data/collectionsData.js';
 import productService from '../services/productService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
 
-// Flatten all thienduc products for fast lookup
+// Flatten all thienduc and collection products for fast lookup
 function getAllThienducProducts() {
   const all = [];
   if (thienducSections.chuot) all.push(...thienducSections.chuot);
@@ -34,6 +35,11 @@ function getAllThienducProducts() {
     if (thienducSections.thuysinh.tep) all.push(...thienducSections.thuysinh.tep);
     if (thienducSections.thuysinh.cauvong) all.push(...thienducSections.thuysinh.cauvong);
     if (thienducSections.thuysinh.phuonghoang) all.push(...thienducSections.thuysinh.phuonghoang);
+  }
+  if (collectionsData) {
+    Object.values(collectionsData).forEach((col) => {
+      if (col.items) all.push(...col.items);
+    });
   }
   return all;
 }

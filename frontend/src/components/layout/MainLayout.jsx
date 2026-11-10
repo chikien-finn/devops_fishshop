@@ -28,16 +28,16 @@ export default function MainLayout() {
 
   const productCategoriesMenu = [
     { name: 'Cá Neon', link: '/products?search=Neon' },
-    { name: 'Cá Dĩa', link: '/products?search=Dĩa' },
+    { name: 'Cá Dĩa', link: '/ca-dia' },
     { name: 'Cá Thần Tiên', link: '/products?search=Thần Tiên' },
-    { name: 'Cá Chuột', link: '/products?search=Chuột' },
-    { name: 'Cá Phượng Hoàng', link: '/products?search=Phượng Hoàng' },
+    { name: 'Cá Chuột', link: '/ca-chuot' },
+    { name: 'Cá Phượng Hoàng', link: '/ca-phuong-hoang' },
     { name: 'Cá Ali Thái', link: '/products?search=Ali' },
     { name: 'Cá Molly, Bình Tích', link: '/products?search=Molly, Bình Tích' },
     { name: 'Cá Betta', link: '/products?search=Betta' },
     { name: 'Cá Bảy Màu', link: '/products?search=Bảy Màu' },
     { name: 'Cá Cầu Vồng', link: '/products?search=Cầu Vồng' },
-    { name: 'Tép Thủy Sinh', link: '/products?search=Tép' },
+    { name: 'Tép Thủy Sinh', link: '/tep' },
     { name: 'Lau Kiếng, Vệ Sinh Hồ', link: '/products?search=Lau Kiếng, Vệ Sinh Hồ' },
     { name: 'Thức Ăn Cá', link: '/products?category=food' },
   ];
