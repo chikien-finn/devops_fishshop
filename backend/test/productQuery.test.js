@@ -24,15 +24,19 @@ test('buildProductQuery escapes regex in search and supports non-accented slug m
   assert.ok(searchOr.every((cond) => !('description' in cond)));
 });
 
-test('buildProductQuery combines collection, sale, fish filter, and search safely in $and', () => {
+test('buildProductQuery combines collection, sale, fish filter, price range, and text search safely in $and', () => {
   const query = buildProductQuery({
     collection: 'ca-chuot',
     sale: 'true',
     search: 'panda',
     maxStock: '5',
+    minPrice: '50000',
+    maxPrice: '200000',
   });
   assert.strictEqual(query.$and.length, 3);
+  assert.deepStrictEqual(query.$and[2], { $text: { $search: '"panda"' } });
   assert.deepStrictEqual(query.stock, { $lte: 5 });
+  assert.deepStrictEqual(query.price, { $gte: 50000, $lte: 200000 });
 });
 
 test('buildSortOption maps supported sort modes', () => {

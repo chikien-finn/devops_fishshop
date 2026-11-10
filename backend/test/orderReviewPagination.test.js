@@ -4,6 +4,7 @@ import app from '../src/app.js';
 import Product from '../src/features/products/product.model.js';
 import Order from '../src/features/orders/order.model.js';
 import Review from '../src/features/reviews/review.model.js';
+import User from '../src/features/users/user.model.js';
 
 test('Product, Order, and Review schemas define indexes for paginated queries', () => {
   const productIndexes = Product.schema.indexes().map(([spec]) => spec);
@@ -32,14 +33,29 @@ test('Product, Order, and Review schemas define indexes for paginated queries', 
     'Product should index { isActive: 1, subCategory: 1, createdAt: -1 }'
   );
 
+  assert.ok(
+    productIndexes.some((spec) => spec.name === 'text' && spec.categoryName === 'text'),
+    'Product should define lightweight text index on name/categoryName/origin'
+  );
+
   const orderIndexes = Order.schema.indexes().map(([spec]) => spec);
   assert.ok(
     orderIndexes.some((spec) => spec.createdAt === -1 && spec._id === -1),
     'Order should index { createdAt: -1, _id: -1 }'
   );
   assert.ok(
+    orderIndexes.some((spec) => spec.status === 1 && spec.totalAmount === 1 && spec.createdAt === 1),
+    'Order should define covering index for stats aggregation'
+  );
+  assert.ok(
     orderIndexes.some((spec) => spec.user === 1 && spec.createdAt === -1),
     'Order should index { user: 1, createdAt: -1 }'
+  );
+
+  const userIndexes = User.schema.indexes().map(([spec]) => spec);
+  assert.ok(
+    userIndexes.some((spec) => spec.createdAt === -1),
+    'User should index { createdAt: -1 }'
   );
 
   const reviewIndexes = Review.schema.indexes().map(([spec]) => spec);
@@ -55,6 +71,32 @@ test('GET /api/orders/admin requires authentication', async () => {
   try {
     const res = await fetch(`http://localhost:${port}/api/orders/admin?page=1&limit=10`);
     assert.strictEqual(res.status, 401);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('Protected auth, upload, order stats, and paginated users routes enforce auth/validation', async () => {
+  const server = app.listen(0);
+  const { port } = server.address();
+  try {
+    const [changeRes, uploadRes, orderStatsRes, usersRes, forgotRes] = await Promise.all([
+      fetch(`http://localhost:${port}/api/auth/change-password`, { method: 'PUT' }),
+      fetch(`http://localhost:${port}/api/products/upload`, { method: 'POST' }),
+      fetch(`http://localhost:${port}/api/orders/stats`),
+      fetch(`http://localhost:${port}/api/users?page=1&limit=10`),
+      fetch(`http://localhost:${port}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: '', newPassword: '123' }),
+      }),
+    ]);
+
+    assert.strictEqual(changeRes.status, 401);
+    assert.strictEqual(uploadRes.status, 401);
+    assert.strictEqual(orderStatsRes.status, 401);
+    assert.strictEqual(usersRes.status, 401);
+    assert.strictEqual(forgotRes.status, 400);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

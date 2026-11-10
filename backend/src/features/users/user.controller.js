@@ -3,8 +3,8 @@ import * as userService from './user.service.js';
 
 export const getUsers = async (req, res, next) => {
   try {
-    const users = await userService.getAllUsers();
-    sendSuccess(res, users, 'Lấy danh sách người dùng thành công');
+    const result = await userService.getAllUsers(req.query);
+    sendSuccess(res, result, 'Lấy danh sách người dùng thành công');
   } catch (error) {
     next(error);
   }

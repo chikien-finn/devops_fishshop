@@ -33,6 +33,16 @@ export const authService = {
     return response.data?.data;
   },
 
+  async changePassword(currentPassword, newPassword) {
+    const response = await api.put('/auth/change-password', { currentPassword, newPassword });
+    return response.data?.data;
+  },
+
+  async forgotPassword(email, newPassword) {
+    const response = await api.post('/auth/forgot-password', { email, newPassword });
+    return response.data?.data;
+  },
+
   logout() {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');

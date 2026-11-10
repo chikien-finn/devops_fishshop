@@ -23,7 +23,6 @@ export default function MainLayout() {
   const { totalItems } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [infoModal, setInfoModal] = useState(null); // 'models' | 'knowledge' | 'about'
   const closeDropdownTimer = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -506,53 +505,41 @@ export default function MainLayout() {
             <span>CÁ GIẢM GIÁ</span>
           </Link>
 
-          <button
-            onClick={() => setInfoModal('models')}
+          <Link
+            to="/tank-models"
             style={{
-              background: 'none',
-              border: 'none',
-              color: '#1e293b',
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              padding: 0,
+              textDecoration: 'none',
+              color: isActive('/tank-models') ? '#0284c7' : '#1e293b',
+              borderBottom: isActive('/tank-models') ? '2px solid #0284c7' : '2px solid transparent',
+              paddingBottom: '2px',
             }}
           >
             MẪU HỒ CÁ
-          </button>
+          </Link>
 
-          <button
-            onClick={() => setInfoModal('knowledge')}
+          <Link
+            to="/knowledge"
             style={{
-              background: 'none',
-              border: 'none',
-              color: '#1e293b',
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              padding: 0,
+              textDecoration: 'none',
+              color: isActive('/knowledge') ? '#0284c7' : '#1e293b',
+              borderBottom: isActive('/knowledge') ? '2px solid #0284c7' : '2px solid transparent',
+              paddingBottom: '2px',
             }}
           >
             KIẾN THỨC NUÔI CÁ
-          </button>
+          </Link>
 
-          <button
-            onClick={() => setInfoModal('about')}
+          <Link
+            to="/about"
             style={{
-              background: 'none',
-              border: 'none',
-              color: '#1e293b',
-              fontSize: '0.875rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              padding: 0,
+              textDecoration: 'none',
+              color: isActive('/about') ? '#0284c7' : '#1e293b',
+              borderBottom: isActive('/about') ? '2px solid #0284c7' : '2px solid transparent',
+              paddingBottom: '2px',
             }}
           >
             GIỚI THIỆU
-          </button>
+          </Link>
         </div>
       </nav>
 
@@ -639,91 +626,6 @@ export default function MainLayout() {
 
       {/* Floating Action Buttons (Cart, Hotline, Zalo, Messenger) */}
       <FloatingActions />
-
-      {/* INFO MODALS */}
-      {infoModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-          }}
-          onClick={() => setInfoModal(null)}
-        >
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '8px',
-              maxWidth: '600px',
-              width: '100%',
-              padding: '2rem',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>
-              {infoModal === 'models' && '🌿 Bộ Sưu Tập Mẫu Hồ Cá Thủy Sinh'}
-              {infoModal === 'knowledge' && '📖 Cẩm Nang & Kiến Thức Nuôi Cá Cảnh'}
-              {infoModal === 'about' && '🏢 Giới Thiệu Về Hệ Thống AquaCraft'}
-            </h2>
-            <div style={{ color: '#475569', fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-              {infoModal === 'models' && (
-                <div>
-                  <p>AquaCraft thiết kế và thi công trọn gói các hệ thống hồ cá:</p>
-                  <ul style={{ paddingLeft: '1.25rem', marginTop: '0.5rem' }}>
-                    <li>Hồ Thủy Sinh phong cách Iwagumi, phong cách Nature Nhật Bản.</li>
-                    <li>Hồ Cá Biển san hô công nghệ lọc vi sinh hiện đại.</li>
-                    <li>Hồ Biotop mô phỏng dòng sông Amazon hoang dã.</li>
-                  </ul>
-                </div>
-              )}
-              {infoModal === 'knowledge' && (
-                <div>
-                  <p>Các nguyên tắc vàng giúp cá khỏe mạnh, lên màu rực rỡ:</p>
-                  <ul style={{ paddingLeft: '1.25rem', marginTop: '0.5rem' }}>
-                    <li><strong>Chu trình vi sinh (Cycle hồ):</strong> Chạy lọc vi sinh tối thiểu 7-14 ngày trước khi thả cá.</li>
-                    <li><strong>Nhiệt độ nước:</strong> Ổn định ở mức 26-28°C cho các dòng cá nhiệt đới.</li>
-                    <li><strong>Cho ăn điều độ:</strong> Cho lượng thức ăn cá có thể ăn hết trong 2-3 phút, tránh dư thừa gây đục nước.</li>
-                  </ul>
-                </div>
-              )}
-              {infoModal === 'about' && (
-                <div>
-                  <p>
-                    AquaCraft tự hào là trang trại chuyên nhân giống, thuần dưỡng và phân phối sỉ lẻ các dòng cá cảnh chất lượng cao:
-                  </p>
-                  <ul style={{ paddingLeft: '1.25rem', marginTop: '0.5rem' }}>
-                    <li>Hơn 50 giống cá cảnh thuần chủng (Cá Dĩa, Cá Neon, Cá Thần Tiên, Cá Betta...).</li>
-                    <li>Quy trình tuyển chọn nghiêm ngặt, xét nghiệm mầm bệnh trước khi xuất trại.</li>
-                    <li>Đội ngũ chuyên gia thủy sinh đồng hành hỗ trợ trọn đời.</li>
-                  </ul>
-                </div>
-              )}
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <button
-                onClick={() => setInfoModal(null)}
-                style={{
-                  backgroundColor: '#0284c7',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '0.5rem 1.25rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

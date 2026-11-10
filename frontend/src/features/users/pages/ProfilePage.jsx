@@ -12,8 +12,10 @@ import {
   Clock,
   ArrowRight,
   ShieldAlert,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '../../auth/hooks/useAuth.jsx';
+import authService from '../../auth/services/authService.js';
 import { formatDate } from '../../../utils/formatters.js';
 
 export default function ProfilePage() {
@@ -27,6 +29,12 @@ export default function ProfilePage() {
 
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -60,6 +68,32 @@ export default function ProfilePage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setFeedback(null);
+    if (passwordForm.newPassword.length < 6) {
+      setFeedback({ type: 'error', message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setFeedback({ type: 'error', message: 'Mật khẩu xác nhận không khớp.' });
+      return;
+    }
+    try {
+      setChangingPassword(true);
+      await authService.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setFeedback({ type: 'success', message: 'Đổi mật khẩu thành công!' });
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        message: err.response?.data?.message || 'Không thể đổi mật khẩu.',
+      });
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -328,6 +362,116 @@ export default function ProfilePage() {
             >
               <Save size={16} />
               {saving ? 'Đang lưu...' : 'Lưu Thay Đổi'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Change Password Card */}
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '4px',
+          padding: '1.5rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+          <Lock size={18} color="#0284c7" />
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+            Đổi Mật Khẩu
+          </h2>
+        </div>
+        <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '1.25rem' }}>
+          Cập nhật mật khẩu mới cho tài khoản AquaCraft của bạn.
+        </p>
+
+        <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+              Mật khẩu hiện tại
+            </label>
+            <input
+              type="password"
+              required
+              placeholder="Nhập mật khẩu đang dùng"
+              value={passwordForm.currentPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '0.5rem 0.75rem',
+                fontSize: '0.875rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '4px',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Mật khẩu mới
+              </label>
+              <input
+                type="password"
+                required
+                placeholder="Ít nhất 6 ký tự"
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  fontSize: '0.875rem',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
+                Xác nhận mật khẩu mới
+              </label>
+              <input
+                type="password"
+                required
+                placeholder="Nhập lại mật khẩu mới"
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  fontSize: '0.875rem',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="submit"
+              disabled={changingPassword}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.625rem 1.25rem',
+                backgroundColor: '#0f172a',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                cursor: changingPassword ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <Lock size={15} />
+              {changingPassword ? 'Đang cập nhật...' : 'Đổi Mật Khẩu'}
             </button>
           </div>
         </form>

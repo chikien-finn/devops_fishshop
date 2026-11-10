@@ -10,9 +10,13 @@ import AdminDashboardPage from '../features/dashboard/pages/AdminDashboardPage.j
 import CartPage from '../features/cart/pages/CartPage.jsx';
 import LoginPage from '../features/auth/pages/LoginPage.jsx';
 import RegisterPage from '../features/auth/pages/RegisterPage.jsx';
+import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage.jsx';
 import ProfilePage from '../features/users/pages/ProfilePage.jsx';
 import AdminUserManagePage from '../features/users/pages/AdminUserManagePage.jsx';
 import AdminOrdersPage from '../features/orders/pages/AdminOrdersPage.jsx';
+import TankModelsPage from '../features/content/pages/TankModelsPage.jsx';
+import KnowledgePage from '../features/content/pages/KnowledgePage.jsx';
+import AboutPage from '../features/content/pages/AboutPage.jsx';
 
 export const router = createBrowserRouter([
   {
@@ -74,6 +78,22 @@ export const router = createBrowserRouter([
       {
         path: 'register',
         element: <RegisterPage />,
+      },
+      {
+        path: 'forgot-password',
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: 'tank-models',
+        element: <TankModelsPage />,
+      },
+      {
+        path: 'knowledge',
+        element: <KnowledgePage />,
+      },
+      {
+        path: 'about',
+        element: <AboutPage />,
       },
       {
         path: 'profile',

@@ -153,23 +153,51 @@ export const buildProductQuery = (filters = {}) => {
     }
   }
 
-  if (filters.search) {
-    const terms = String(filters.search)
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+  if (filters.minPrice !== undefined && filters.minPrice !== '') {
+    const minPrice = Number(filters.minPrice);
+    if (!Number.isNaN(minPrice) && minPrice >= 0) {
+      query.price = { ...(query.price || {}), $gte: minPrice };
+    }
+  }
 
-    if (terms.length > 0) {
-      const searchOr = [];
-      for (const term of terms) {
-        const regex = new RegExp(escapeRegex(term), 'i');
-        searchOr.push({ name: regex }, { categoryName: regex }, { origin: regex });
-        const slugTerm = toSlug(term);
-        if (slugTerm) {
-          searchOr.push({ slug: new RegExp(escapeRegex(slugTerm), 'i') });
+  if (filters.maxPrice !== undefined && filters.maxPrice !== '') {
+    const maxPrice = Number(filters.maxPrice);
+    if (!Number.isNaN(maxPrice) && maxPrice >= 0) {
+      query.price = { ...(query.price || {}), $lte: maxPrice };
+    }
+  }
+
+  if (filters.search) {
+    const rawSearch = String(filters.search).trim();
+    if (rawSearch.includes(',')) {
+      const terms = rawSearch
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (terms.length > 0) {
+        const searchOr = [];
+        for (const term of terms) {
+          const regex = new RegExp(escapeRegex(term), 'i');
+          searchOr.push({ name: regex }, { categoryName: regex }, { origin: regex });
+          const slugTerm = toSlug(term);
+          if (slugTerm) {
+            searchOr.push({ slug: new RegExp(escapeRegex(slugTerm), 'i') });
+          }
         }
+        andConditions.push({ $or: searchOr });
       }
-      andConditions.push({ $or: searchOr });
+    } else if (rawSearch) {
+      const tokens = rawSearch
+        .replace(/"/g, ' ')
+        .split(/\s+/)
+        .map((t) => t.trim())
+        .filter(Boolean);
+      if (tokens.length > 0) {
+        andConditions.push({
+          $text: { $search: tokens.map((token) => `"${token}"`).join(' ') },
+        });
+      }
     }
   }
 

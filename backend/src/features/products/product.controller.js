@@ -1,4 +1,5 @@
 import { sendSuccess } from '../../utils/responseHandler.js';
+import { ApiError } from '../../utils/apiError.js';
 import * as productService from './product.service.js';
 
 export const getProducts = async (req, res, next) => {
@@ -41,6 +42,22 @@ export const createProduct = async (req, res, next) => {
   try {
     const newProduct = await productService.createProduct(req.body);
     sendSuccess(res, newProduct, 'Tạo sản phẩm mới thành công', 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadProductImage = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      throw new ApiError(400, 'Vui lòng chọn file ảnh để tải lên');
+    }
+    sendSuccess(
+      res,
+      { url: `/uploads/${req.file.filename}`, filename: req.file.filename },
+      'Tải ảnh lên thành công',
+      201
+    );
   } catch (error) {
     next(error);
   }

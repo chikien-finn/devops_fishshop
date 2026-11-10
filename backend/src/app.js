@@ -3,6 +3,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import { ENV } from './configs/env.config.js';
 import { errorHandler } from './middlewares/error.middleware.js';
+import { uploadsDir } from './middlewares/upload.middleware.js';
 
 // Feature Routes
 import authRoutes from './features/auth/auth.routes.js';
@@ -37,6 +38,7 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(uploadsDir));
 
 if (ENV.NODE_ENV === 'development') {
   app.use(morgan('dev'));

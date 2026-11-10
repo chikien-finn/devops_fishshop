@@ -111,9 +111,14 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-            Mật khẩu
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+            <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#334155' }}>
+              Mật khẩu
+            </label>
+            <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}>
+              Quên mật khẩu?
+            </Link>
+          </div>
           <input
             type="password"
             value={password}

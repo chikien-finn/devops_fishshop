@@ -14,6 +14,7 @@ import {
   Droplets,
   RotateCcw,
   Fish,
+  Upload,
 } from 'lucide-react';
 import productService, { isRequestCanceled } from '../services/productService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
@@ -84,6 +85,7 @@ export default function AdminProductsPage() {
   const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit' | 'view'
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [currentId, setCurrentId] = useState(null);
 
@@ -265,6 +267,23 @@ export default function AdminProductsPage() {
   // Mở modal Xem chi tiết
   const handleOpenView = (product) => {
     openProductModalWithFullDetail(product, 'view');
+  };
+
+  const handleImageFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingImage(true);
+      const result = await productService.uploadImage(file);
+      if (result?.url) {
+        setFormData((prev) => ({ ...prev, imageUrl: result.url }));
+      }
+    } catch (err) {
+      alert('Lỗi tải ảnh: ' + (err.response?.data?.message || 'Không thể tải ảnh lên'));
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
+    }
   };
 
   // Lưu sản phẩm (Thêm hoặc Sửa)
@@ -1436,23 +1455,52 @@ export default function AdminProductsPage() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-                    Đường dẫn hình ảnh (URL)
+                    Hình ảnh sản phẩm (Tải file hoặc nhập URL)
                   </label>
-                  <input
-                    type="url"
-                    placeholder="https://images.unsplash.com/..."
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem 0.75rem',
-                      fontSize: '0.875rem',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '4px',
-                      outline: 'none',
-                      backgroundColor: '#ffffff',
-                    }}
-                  />
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      placeholder="https://... hoặc /uploads/..."
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      style={{
+                        flex: 1,
+                        minWidth: '200px',
+                        padding: '0.5rem 0.75rem',
+                        fontSize: '0.875rem',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '4px',
+                        outline: 'none',
+                        backgroundColor: '#ffffff',
+                      }}
+                    />
+                    <label
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        padding: '0.5rem 0.875rem',
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '4px',
+                        fontSize: '0.8125rem',
+                        fontWeight: 600,
+                        color: '#0284c7',
+                        cursor: uploadingImage ? 'wait' : 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <Upload size={15} />
+                      <span>{uploadingImage ? 'Đang tải...' : 'Tải ảnh từ máy'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploadingImage}
+                        onChange={handleImageFileChange}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                  </div>
                   {formData.imageUrl && (
                     <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <img

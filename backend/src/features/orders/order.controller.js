@@ -38,3 +38,12 @@ export const updateStatus = async (req, res, next) => {
   }
 };
 
+export const getOrderStats = async (req, res, next) => {
+  try {
+    const stats = await orderService.getOrderStats();
+    sendSuccess(res, stats, 'Lấy thống kê đơn hàng thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+

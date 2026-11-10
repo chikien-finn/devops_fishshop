@@ -13,6 +13,7 @@ import {
   Plus,
 } from 'lucide-react';
 import productService, { isRequestCanceled } from '../../products/services/productService.js';
+import orderService from '../../orders/services/orderService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
 import Pagination from '../../../components/common/Pagination.jsx';
 
@@ -29,8 +30,20 @@ const EMPTY_STATS = {
   lowStockCount: 0,
 };
 
+const EMPTY_ORDER_STATS = {
+  totalOrders: 0,
+  pendingCount: 0,
+  confirmedCount: 0,
+  shippingCount: 0,
+  deliveredCount: 0,
+  cancelledCount: 0,
+  totalRevenue: 0,
+  deliveredRevenue: 0,
+};
+
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState(EMPTY_STATS);
+  const [orderStats, setOrderStats] = useState(EMPTY_ORDER_STATS);
   const [lowStockItems, setLowStockItems] = useState([]);
   const [lowStockTotal, setLowStockTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -39,7 +52,10 @@ export default function AdminDashboardPage() {
 
   const fetchStatsData = useCallback(async (signal) => {
     try {
-      const data = await productService.getProductStats({ signal });
+      const [data, ordStats] = await Promise.all([
+        productService.getProductStats({ signal }),
+        orderService.getOrderStats({ signal }).catch(() => EMPTY_ORDER_STATS),
+      ]);
       setStats({
         total: data.total || 0,
         fishCount: data.fish || 0,
@@ -51,6 +67,16 @@ export default function AdminDashboardPage() {
         freshwaterCount: data.freshwaterCount || 0,
         saltwaterCount: data.saltwaterCount || 0,
         lowStockCount: data.lowStockCount || 0,
+      });
+      setOrderStats({
+        totalOrders: ordStats.totalOrders || 0,
+        pendingCount: ordStats.pendingCount || 0,
+        confirmedCount: ordStats.confirmedCount || 0,
+        shippingCount: ordStats.shippingCount || 0,
+        deliveredCount: ordStats.deliveredCount || 0,
+        cancelledCount: ordStats.cancelledCount || 0,
+        totalRevenue: ordStats.totalRevenue || 0,
+        deliveredRevenue: ordStats.deliveredRevenue || 0,
       });
     } catch (err) {
       if (!isRequestCanceled(err)) {
@@ -330,6 +356,73 @@ export default function AdminDashboardPage() {
           </div>
           <div style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '0.35rem' }}>
             {stats.lowStockCount > 0 ? 'Cần nhập thêm đợt mới' : 'Kho hàng dồi dào'}
+          </div>
+        </div>
+      </div>
+
+      {/* Order & Revenue Overview Card */}
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '4px',
+          padding: '1.25rem 1.5rem',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ShoppingBag size={18} color="#0284c7" />
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+              Thống Kê Đơn Hàng & Doanh Thu
+            </h2>
+          </div>
+          <Link
+            to="/admin/orders"
+            style={{ fontSize: '0.8125rem', color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}
+          >
+            Xem tất cả đơn hàng →
+          </Link>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))', gap: '0.875rem' }}>
+          <div style={{ padding: '0.875rem', backgroundColor: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>TỔNG ĐƠN HÀNG</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: '#0f172a', marginTop: '0.25rem' }}>
+              {orderStats.totalOrders.toLocaleString()}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '0.2rem' }}>
+              Chờ duyệt: {orderStats.pendingCount.toLocaleString()} | Đang giao: {orderStats.shippingCount.toLocaleString()}
+            </div>
+          </div>
+
+          <div style={{ padding: '0.875rem', backgroundColor: '#f0fdf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#166534' }}>ĐÃ GIAO THÀNH CÔNG</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: '#15803d', marginTop: '0.25rem' }}>
+              {orderStats.deliveredCount.toLocaleString()} đơn
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#166534', marginTop: '0.2rem' }}>
+              Đã xác nhận: {orderStats.confirmedCount.toLocaleString()} đơn
+            </div>
+          </div>
+
+          <div style={{ padding: '0.875rem', backgroundColor: '#eff6ff', borderRadius: '4px', border: '1px solid #bfdbfe' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1e40af' }}>DOANH THU ĐÃ GIAO</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0284c7', marginTop: '0.25rem' }}>
+              {formatCurrency(orderStats.deliveredRevenue)}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.2rem' }}>
+              Đơn hoàn thành
+            </div>
+          </div>
+
+          <div style={{ padding: '0.875rem', backgroundColor: '#faf5ff', borderRadius: '4px', border: '1px solid #e9d5ff' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b21a8' }}>TỔNG GIÁ TRỊ ĐƠN (TRỪ HỦY)</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#9333ea', marginTop: '0.25rem' }}>
+              {formatCurrency(orderStats.totalRevenue)}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
+              Đơn đã hủy: {orderStats.cancelledCount.toLocaleString()}
+            </div>
           </div>
         </div>
       </div>

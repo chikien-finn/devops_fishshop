@@ -4,6 +4,14 @@ import Cart from '../cart/cart.model.js';
 import Product from '../products/product.model.js';
 import { ApiError } from '../../utils/apiError.js';
 
+const ORDER_STATS_TTL_MS = 60_000;
+let orderStatsCache = null;
+let orderStatsInFlight = null;
+
+const invalidateOrderStatsCache = () => {
+  orderStatsCache = null;
+};
+
 export const createOrder = async (userId, orderData) => {
   const { shippingAddress, phoneNumber, paymentMethod, items: bodyItems } = orderData;
 
@@ -84,6 +92,7 @@ export const createOrder = async (userId, orderData) => {
     await cart.save();
   }
 
+  invalidateOrderStatsCache();
   return order;
 };
 
@@ -139,5 +148,70 @@ export const getAllOrders = async (filters = {}) => {
 export const updateOrderStatus = async (orderId, status) => {
   const order = await Order.findByIdAndUpdate(orderId, { status }, { returnDocument: 'after' });
   if (!order) throw new ApiError(404, 'Không tìm thấy đơn hàng');
+  invalidateOrderStatsCache();
   return order;
+};
+
+export const getOrderStats = async () => {
+  if (orderStatsCache && Date.now() - orderStatsCache.timestamp < ORDER_STATS_TTL_MS) {
+    return orderStatsCache.data;
+  }
+  if (orderStatsInFlight) {
+    return await orderStatsInFlight;
+  }
+
+  orderStatsInFlight = (async () => {
+    const rows = await Order.aggregate([
+      { $match: { status: { $gte: '' } } },
+      { $project: { _id: 0, status: 1, totalAmount: 1 } },
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          revenue: { $sum: { $ifNull: ['$totalAmount', 0] } },
+        },
+      },
+    ]);
+
+    const summary = {
+      totalOrders: 0,
+      pendingCount: 0,
+      confirmedCount: 0,
+      shippingCount: 0,
+      deliveredCount: 0,
+      cancelledCount: 0,
+      totalRevenue: 0,
+      deliveredRevenue: 0,
+    };
+
+    for (const row of rows) {
+      const status = row._id;
+      const count = row.count || 0;
+      const revenue = row.revenue || 0;
+
+      summary.totalOrders += count;
+      if (status !== 'cancelled') {
+        summary.totalRevenue += revenue;
+      }
+
+      if (status === 'pending') summary.pendingCount += count;
+      else if (status === 'confirmed') summary.confirmedCount += count;
+      else if (status === 'shipping') summary.shippingCount += count;
+      else if (status === 'delivered') {
+        summary.deliveredCount += count;
+        summary.deliveredRevenue += revenue;
+      } else if (status === 'cancelled') {
+        summary.cancelledCount += count;
+      }
+    }
+
+    orderStatsCache = { data: summary, timestamp: Date.now() };
+    return summary;
+  })();
+
+  try {
+    return await orderStatsInFlight;
+  } finally {
+    orderStatsInFlight = null;
+  }
 };

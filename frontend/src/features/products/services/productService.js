@@ -128,6 +128,15 @@ export const productService = {
     clearProductCache();
     return response.data?.data;
   },
+
+  async uploadImage(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await api.post('/products/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data?.data;
+  },
 };
 
 export default productService;

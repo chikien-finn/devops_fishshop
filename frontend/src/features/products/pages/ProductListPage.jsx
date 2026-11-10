@@ -18,6 +18,9 @@ export default function ProductListPage() {
   const searchQuery = searchParams.get('search') || '';
   const currentCategory = searchParams.get('category') || 'all';
   const currentSubCategory = searchParams.get('subCategory') || '';
+  const currentWaterType = searchParams.get('waterType') || 'all';
+  const currentPriceRange = searchParams.get('priceRange') || 'all';
+  const currentSort = searchParams.get('sort') || 'newest';
   const isSaleOnly = searchParams.get('sale') === 'true';
   const currentPage = Math.max(1, parseInt(searchParams.get('page'), 10) || 1);
 
@@ -28,6 +31,7 @@ export default function ProductListPage() {
     const params = {
       page: currentPage,
       limit: pageSize,
+      sort: currentSort,
     };
     if (searchQuery) params.search = searchQuery;
     if (currentCategory === 'food') {
@@ -36,6 +40,18 @@ export default function ProductListPage() {
       params.category = currentCategory;
     }
     if (currentSubCategory) params.subCategory = currentSubCategory;
+    if (currentWaterType !== 'all') params.waterType = currentWaterType;
+    if (currentPriceRange === 'under-50') {
+      params.maxPrice = 50000;
+    } else if (currentPriceRange === '50-200') {
+      params.minPrice = 50000;
+      params.maxPrice = 200000;
+    } else if (currentPriceRange === '200-500') {
+      params.minPrice = 200000;
+      params.maxPrice = 500000;
+    } else if (currentPriceRange === 'over-500') {
+      params.minPrice = 500000;
+    }
     if (isSaleOnly) params.sale = 'true';
 
     productService
@@ -52,7 +68,18 @@ export default function ProductListPage() {
       });
 
     return () => controller.abort();
-  }, [searchQuery, currentCategory, currentSubCategory, isSaleOnly, currentPage, pageSize]);
+  }, [searchQuery, currentCategory, currentSubCategory, currentWaterType, currentPriceRange, currentSort, isSaleOnly, currentPage, pageSize]);
+
+  const updateFilterParam = (key, value, defaultVal = 'all') => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('page');
+    if (!value || value === defaultVal) {
+      newParams.delete(key);
+    } else {
+      newParams.set(key, value);
+    }
+    setSearchParams(newParams);
+  };
 
   const updatePageParam = (nextPage) => {
     const newParams = new URLSearchParams(searchParams);
@@ -120,6 +147,9 @@ export default function ProductListPage() {
                   if (tab.id === 'all') {
                     newParams.delete('category');
                     newParams.delete('subCategory');
+                    newParams.delete('waterType');
+                    newParams.delete('priceRange');
+                    newParams.delete('sort');
                     newParams.delete('sale');
                     newParams.delete('search');
                   } else {
@@ -180,6 +210,73 @@ export default function ProductListPage() {
                 ))}
               </select>
             )}
+
+            <select
+              aria-label="Lọc theo môi trường nước"
+              value={currentWaterType}
+              onChange={(e) => updateFilterParam('waterType', e.target.value)}
+              style={{
+                padding: '0.4rem 0.75rem',
+                borderRadius: '20px',
+                border: currentWaterType !== 'all' ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#334155',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              <option value="all">Tất cả hệ nước</option>
+              <option value="freshwater">Nước ngọt</option>
+              <option value="saltwater">Nước mặn</option>
+            </select>
+
+            <select
+              aria-label="Lọc theo khoảng giá"
+              value={currentPriceRange}
+              onChange={(e) => updateFilterParam('priceRange', e.target.value)}
+              style={{
+                padding: '0.4rem 0.75rem',
+                borderRadius: '20px',
+                border: currentPriceRange !== 'all' ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#334155',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              <option value="all">Tất cả mức giá</option>
+              <option value="under-50">Dưới 50.000đ</option>
+              <option value="50-200">50.000đ - 200.000đ</option>
+              <option value="200-500">200.000đ - 500.000đ</option>
+              <option value="over-500">Trên 500.000đ</option>
+            </select>
+
+            <select
+              aria-label="Sắp xếp sản phẩm"
+              value={currentSort}
+              onChange={(e) => updateFilterParam('sort', e.target.value, 'newest')}
+              style={{
+                padding: '0.4rem 0.75rem',
+                borderRadius: '20px',
+                border: currentSort !== 'newest' ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#334155',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              <option value="newest">Mới nhất</option>
+              <option value="price-asc">Giá thấp đến cao</option>
+              <option value="price-desc">Giá cao đến thấp</option>
+              <option value="name-asc">Tên A - Z</option>
+              <option value="name-desc">Tên Z - A</option>
+            </select>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Users,
   Search,
@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import userService from '../services/userService.js';
+import { isRequestCanceled } from '../../products/services/productService.js';
 import { useAuth } from '../../auth/hooks/useAuth.jsx';
 import { formatDate } from '../../../utils/formatters.js';
 import Pagination from '../../../components/common/Pagination.jsx';
@@ -25,12 +26,20 @@ import Pagination from '../../../components/common/Pagination.jsx';
 export default function AdminUserManagePage() {
   const { user: currentAdmin } = useAuth();
   const [users, setUsers] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [stats, setStats] = useState({
+    total: 0,
+    adminCount: 0,
+    customerCount: 0,
+    withPhoneCount: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -40,23 +49,51 @@ export default function AdminUserManagePage() {
   const [deleteModal, setDeleteModal] = useState({ open: false, user: null });
   const [processing, setProcessing] = useState(false);
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const data = await userService.getAllUsers();
-      setUsers(data);
-    } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Không thể tải danh sách tài khoản.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    if (searchTerm === debouncedSearch) return;
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchTerm, debouncedSearch]);
+
+  const fetchUsers = useCallback(
+    async (signal) => {
+      try {
+        setLoading(true);
+        setError('');
+        const params = {
+          page: currentPage,
+          limit: pageSize,
+        };
+        if (roleFilter !== 'all') params.role = roleFilter;
+        if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+
+        const res = await userService.getAllUsers(params, { signal });
+        if (currentPage > res.pagination.totalPages) {
+          setCurrentPage(res.pagination.totalPages);
+          return;
+        }
+        setUsers(res.items);
+        setTotalItems(res.pagination.totalItems);
+        setStats(res.stats);
+        setLoading(false);
+      } catch (err) {
+        if (isRequestCanceled(err)) return;
+        console.error(err);
+        setError(err.response?.data?.message || 'Không thể tải danh sách tài khoản.');
+        setLoading(false);
+      }
+    },
+    [currentPage, pageSize, roleFilter, debouncedSearch]
+  );
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    const controller = new AbortController();
+    fetchUsers(controller.signal);
+    return () => controller.abort();
+  }, [fetchUsers]);
 
   useEffect(() => {
     if (feedback) {
@@ -64,34 +101,6 @@ export default function AdminUserManagePage() {
       return () => clearTimeout(timer);
     }
   }, [feedback]);
-
-  const filteredUsers = useMemo(() => {
-    return users.filter((u) => {
-      const matchesSearch =
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (u.phone && u.phone.includes(searchTerm));
-      const matchesRole = roleFilter === 'all' || u.role === roleFilter;
-      return matchesSearch && matchesRole;
-    });
-  }, [users, searchTerm, roleFilter]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, roleFilter]);
-
-  const paginatedUsers = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredUsers.slice(start, start + pageSize);
-  }, [filteredUsers, currentPage, pageSize]);
-
-  const stats = useMemo(() => {
-    const total = users.length;
-    const adminCount = users.filter((u) => u.role === 'admin').length;
-    const customerCount = users.filter((u) => u.role === 'user').length;
-    const withPhoneCount = users.filter((u) => u.phone && u.phone.trim()).length;
-    return { total, adminCount, customerCount, withPhoneCount };
-  }, [users]);
 
   // Đổi role
   const handleConfirmRoleChange = async () => {
@@ -107,6 +116,7 @@ export default function AdminUserManagePage() {
         }.`,
       });
       setRoleModal({ open: false, user: null, targetRole: '' });
+      fetchUsers();
     } catch (err) {
       alert('Lỗi: ' + (err.response?.data?.message || 'Không thể cập nhật quyền'));
     } finally {
@@ -121,12 +131,12 @@ export default function AdminUserManagePage() {
       setProcessing(true);
       const targetId = deleteModal.user._id;
       await userService.deleteUser(targetId);
-      setUsers(users.filter((u) => u._id !== targetId));
       setFeedback({
         type: 'success',
         message: `Đã xóa tài khoản "${deleteModal.user.name}" khỏi hệ thống.`,
       });
       setDeleteModal({ open: false, user: null });
+      fetchUsers();
     } catch (err) {
       alert('Lỗi: ' + (err.response?.data?.message || 'Không thể xóa người dùng'));
     } finally {
@@ -192,7 +202,7 @@ export default function AdminUserManagePage() {
         </div>
 
         <button
-          onClick={fetchUsers}
+          onClick={() => fetchUsers()}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -308,7 +318,10 @@ export default function AdminUserManagePage() {
 
           <select
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setCurrentPage(1);
+            }}
             style={{
               padding: '0.5rem 0.75rem',
               fontSize: '0.875rem',
@@ -330,7 +343,9 @@ export default function AdminUserManagePage() {
           <button
             onClick={() => {
               setSearchTerm('');
+              setDebouncedSearch('');
               setRoleFilter('all');
+              setCurrentPage(1);
             }}
             style={{
               padding: '0.5rem 0.75rem',
@@ -390,7 +405,7 @@ export default function AdminUserManagePage() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredUsers.length === 0 ? (
+              ) : users.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
@@ -400,7 +415,7 @@ export default function AdminUserManagePage() {
                   </td>
                 </tr>
               ) : (
-                paginatedUsers.map((u) => {
+                users.map((u) => {
                   const isCurrentAdmin = u._id === currentAdmin?._id || u.email === currentAdmin?.email;
                   return (
                     <tr
@@ -545,7 +560,7 @@ export default function AdminUserManagePage() {
 
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredUsers.length}
+          totalItems={totalItems}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={(size) => {

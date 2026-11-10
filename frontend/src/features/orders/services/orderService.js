@@ -42,6 +42,11 @@ export const orderService = {
     const response = await api.patch(`/orders/${id}/status`, { status });
     return response.data?.data;
   },
+
+  async getOrderStats(options = {}) {
+    const response = await api.get('/orders/stats', { signal: options.signal });
+    return response.data?.data || {};
+  },
 };
 
 export default orderService;
