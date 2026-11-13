@@ -304,6 +304,18 @@ export default function MainLayout() {
                   >
                     {user?.name || 'Tài khoản'}
                   </Link>
+                  <Link
+                    to="/orders"
+                    style={{
+                      display: 'block',
+                      color: '#0369a1',
+                      fontSize: '0.75rem',
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Đơn hàng của tôi
+                  </Link>
                   <button
                     onClick={logout}
                     style={{

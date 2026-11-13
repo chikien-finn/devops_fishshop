@@ -7,7 +7,7 @@ import orderService from '../../orders/services/orderService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
 
 export default function CartPage() {
-  const { cart, removeFromCart, updateQuantity, clearCart, totalAmount, totalItems } = useCart();
+  const { cart, removeFromCart, updateQuantity, clearCart, totalAmount, totalItems, syncError } = useCart();
   const { user, isAuthenticated } = useAuth();
 
   const [shippingAddress, setShippingAddress] = useState(user?.address || '');
@@ -16,6 +16,29 @@ export default function CartPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [createdOrder, setCreatedOrder] = useState(null);
+  const [paymentConfig, setPaymentConfig] = useState(null);
+  const [paymentConfigError, setPaymentConfigError] = useState('');
+  const [shippingRegion, setShippingRegion] = useState('central');
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponMessage, setCouponMessage] = useState('');
+  const shippingFees = { north: 35000, central: 25000, south: 30000 };
+  const shippingFee = shippingFees[shippingRegion];
+  const discountAmount = appliedCoupon?.discountAmount || 0;
+  const checkoutTotal = Math.max(0, totalAmount + shippingFee - discountAmount);
+
+  const handleApplyCoupon = async () => {
+    setCouponMessage('');
+    try {
+      const coupon = await orderService.validateCoupon(couponInput, totalAmount);
+      setAppliedCoupon(coupon);
+      setCouponInput(coupon.code);
+      setCouponMessage(`Đã áp dụng mã ${coupon.code}`);
+    } catch (err) {
+      setAppliedCoupon(null);
+      setCouponMessage(err.response?.data?.message || 'Không thể áp dụng mã giảm giá');
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -23,6 +46,15 @@ export default function CartPage() {
       if (!phoneNumber && user.phone) setPhoneNumber(user.phone);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (paymentMethod !== 'banking') return;
+    let active = true;
+    orderService.getPaymentConfig()
+      .then((config) => { if (active) { setPaymentConfig(config); setPaymentConfigError(''); } })
+      .catch(() => { if (active) setPaymentConfigError('Chưa tải được thông tin ngân hàng nhận tiền.'); });
+    return () => { active = false; };
+  }, [paymentMethod]);
 
   const handleCheckout = async (e) => {
     e.preventDefault();
@@ -34,6 +66,11 @@ export default function CartPage() {
     }
     if (!shippingAddress.trim() || !phoneNumber.trim()) {
       setErrorMsg('Vui lòng nhập đầy đủ địa chỉ giao hàng và số điện thoại.');
+      return;
+    }
+
+    if (paymentMethod === 'banking' && !paymentConfig) {
+      setErrorMsg(paymentConfigError || 'Đang tải thông tin chuyển khoản. Vui lòng thử lại sau ít giây.');
       return;
     }
 
@@ -49,6 +86,8 @@ export default function CartPage() {
         shippingAddress: shippingAddress.trim(),
         phoneNumber: phoneNumber.trim(),
         paymentMethod,
+        shippingRegion,
+        couponCode: appliedCoupon?.code || '',
         items,
       });
       setCreatedOrder(order);
@@ -61,6 +100,10 @@ export default function CartPage() {
   };
 
   if (createdOrder) {
+    const transferContent = `AQUA${createdOrder._id?.slice(-8).toUpperCase()}`;
+    const qrUrl = createdOrder.paymentMethod === 'banking' && paymentConfig?.bankBin && paymentConfig?.accountNumber
+      ? `https://img.vietqr.io/image/${encodeURIComponent(paymentConfig.bankBin)}-${encodeURIComponent(paymentConfig.accountNumber)}-compact2.svg?amount=${encodeURIComponent(createdOrder.totalAmount)}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(paymentConfig.accountName || '')}`
+      : '';
     return (
       <div
         style={{
@@ -84,23 +127,22 @@ export default function CartPage() {
         <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
           Tổng thanh toán: <strong style={{ color: '#dc2626' }}>{formatCurrency(createdOrder.totalAmount)}</strong>. Trại cá AquaCraft sẽ đóng oxy và giao hàng trong 24-48h!
         </p>
-        <Link
-          to="/"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            backgroundColor: '#0284c7',
-            color: '#ffffff',
-            padding: '0.625rem 1.25rem',
-            borderRadius: '6px',
-            textDecoration: 'none',
-            fontWeight: 600,
-            fontSize: '0.875rem',
-          }}
-        >
-          <ArrowLeft size={16} /> Tiếp tục mua sắm
-        </Link>
+        {createdOrder.paymentMethod === 'banking' && (
+          <div className="checkout-bank-payment">
+            <h3>Quét QR để chuyển khoản</h3>
+            {qrUrl ? <img src={qrUrl} alt={`Mã QR chuyển khoản ${paymentConfig?.bankName || ''}`} /> : <p>{paymentConfigError || 'Đang tải mã QR…'}</p>}
+            {paymentConfig && <div><strong>{paymentConfig.bankName} · {paymentConfig.accountNumber}</strong><span>{paymentConfig.accountName}</span><span>Số tiền: {formatCurrency(createdOrder.totalAmount)}</span><span>Nội dung: <b>{transferContent}</b></span></div>}
+            <p>Trạng thái thanh toán: <strong>Chờ cửa hàng xác nhận</strong>. Đơn hàng chỉ được cập nhật sau khi đối soát chuyển khoản.</p>
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#0284c7', color: '#ffffff', padding: '0.625rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
+            <ShoppingBag size={16} /> Xem lịch sử đơn hàng
+          </Link>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#f1f5f9', color: '#334155', padding: '0.625rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
+            <ArrowLeft size={16} /> Tiếp tục mua sắm
+          </Link>
+        </div>
       </div>
     );
   }
@@ -125,23 +167,14 @@ export default function CartPage() {
         <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
           Hãy khám phá các giống cá cảnh tuyệt đẹp và phụ kiện tại AquaCraft ngay!
         </p>
-        <Link
-          to="/"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            backgroundColor: '#0284c7',
-            color: '#ffffff',
-            padding: '0.625rem 1.25rem',
-            borderRadius: '6px',
-            textDecoration: 'none',
-            fontWeight: 600,
-            fontSize: '0.875rem',
-          }}
-        >
-          <ArrowLeft size={16} /> Quay lại mua sắm
-        </Link>
+        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#0284c7', color: '#ffffff', padding: '0.625rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
+            <ShoppingBag size={16} /> Xem lịch sử đơn hàng
+          </Link>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#f1f5f9', color: '#334155', padding: '0.625rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
+            <ArrowLeft size={16} /> Tiếp tục mua sắm
+          </Link>
+        </div>
       </div>
     );
   }
@@ -340,9 +373,29 @@ export default function CartPage() {
               borderBottom: '1px solid #f1f5f9',
             }}
           >
-            <span>Phí vận chuyển (Oxy 48h):</span>
-            <span style={{ color: '#059669', fontWeight: 600 }}>Miễn phí</span>
+            <span>Phí vận chuyển:</span>
+            <span style={{ color: '#0f172a', fontWeight: 600 }}>{formatCurrency(shippingFee)}</span>
           </div>
+
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.25rem' }}>Khu vực giao hàng</label>
+            <select value={shippingRegion} onChange={(e) => setShippingRegion(e.target.value)} style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', background: '#fff' }}>
+              <option value="north">Miền Bắc · 35.000đ</option>
+              <option value="central">Miền Trung · 25.000đ</option>
+              <option value="south">Miền Nam · 30.000đ</option>
+            </select>
+          </div>
+
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.25rem' }}>Mã giảm giá</label>
+            <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <input value={couponInput} onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setAppliedCoupon(null); setCouponMessage(''); }} placeholder="Nhập mã voucher" style={{ minWidth: 0, flex: 1, padding: '0.5rem 0.65rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+              <button type="button" onClick={handleApplyCoupon} style={{ padding: '0.5rem 0.7rem', border: '1px solid #0284c7', color: '#0284c7', borderRadius: '6px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>Áp dụng</button>
+            </div>
+            {couponMessage && <p style={{ margin: '0.35rem 0 0', color: appliedCoupon ? '#059669' : '#dc2626', fontSize: '0.75rem' }}>{couponMessage}</p>}
+          </div>
+
+          {discountAmount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669', fontSize: '0.875rem', marginBottom: '0.75rem' }}><span>Giảm giá ({appliedCoupon.code}):</span><strong>-{formatCurrency(discountAmount)}</strong></div>}
 
           <div
             style={{
@@ -355,7 +408,7 @@ export default function CartPage() {
             }}
           >
             <span>Thành tiền:</span>
-            <span style={{ color: '#dc2626' }}>{formatCurrency(totalAmount)}</span>
+            <span style={{ color: '#dc2626' }}>{formatCurrency(checkoutTotal)}</span>
           </div>
 
           <form onSubmit={handleCheckout} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

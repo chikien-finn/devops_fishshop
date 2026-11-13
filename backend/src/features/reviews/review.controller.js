@@ -10,6 +10,15 @@ export const getProductReviews = async (req, res, next) => {
   }
 };
 
+export const getMyProductReview = async (req, res, next) => {
+  try {
+    const review = await reviewService.getUserReview(req.user.id, req.params.productId);
+    sendSuccess(res, review, 'Lấy đánh giá của bạn thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createReview = async (req, res, next) => {
   try {
     const review = await reviewService.addReview(

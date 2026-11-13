@@ -37,6 +37,10 @@ services:
       JWT_SECRET: ${JWT_SECRET:-aquacraft_super_secret_jwt_key_2026}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       CLIENT_URL: ${CLIENT_URL:-http://localhost}
+      BANK_BIN: ${BANK_BIN:-970436}
+      BANK_NAME: ${BANK_NAME:-Vietcombank}
+      BANK_ACCOUNT_NUMBER: ${BANK_ACCOUNT_NUMBER:-1033805613}
+      BANK_ACCOUNT_NAME: ${BANK_ACCOUNT_NAME:-NGUYEN THI THANH THU}
     depends_on:
       mongodb:
         condition: service_healthy

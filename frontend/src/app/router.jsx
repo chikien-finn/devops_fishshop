@@ -14,6 +14,7 @@ import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage.jsx';
 import ProfilePage from '../features/users/pages/ProfilePage.jsx';
 import AdminUserManagePage from '../features/users/pages/AdminUserManagePage.jsx';
 import AdminOrdersPage from '../features/orders/pages/AdminOrdersPage.jsx';
+import MyOrdersPage from '../features/orders/pages/MyOrdersPage.jsx';
 import TankModelsPage from '../features/content/pages/TankModelsPage.jsx';
 import KnowledgePage from '../features/content/pages/KnowledgePage.jsx';
 import AboutPage from '../features/content/pages/AboutPage.jsx';
@@ -98,6 +99,10 @@ export const router = createBrowserRouter([
       {
         path: 'profile',
         element: <ProfilePage />,
+      },
+      {
+        path: 'orders',
+        element: <MyOrdersPage />,
       },
     ],
   },

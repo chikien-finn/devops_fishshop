@@ -29,3 +29,12 @@ export const removeFromCart = async (req, res, next) => {
   }
 };
 
+export const syncCart = async (req, res, next) => {
+  try {
+    const cart = await cartService.syncCartItems(req.user.id, req.body.items);
+    sendSuccess(res, cart, 'Đã đồng bộ giỏ hàng');
+  } catch (error) {
+    next(error);
+  }
+};
+

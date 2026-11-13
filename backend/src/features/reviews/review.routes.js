@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { getProductReviews, createReview } from './review.controller.js';
+import { getProductReviews, getMyProductReview, createReview } from './review.controller.js';
 import { verifyToken } from '../../middlewares/auth.middleware.js';
 
 const router = Router();
 
 // Public
+router.get('/product/:productId/mine', verifyToken, getMyProductReview);
 router.get('/product/:productId', getProductReviews);
 
 // Protected

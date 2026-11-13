@@ -1,5 +1,15 @@
 import { sendSuccess } from '../../utils/responseHandler.js';
 import * as orderService from './order.service.js';
+import { ENV } from '../../configs/env.config.js';
+
+export const getPaymentConfig = async (req, res) => {
+  sendSuccess(res, {
+    bankBin: ENV.BANK_BIN,
+    bankName: ENV.BANK_NAME,
+    accountNumber: ENV.BANK_ACCOUNT_NUMBER,
+    accountName: ENV.BANK_ACCOUNT_NAME,
+  }, 'Lấy thông tin chuyển khoản thành công');
+};
 
 export const createOrder = async (req, res, next) => {
   try {
@@ -19,6 +29,15 @@ export const getMyOrders = async (req, res, next) => {
   }
 };
 
+export const cancelMyOrder = async (req, res, next) => {
+  try {
+    const order = await orderService.cancelUserOrder(req.user.id, req.params.id);
+    sendSuccess(res, order, 'Hủy đơn hàng thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getAllOrders = async (req, res, next) => {
   try {
     const result = await orderService.getAllOrders(req.query);
@@ -33,6 +52,15 @@ export const updateStatus = async (req, res, next) => {
     const { status } = req.body;
     const order = await orderService.updateOrderStatus(req.params.id, status);
     sendSuccess(res, order, 'Cập nhật trạng thái đơn hàng thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePaymentStatus = async (req, res, next) => {
+  try {
+    const order = await orderService.updateOrderPaymentStatus(req.params.id, req.body.paymentStatus);
+    sendSuccess(res, order, 'Cập nhật trạng thái thanh toán thành công');
   } catch (error) {
     next(error);
   }

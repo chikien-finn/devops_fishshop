@@ -12,6 +12,7 @@ import productRoutes from './features/products/product.routes.js';
 import cartRoutes from './features/cart/cart.routes.js';
 import orderRoutes from './features/orders/order.routes.js';
 import reviewRoutes from './features/reviews/review.routes.js';
+import couponRoutes from './features/coupons/coupon.routes.js';
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/coupons', couponRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

@@ -52,6 +52,16 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handlePaymentStatusChange = async (orderId, paymentStatus) => {
+    try {
+      const updated = await orderService.updatePaymentStatus(orderId, paymentStatus);
+      setOrders((prev) => prev.map((order) => order._id === orderId ? { ...order, paymentStatus: updated.paymentStatus } : order));
+    } catch (err) {
+      alert('Lỗi cập nhật thanh toán: ' + (err.response?.data?.message || 'Vui lòng thử lại.'));
+      fetchOrders();
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div
@@ -160,6 +170,20 @@ export default function AdminOrdersPage() {
                       <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748b' }}>
                         {order.paymentMethod === 'banking' ? 'Chuyển khoản' : 'COD'}
                       </div>
+                      {order.paymentMethod === 'banking' && (
+                        <select
+                          aria-label="Trạng thái thanh toán"
+                          value={order.paymentStatus || 'pending'}
+                          onChange={(event) => handlePaymentStatusChange(order._id, event.target.value)}
+                          style={{ marginTop: '0.35rem', maxWidth: '140px', padding: '0.3rem', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '0.75rem', background: '#fff' }}
+                        >
+                          <option value="pending">Chờ thanh toán</option>
+                          <option value="paid">Đã thanh toán</option>
+                          <option value="failed">Thanh toán lỗi</option>
+                          <option value="refunded">Đã hoàn tiền</option>
+                          <option value="expired">Hết hạn thanh toán</option>
+                        </select>
+                      )}
                     </td>
                     <td style={{ padding: '0.85rem 1rem' }}>
                       <span

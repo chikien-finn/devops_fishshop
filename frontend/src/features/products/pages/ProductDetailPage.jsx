@@ -25,6 +25,7 @@ import { collectionsData } from '../data/collectionsData.js';
 import productService, { isRequestCanceled } from '../services/productService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
 import { formatCatalogProduct } from '../utils/productMapper.js';
+import ProductReviews from '../../reviews/components/ProductReviews.jsx';
 
 // Flatten all thienduc and collection products for fast lookup
 function getAllThienducProducts() {
@@ -835,6 +836,8 @@ export default function ProductDetailPage() {
           </div>
         )}
       </section>
+
+      <ProductReviews productId={product._id} />
 
       {/* RELATED PRODUCTS */}
       {relatedProducts.length > 0 && (
