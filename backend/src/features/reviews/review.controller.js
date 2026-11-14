@@ -19,6 +19,15 @@ export const getMyProductReview = async (req, res, next) => {
   }
 };
 
+export const checkReviewEligibility = async (req, res, next) => {
+  try {
+    const status = await reviewService.checkReviewEligibility(req.user.id, req.params.productId);
+    sendSuccess(res, status, 'Kiểm tra quyền đánh giá thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createReview = async (req, res, next) => {
   try {
     const review = await reviewService.addReview(
@@ -31,4 +40,3 @@ export const createReview = async (req, res, next) => {
     next(error);
   }
 };
-

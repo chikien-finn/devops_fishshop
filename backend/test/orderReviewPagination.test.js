@@ -102,3 +102,24 @@ test('Protected auth, upload, order stats, and paginated users routes enforce au
   }
 });
 
+test('Member 4: Dashboard & Review eligibility endpoints enforce authentication and protection', async () => {
+  const server = app.listen(0);
+  const { port } = server.address();
+  try {
+    const [dashStatsRes, recentOrdersRes, topProductsRes, reviewEligRes] = await Promise.all([
+      fetch(`http://localhost:${port}/api/admin/dashboard/stats`),
+      fetch(`http://localhost:${port}/api/admin/dashboard/recent-orders`),
+      fetch(`http://localhost:${port}/api/admin/dashboard/top-products`),
+      fetch(`http://localhost:${port}/api/reviews/product/64f1a2b3c4d5e6f7a8b9c0d1/eligibility`),
+    ]);
+
+    assert.strictEqual(dashStatsRes.status, 401, 'Dashboard stats must be protected');
+    assert.strictEqual(recentOrdersRes.status, 401, 'Recent orders must be protected');
+    assert.strictEqual(topProductsRes.status, 401, 'Top products must be protected');
+    assert.strictEqual(reviewEligRes.status, 401, 'Review eligibility must require login');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+

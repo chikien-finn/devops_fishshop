@@ -1,94 +1,105 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Package,
   Fish,
   ShoppingBag,
   Users,
-  AlertTriangle,
-  ArrowRight,
+  DollarSign,
   TrendingUp,
-  Droplets,
+  Package,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Truck,
+  XCircle,
+  ArrowRight,
   RefreshCw,
-  Plus,
+  Award,
+  Layers,
 } from 'lucide-react';
+import dashboardApi from '../services/dashboardApi.js';
 import productService, { isRequestCanceled } from '../../products/services/productService.js';
-import orderService from '../../orders/services/orderService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
 import Pagination from '../../../components/common/Pagination.jsx';
 
-const EMPTY_STATS = {
-  total: 0,
-  fishCount: 0,
-  plantCount: 0,
-  foodCount: 0,
-  otherCount: 0,
-  totalStock: 0,
-  totalInventoryValue: 0,
-  freshwaterCount: 0,
-  saltwaterCount: 0,
-  lowStockCount: 0,
-};
-
-const EMPTY_ORDER_STATS = {
-  totalOrders: 0,
-  pendingCount: 0,
-  confirmedCount: 0,
-  shippingCount: 0,
-  deliveredCount: 0,
-  cancelledCount: 0,
-  totalRevenue: 0,
-  deliveredRevenue: 0,
+const DEFAULT_STATS = {
+  revenue: {
+    totalRevenue: 0,
+    deliveredRevenue: 0,
+    averageOrderValue: 0,
+  },
+  orders: {
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    shipping: 0,
+    delivered: 0,
+    cancelled: 0,
+    successRate: 0,
+  },
+  products: {
+    total: 0,
+    totalStock: 0,
+    totalInventoryValue: 0,
+    fishCount: 0,
+    plantCount: 0,
+    foodCount: 0,
+    accessoryCount: 0,
+    freshwaterCount: 0,
+    saltwaterCount: 0,
+    lowStockCount: 0,
+  },
+  customers: {
+    total: 0,
+    customers: 0,
+    admins: 0,
+  },
+  reviews: {
+    total: 0,
+    avgRating: 5.0,
+  },
 };
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState(EMPTY_STATS);
-  const [orderStats, setOrderStats] = useState(EMPTY_ORDER_STATS);
+  const [stats, setStats] = useState(DEFAULT_STATS);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
   const [lowStockItems, setLowStockItems] = useState([]);
   const [lowStockTotal, setLowStockTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [lowStockPage, setLowStockPage] = useState(1);
   const [lowStockPageSize, setLowStockPageSize] = useState(10);
 
-  const fetchStatsData = useCallback(async (signal) => {
+  // Tải dữ liệu Dashboard từ các API chuyên biệt của Thành viên 4
+  const fetchDashboardData = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) setRefreshing(true);
+    else setLoading(true);
+
     try {
-      const [data, ordStats] = await Promise.all([
-        productService.getProductStats({ signal }),
-        orderService.getOrderStats({ signal }).catch(() => EMPTY_ORDER_STATS),
+      const [statsRes, ordersRes, topRes] = await Promise.all([
+        dashboardApi.getStats().catch(() => DEFAULT_STATS),
+        dashboardApi.getRecentOrders(5).catch(() => []),
+        dashboardApi.getTopProducts(5).catch(() => []),
       ]);
-      setStats({
-        total: data.total || 0,
-        fishCount: data.fish || 0,
-        plantCount: data.plant || 0,
-        foodCount: data.food || 0,
-        otherCount: data.accessory || 0,
-        totalStock: data.totalStock || 0,
-        totalInventoryValue: data.totalInventoryValue || 0,
-        freshwaterCount: data.freshwaterCount || 0,
-        saltwaterCount: data.saltwaterCount || 0,
-        lowStockCount: data.lowStockCount || 0,
-      });
-      setOrderStats({
-        totalOrders: ordStats.totalOrders || 0,
-        pendingCount: ordStats.pendingCount || 0,
-        confirmedCount: ordStats.confirmedCount || 0,
-        shippingCount: ordStats.shippingCount || 0,
-        deliveredCount: ordStats.deliveredCount || 0,
-        cancelledCount: ordStats.cancelledCount || 0,
-        totalRevenue: ordStats.totalRevenue || 0,
-        deliveredRevenue: ordStats.deliveredRevenue || 0,
-      });
-    } catch (err) {
-      if (!isRequestCanceled(err)) {
-        console.error('Error fetching dashboard stats:', err);
+
+      if (statsRes) {
+        setStats(statsRes);
       }
+      setRecentOrders(ordersRes || []);
+      setTopProducts(topRes || []);
+    } catch (err) {
+      console.error('Lỗi khi tải dữ liệu dashboard:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
+  // Tải danh sách cá cảnh / sản phẩm sắp hết hàng
   const fetchLowStockData = useCallback(
     async ({ signal, useCache = true } = {}) => {
       try {
-        setLoading(true);
         const res = await productService.getProducts(
           {
             all: 'true',
@@ -99,23 +110,20 @@ export default function AdminDashboardPage() {
           },
           { signal, useCache }
         );
-        setLowStockItems(res.items);
-        setLowStockTotal(res.pagination.totalItems);
-        setLoading(false);
+        setLowStockItems(res.items || []);
+        setLowStockTotal(res.pagination?.totalItems || 0);
       } catch (err) {
-        if (isRequestCanceled(err)) return;
-        console.error('Error fetching low stock items:', err);
-        setLoading(false);
+        if (!isRequestCanceled(err)) {
+          console.error('Lỗi khi tải sản phẩm tồn ít:', err);
+        }
       }
     },
     [lowStockPage, lowStockPageSize]
   );
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetchStatsData(controller.signal);
-    return () => controller.abort();
-  }, [fetchStatsData]);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -123,14 +131,52 @@ export default function AdminDashboardPage() {
     return () => controller.abort();
   }, [fetchLowStockData]);
 
-  const fetchDashboardData = () => {
-    fetchStatsData();
+  const handleRefresh = () => {
+    fetchDashboardData(true);
     fetchLowStockData({ useCache: false });
   };
 
+  // Helper render badge trạng thái đơn hàng
+  const renderStatusBadge = (status) => {
+    switch (status) {
+      case 'pending':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#fef3c7', color: '#b45309', fontSize: '0.75rem', fontWeight: 600 }}>
+            <Clock size={12} /> Chờ duyệt
+          </span>
+        );
+      case 'confirmed':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.75rem', fontWeight: 600 }}>
+            <CheckCircle2 size={12} /> Đã xác nhận
+          </span>
+        );
+      case 'shipping':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#f3e8ff', color: '#7e22ce', fontSize: '0.75rem', fontWeight: 600 }}>
+            <Truck size={12} /> Đang giao
+          </span>
+        );
+      case 'delivered':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#dcfce7', color: '#15803d', fontSize: '0.75rem', fontWeight: 600 }}>
+            <CheckCircle2 size={12} /> Đã giao
+          </span>
+        );
+      case 'cancelled':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '0.2rem 0.5rem', borderRadius: '4px', backgroundColor: '#fee2e2', color: '#b91c1c', fontSize: '0.75rem', fontWeight: 600 }}>
+            <XCircle size={12} /> Đã hủy
+          </span>
+        );
+      default:
+        return <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{status}</span>;
+    }
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Dashboard Header */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', paddingBottom: '2rem' }}>
+      {/* Header Dashboard */}
       <div
         style={{
           display: 'flex',
@@ -138,28 +184,35 @@ export default function AdminDashboardPage() {
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '1rem',
+          backgroundColor: '#ffffff',
+          padding: '1.25rem 1.5rem',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0',
         }}
       >
         <div>
-          <h1
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 700,
-              color: '#0f172a',
-              letterSpacing: '-0.02em',
-              margin: 0,
-            }}
-          >
-            Bảng Điều Khiển Tổng Quan (Dashboard)
-          </h1>
-          <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-            Theo dõi tổng thể hệ thống AquaCraft, tồn kho các dòng cá cảnh, giá trị hàng hóa và đơn hàng.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h1
+              style={{
+                fontSize: '1.5rem',
+                fontWeight: 700,
+                color: '#0f172a',
+                letterSpacing: '-0.02em',
+                margin: 0,
+              }}
+            >
+              Hệ Thống Thống Kê &amp; Báo Cáo (Admin Dashboard)
+            </h1>
+          </div>
+          <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '0.35rem', margin: 0 }}>
+            Theo dõi thời gian thực doanh thu bán hàng, tiến độ xử lý đơn, tồn kho cá cảnh và sản phẩm bán chạy.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <button
-            onClick={fetchDashboardData}
+            onClick={handleRefresh}
+            disabled={refreshing}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -167,64 +220,68 @@ export default function AdminDashboardPage() {
               padding: '0.5rem 0.875rem',
               backgroundColor: '#ffffff',
               border: '1px solid #cbd5e1',
-              borderRadius: '4px',
-              color: '#475569',
+              borderRadius: '6px',
+              color: '#334155',
               fontSize: '0.875rem',
-              fontWeight: 500,
-              cursor: 'pointer',
+              fontWeight: 600,
+              cursor: refreshing ? 'not-allowed' : 'pointer',
             }}
           >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-            <span>Làm mới số liệu</span>
+            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+            <span>{refreshing ? 'Đang cập nhật…' : 'Làm mới'}</span>
           </button>
 
           <Link
-            to="/admin/products?category=fish"
+            to="/admin/orders"
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
+              gap: '0.375rem',
               padding: '0.5rem 1rem',
               backgroundColor: '#0284c7',
               color: '#ffffff',
-              borderRadius: '4px',
+              borderRadius: '6px',
               fontSize: '0.875rem',
               fontWeight: 600,
               textDecoration: 'none',
             }}
           >
-            <Fish size={16} />
-            <span>Xem quản lý cá cảnh</span>
+            <ShoppingBag size={16} />
+            <span>Duyệt đơn hàng</span>
           </Link>
         </div>
       </div>
 
-      {/* KPI Cards Row - White Theme with Crisp Borders */}
+      {/* 4 Thẻ Tổng Quan (Cards KPI) */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
           gap: '1rem',
         }}
       >
-        {/* Card 1 */}
+        {/* Card 1: Doanh thu */}
         <div
           style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '4px',
+            borderRadius: '8px',
             padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              Tổng loại cá cảnh
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+              Tổng Doanh Thu
             </span>
             <div
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '4px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
                 backgroundColor: '#eff6ff',
                 color: '#0284c7',
                 display: 'flex',
@@ -232,71 +289,40 @@ export default function AdminDashboardPage() {
                 justifyContent: 'center',
               }}
             >
-              <Fish size={18} />
+              <DollarSign size={20} />
             </div>
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', marginTop: '0.5rem' }}>
-            {stats.fishCount} <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#64748b' }}>giống cá</span>
+          <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', marginTop: '0.5rem' }}>
+            {formatCurrency(stats.revenue?.totalRevenue || 0)}
           </div>
-          <div style={{ fontSize: '0.8125rem', color: '#0284c7', marginTop: '0.35rem' }}>
-            Betta, Dĩa, Nemo, Neon...
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#16a34a', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+            <span>Đã giao thành công:</span>
+            <strong>{formatCurrency(stats.revenue?.deliveredRevenue || 0)}</strong>
           </div>
         </div>
 
-        {/* Card 2 */}
+        {/* Card 2: Đơn hàng */}
         <div
           style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '4px',
+            borderRadius: '8px',
             padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              Tổng số lượng tồn kho
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+              Tổng Đơn Hàng
             </span>
             <div
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '4px',
-                backgroundColor: '#f0fdf4',
-                color: '#16a34a',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Package size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', marginTop: '0.5rem' }}>
-            {stats.totalStock} <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#64748b' }}>cá & món</span>
-          </div>
-          <div style={{ fontSize: '0.8125rem', color: '#16a34a', marginTop: '0.35rem' }}>
-            Sẵn sàng giao cho khách
-          </div>
-        </div>
-
-        {/* Card 3 */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '4px',
-            padding: '1.25rem',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              Giá trị kho hàng ước tính
-            </span>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '4px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
                 backgroundColor: '#faf5ff',
                 color: '#9333ea',
                 display: 'flex',
@@ -304,489 +330,485 @@ export default function AdminDashboardPage() {
                 justifyContent: 'center',
               }}
             >
-              <TrendingUp size={18} />
+              <ShoppingBag size={20} />
             </div>
           </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', marginTop: '0.5rem' }}>
-            {formatCurrency(stats.totalInventoryValue)}
+          <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', marginTop: '0.5rem' }}>
+            {(stats.orders?.total || 0).toLocaleString()} <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#64748b' }}>đơn</span>
           </div>
-          <div style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '0.35rem' }}>
-            Tính theo đơn giá niêm yết
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+            <span>Chờ duyệt: <strong style={{ color: '#b45309' }}>{stats.orders?.pending || 0}</strong></span>
+            <span>Đã giao: <strong style={{ color: '#15803d' }}>{stats.orders?.delivered || 0}</strong></span>
           </div>
         </div>
 
-        {/* Card 4 */}
+        {/* Card 3: Sản phẩm cá cảnh */}
         <div
           style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '4px',
+            borderRadius: '8px',
             padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              Cảnh báo tồn kho ít
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+              Cá Cảnh &amp; Thủy Sinh
             </span>
             <div
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '4px',
-                backgroundColor: stats.lowStockCount > 0 ? '#fef2f2' : '#f0fdf4',
-                color: stats.lowStockCount > 0 ? '#dc2626' : '#16a34a',
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                backgroundColor: '#f0fdf4',
+                color: '#16a34a',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <AlertTriangle size={18} />
+              <Fish size={20} />
             </div>
           </div>
-          <div
-            style={{
-              fontSize: '1.75rem',
-              fontWeight: 700,
-              color: stats.lowStockCount > 0 ? '#dc2626' : '#16a34a',
-              marginTop: '0.5rem',
-            }}
-          >
-            {stats.lowStockCount}{' '}
-            <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#64748b' }}>mục cần chú ý</span>
+          <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', marginTop: '0.5rem' }}>
+            {(stats.products?.total || 0).toLocaleString()} <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#64748b' }}>mẫu cá</span>
           </div>
-          <div style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '0.35rem' }}>
-            {stats.lowStockCount > 0 ? 'Cần nhập thêm đợt mới' : 'Kho hàng dồi dào'}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+            <span>Tổng tồn kho: <strong>{(stats.products?.totalStock || 0).toLocaleString()}</strong> con</span>
+            <span>Cá cảnh: <strong>{stats.products?.fishCount || 0}</strong></span>
+          </div>
+        </div>
+
+        {/* Card 4: Khách hàng & Người dùng */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+              Khách Hàng Thành Viên
+            </span>
+            <div
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                backgroundColor: '#fff7ed',
+                color: '#ea580c',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Users size={20} />
+            </div>
+          </div>
+          <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', marginTop: '0.5rem' }}>
+            {(stats.customers?.total || 0).toLocaleString()} <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#64748b' }}>tài khoản</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+            <span>Đánh giá: <strong>{stats.reviews?.total || 0}</strong> ({stats.reviews?.avgRating || 5.0}★)</span>
+            <span>Quản trị: <strong>{stats.customers?.admins || 1}</strong></span>
           </div>
         </div>
       </div>
 
-      {/* Order & Revenue Overview Card */}
+      {/* Biểu đồ Thống kê (Charts Row) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+          gap: '1.25rem',
+        }}
+      >
+        {/* Biểu đồ 1: Phân bổ Đơn hàng theo trạng thái */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '1.5rem',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+              Tiến Độ Xử Lý &amp; Trạng Thái Đơn Hàng
+            </h2>
+            <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: 600, backgroundColor: '#eff6ff', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+              Tỷ lệ giao: {stats.orders?.successRate || 0}%
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+            {[
+              { label: 'Chờ duyệt', count: stats.orders?.pending || 0, color: '#f59e0b' },
+              { label: 'Đã xác nhận', count: stats.orders?.confirmed || 0, color: '#0284c7' },
+              { label: 'Đang vận chuyển', count: stats.orders?.shipping || 0, color: '#8b5cf6' },
+              { label: 'Đã giao thành công', count: stats.orders?.delivered || 0, color: '#16a34a' },
+              { label: 'Đã hủy', count: stats.orders?.cancelled || 0, color: '#ef4444' },
+            ].map((item) => {
+              const totalOrd = stats.orders?.total || 1;
+              const pct = stats.orders?.total > 0 ? Math.round((item.count / totalOrd) * 100) : 0;
+              return (
+                <div key={item.label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', marginBottom: '0.25rem' }}>
+                    <span style={{ color: '#475569', fontWeight: 500 }}>{item.label}</span>
+                    <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                      {item.count} đơn ({pct}%)
+                    </span>
+                  </div>
+                  <div style={{ height: '8px', backgroundColor: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${pct}%`,
+                        backgroundColor: item.color,
+                        borderRadius: '999px',
+                        transition: 'width 0.4s ease',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Biểu đồ 2: Cơ cấu phân bổ danh mục cá cảnh & phụ kiện */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '1.5rem',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+              Cơ Cấu Danh Mục Trong Kho
+            </h2>
+            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+              Giá trị kho: <strong>{formatCurrency(stats.products?.totalInventoryValue || 0)}</strong>
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+            {[
+              { label: '🐠 Cá cảnh các loại', count: stats.products?.fishCount || 0, color: '#0284c7' },
+              { label: '🌿 Cây thủy sinh', count: stats.products?.plantCount || 0, color: '#16a34a' },
+              { label: '🥣 Thức ăn cá cảnh', count: stats.products?.foodCount || 0, color: '#f59e0b' },
+              { label: '📦 Hồ kính & Phụ kiện', count: stats.products?.accessoryCount || 0, color: '#8b5cf6' },
+            ].map((cat) => {
+              const totalPrd = stats.products?.total || 1;
+              const pct = stats.products?.total > 0 ? Math.round((cat.count / totalPrd) * 100) : 0;
+              return (
+                <div key={cat.label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', marginBottom: '0.25rem' }}>
+                    <span style={{ color: '#475569', fontWeight: 500 }}>{cat.label}</span>
+                    <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                      {cat.count} loại ({pct}%)
+                    </span>
+                  </div>
+                  <div style={{ height: '8px', backgroundColor: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${pct}%`,
+                        backgroundColor: cat.color,
+                        borderRadius: '999px',
+                        transition: 'width 0.4s ease',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* 2 Bảng Dữ Liệu Lớn: 5 Đơn Hàng Mới Nhất & Top Sản Phẩm Bán Chạy */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+          gap: '1.25rem',
+        }}
+      >
+        {/* Bảng 1: 5 Đơn hàng mới nhất cần xử lý */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '1.5rem',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                5 Đơn Hàng Mới Nhất
+              </h2>
+              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Đơn đặt gần đây cần duyệt &amp; đóng gói</span>
+            </div>
+            <Link
+              to="/admin/orders"
+              style={{ fontSize: '0.8125rem', color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}
+            >
+              Xem tất cả →
+            </Link>
+          </div>
+
+          {recentOrders.length === 0 ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+              Chưa có đơn hàng nào được ghi nhận.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              {recentOrders.map((ord) => (
+                <div
+                  key={ord._id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem',
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <strong style={{ fontSize: '0.875rem', color: '#0284c7' }}>{ord.orderCode}</strong>
+                      <span style={{ fontSize: '0.8125rem', color: '#0f172a', fontWeight: 600 }}>
+                        {ord.customerName}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                      {ord.itemCount} sản phẩm • {new Date(ord.createdAt).toLocaleDateString('vi-VN')}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>
+                        {formatCurrency(ord.totalAmount)}
+                      </div>
+                      <div style={{ marginTop: '0.15rem' }}>{renderStatusBadge(ord.status)}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Bảng 2: Top 5 Sản phẩm bán chạy nhất */}
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '1.5rem',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                Top 5 Cá Cảnh &amp; Thủy Sinh Bán Chạy
+              </h2>
+              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Xếp hạng theo số lượng và doanh thu mang lại</span>
+            </div>
+            <Link
+              to="/admin/products"
+              style={{ fontSize: '0.8125rem', color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}
+            >
+              Quản lý kho →
+            </Link>
+          </div>
+
+          {topProducts.length === 0 ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+              Chưa có dữ liệu bán chạy.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              {topProducts.map((prod, idx) => (
+                <div
+                  key={prod._id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.625rem 0.75rem',
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                    {/* Badge Thứ hạng #1, #2... */}
+                    <div
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        backgroundColor: idx === 0 ? '#fef08a' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#fed7aa' : '#f1f5f9',
+                        color: idx === 0 ? '#854d0e' : idx === 1 ? '#475569' : idx === 2 ? '#9a3412' : '#64748b',
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {idx + 1}
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>
+                        {prod.name}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        Đơn giá: {formatCurrency(prod.price)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#16a34a' }}>
+                      Đã bán: {prod.soldQuantity || 0}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                      Thu về: {formatCurrency(prod.totalRevenue || 0)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bảng Cá cảnh & Sản phẩm cần lưu ý (Tồn kho ít) */}
       <div
         style={{
           backgroundColor: '#ffffff',
           border: '1px solid #e2e8f0',
-          borderRadius: '4px',
-          padding: '1.25rem 1.5rem',
+          borderRadius: '8px',
+          padding: '1.5rem',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ShoppingBag size={18} color="#0284c7" />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div>
             <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-              Thống Kê Đơn Hàng & Doanh Thu
+              Cảnh Báo Cá Cảnh &amp; Sản Phẩm Tồn Kho Ít (&le; 5 món)
             </h2>
+            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Cần chuẩn bị kế hoạch dưỡng hoặc nhập đợt cá mới</span>
           </div>
           <Link
-            to="/admin/orders"
-            style={{ fontSize: '0.8125rem', color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}
+            to="/admin/products?maxStock=5"
+            style={{ fontSize: '0.8125rem', color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}
           >
-            Xem tất cả đơn hàng →
+            Quản lý cá cảnh →
           </Link>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))', gap: '0.875rem' }}>
-          <div style={{ padding: '0.875rem', backgroundColor: '#f8fafc', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>TỔNG ĐƠN HÀNG</div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: '#0f172a', marginTop: '0.25rem' }}>
-              {orderStats.totalOrders.toLocaleString()}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '0.2rem' }}>
-              Chờ duyệt: {orderStats.pendingCount.toLocaleString()} | Đang giao: {orderStats.shippingCount.toLocaleString()}
-            </div>
+        {lowStockTotal === 0 ? (
+          <div style={{ padding: '1.5rem', textAlign: 'center', color: '#16a34a', fontSize: '0.875rem' }}>
+            ✓ Tất cả các dòng cá và sản phẩm đều đang duy trì mức tồn kho dồi dào!
           </div>
-
-          <div style={{ padding: '0.875rem', backgroundColor: '#f0fdf4', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#166534' }}>ĐÃ GIAO THÀNH CÔNG</div>
-            <div style={{ fontSize: '1.35rem', fontWeight: 700, color: '#15803d', marginTop: '0.25rem' }}>
-              {orderStats.deliveredCount.toLocaleString()} đơn
-            </div>
-            <div style={{ fontSize: '0.75rem', color: '#166534', marginTop: '0.2rem' }}>
-              Đã xác nhận: {orderStats.confirmedCount.toLocaleString()} đơn
-            </div>
-          </div>
-
-          <div style={{ padding: '0.875rem', backgroundColor: '#eff6ff', borderRadius: '4px', border: '1px solid #bfdbfe' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1e40af' }}>DOANH THU ĐÃ GIAO</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0284c7', marginTop: '0.25rem' }}>
-              {formatCurrency(orderStats.deliveredRevenue)}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '0.2rem' }}>
-              Đơn hoàn thành
-            </div>
-          </div>
-
-          <div style={{ padding: '0.875rem', backgroundColor: '#faf5ff', borderRadius: '4px', border: '1px solid #e9d5ff' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b21a8' }}>TỔNG GIÁ TRỊ ĐƠN (TRỪ HỦY)</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#9333ea', marginTop: '0.25rem' }}>
-              {formatCurrency(orderStats.totalRevenue)}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
-              Đơn đã hủy: {orderStats.cancelledCount.toLocaleString()}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Grid: 2 Columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
-        {/* Left Column: Phân bố danh mục & Cảnh báo tồn */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Card: Phân bố danh mục */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '4px',
-              padding: '1.5rem',
-            }}
-          >
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>
-              Phân Bố Cơ Cấu Danh Mục
-            </h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Fish */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-                  <span style={{ fontWeight: 600, color: '#334155' }}>🐠 Cá cảnh các loại</span>
-                  <span style={{ color: '#0284c7', fontWeight: 600 }}>
-                    {stats.fishCount} mục ({stats.total > 0 ? Math.round((stats.fishCount / stats.total) * 100) : 0}%)
-                  </span>
-                </div>
-                <div style={{ height: '8px', backgroundColor: '#f1f5f9', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${stats.total > 0 ? (stats.fishCount / stats.total) * 100 : 0}%`,
-                      backgroundColor: '#0284c7',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Plants */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-                  <span style={{ fontWeight: 600, color: '#334155' }}>🌿 Cây thủy sinh</span>
-                  <span style={{ color: '#16a34a', fontWeight: 600 }}>
-                    {stats.plantCount} mục ({stats.total > 0 ? Math.round((stats.plantCount / stats.total) * 100) : 0}%)
-                  </span>
-                </div>
-                <div style={{ height: '8px', backgroundColor: '#f1f5f9', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${stats.total > 0 ? (stats.plantCount / stats.total) * 100 : 0}%`,
-                      backgroundColor: '#16a34a',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Food */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-                  <span style={{ fontWeight: 600, color: '#334155' }}>🥣 Thức ăn & Dinh dưỡng</span>
-                  <span style={{ color: '#f59e0b', fontWeight: 600 }}>
-                    {stats.foodCount} mục ({stats.total > 0 ? Math.round((stats.foodCount / stats.total) * 100) : 0}%)
-                  </span>
-                </div>
-                <div style={{ height: '8px', backgroundColor: '#f1f5f9', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${stats.total > 0 ? (stats.foodCount / stats.total) * 100 : 0}%`,
-                      backgroundColor: '#f59e0b',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Tanks & Accessories */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-                  <span style={{ fontWeight: 600, color: '#334155' }}>📦 Hồ kính & Phụ kiện</span>
-                  <span style={{ color: '#8b5cf6', fontWeight: 600 }}>
-                    {stats.otherCount} mục ({stats.total > 0 ? Math.round((stats.otherCount / stats.total) * 100) : 0}%)
-                  </span>
-                </div>
-                <div style={{ height: '8px', backgroundColor: '#f1f5f9', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${stats.total > 0 ? (stats.otherCount / stats.total) * 100 : 0}%`,
-                      backgroundColor: '#8b5cf6',
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card: Danh sách cần lưu ý */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '4px',
-              padding: '1.5rem',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                Cá Cảnh & Sản Phẩm Cần Lưu Ý
-              </h2>
-              <Link
-                to="/admin/products?category=fish"
-                style={{ fontSize: '0.8125rem', color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}
-              >
-                Xem chi tiết →
-              </Link>
-            </div>
-
-            {lowStockTotal === 0 ? (
-              <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
-                Tất cả các dòng cá và sản phẩm đều đang duy trì mức tồn kho tốt!
-              </div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {lowStockItems.map((item) => (
-                    <div
-                      key={item._id}
+        ) : (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {lowStockItems.map((item) => (
+                <div
+                  key={item._id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.625rem 0.75rem',
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>({item.origin || 'Đà Nẵng'})</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.625rem 0.75rem',
-                        backgroundColor: '#f8fafc',
-                        border: '1px solid #e2e8f0',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        padding: '0.15rem 0.45rem',
                         borderRadius: '4px',
-                        fontSize: '0.875rem',
+                        backgroundColor: item.stock === 0 ? '#fef2f2' : '#fffbeb',
+                        color: item.stock === 0 ? '#dc2626' : '#b45309',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</span>
-                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>({item.origin})</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            padding: '0.15rem 0.45rem',
-                            borderRadius: '3px',
-                            backgroundColor: item.stock === 0 ? '#fef2f2' : '#fffbeb',
-                            color: item.stock === 0 ? '#dc2626' : '#b45309',
-                          }}
-                        >
-                          Tồn: {item.stock}
-                        </span>
-                        <Link
-                          to="/admin/products"
-                          style={{
-                            fontSize: '0.75rem',
-                            color: '#0284c7',
-                            textDecoration: 'none',
-                            fontWeight: 500,
-                          }}
-                        >
-                          Cập nhật
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ marginTop: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                  <Pagination
-                    currentPage={lowStockPage}
-                    totalItems={lowStockTotal}
-                    pageSize={lowStockPageSize}
-                    onPageChange={setLowStockPage}
-                    onPageSizeChange={(size) => {
-                      setLowStockPageSize(size);
-                      setLowStockPage(1);
-                    }}
-                    itemLabel="sản phẩm"
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: Lối tắt & Thông số nước */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Lối tắt quản trị */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '4px',
-              padding: '1.5rem',
-            }}
-          >
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>
-              Lối Tắt Thao Tác Nhanh
-            </h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <Link
-                to="/admin/products?category=fish"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '4px',
-                  textDecoration: 'none',
-                  color: '#0f172a',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <Fish size={18} color="#0284c7" />
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Quản lý Cá cảnh</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Chỉ hiển thị dữ liệu cá, lọc và giá bán</div>
+                      Tồn: {item.stock}
+                    </span>
+                    <Link
+                      to="/admin/products"
+                      style={{
+                        fontSize: '0.75rem',
+                        color: '#0284c7',
+                        textDecoration: 'none',
+                        fontWeight: 500,
+                      }}
+                    >
+                      Cập nhật
+                    </Link>
                   </div>
                 </div>
-                <ArrowRight size={16} color="#94a3b8" />
-              </Link>
-
-              <Link
-                to="/admin/products?action=create"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '4px',
-                  textDecoration: 'none',
-                  color: '#0f172a',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <Plus size={18} color="#16a34a" />
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Thêm cá cảnh mới</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Nhập giống cá, đặc tính và giá nhập/bán</div>
-                  </div>
-                </div>
-                <ArrowRight size={16} color="#94a3b8" />
-              </Link>
-
-              <Link
-                to="/admin/orders"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '4px',
-                  textDecoration: 'none',
-                  color: '#0f172a',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <ShoppingBag size={18} color="#d97706" />
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Quản lý Đơn hàng</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Xử lý giao cá sống và thủy sinh</div>
-                  </div>
-                </div>
-                <ArrowRight size={16} color="#94a3b8" />
-              </Link>
-
-              <Link
-                to="/admin/users"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '4px',
-                  textDecoration: 'none',
-                  color: '#0f172a',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <Users size={18} color="#6366f1" />
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Tài khoản & Khách hàng</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Xem danh sách tài khoản mua hàng</div>
-                  </div>
-                </div>
-                <ArrowRight size={16} color="#94a3b8" />
-              </Link>
+              ))}
             </div>
-          </div>
 
-          {/* Card: Hệ sinh thái Nước ngọt vs Nước mặn */}
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '4px',
-              padding: '1.5rem',
-            }}
-          >
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>
-              Hệ Sinh Thái Môi Trường Nước
-            </h2>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <div
-                style={{
-                  padding: '1rem',
-                  backgroundColor: '#f0fdf4',
-                  borderRadius: '4px',
-                  border: '1px solid #bbf7d0',
+            <div style={{ marginTop: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '6px', overflow: 'hidden' }}>
+              <Pagination
+                currentPage={lowStockPage}
+                totalItems={lowStockTotal}
+                pageSize={lowStockPageSize}
+                onPageChange={setLowStockPage}
+                onPageSizeChange={(size) => {
+                  setLowStockPageSize(size);
+                  setLowStockPage(1);
                 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#15803d', fontSize: '0.8125rem', fontWeight: 600 }}>
-                  <Droplets size={14} />
-                  <span>Nước ngọt</span>
-                </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#14532d', marginTop: '0.25rem' }}>
-                  {stats.freshwaterCount}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#15803d', marginTop: '0.2rem' }}>
-                  Hồ thủy sinh & cá nước ngọt
-                </div>
-              </div>
-
-              <div
-                style={{
-                  padding: '1rem',
-                  backgroundColor: '#eff6ff',
-                  borderRadius: '4px',
-                  border: '1px solid #bfdbfe',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#1d4ed8', fontSize: '0.8125rem', fontWeight: 600 }}>
-                  <Droplets size={14} />
-                  <span>Nước mặn (Biển)</span>
-                </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e3a8a', marginTop: '0.25rem' }}>
-                  {stats.saltwaterCount}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#1d4ed8', marginTop: '0.2rem' }}>
-                  Cá hề, san hô & cá biển
-                </div>
-              </div>
+                itemLabel="sản phẩm"
+              />
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
-

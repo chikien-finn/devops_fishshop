@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Review from './review.model.js';
+import Order from '../orders/order.model.js';
 import { ApiError } from '../../utils/apiError.js';
 
 export const getReviewsByProduct = async (productId, filters = {}) => {
@@ -27,11 +28,52 @@ export const getReviewsByProduct = async (productId, filters = {}) => {
 
 export const getUserReview = async (userId, productId) => Review.findOne({ user: userId, product: productId }).lean();
 
+export const checkReviewEligibility = async (userId, productId) => {
+  const [existingReview, hasPurchasedOrder] = await Promise.all([
+    Review.findOne({ user: userId, product: productId }).lean(),
+    Order.exists({
+      user: userId,
+      'items.product': productId,
+      status: { $in: ['delivered', 'confirmed', 'shipping', 'pending'] },
+    }),
+  ]);
+
+  const hasPurchased = Boolean(hasPurchasedOrder);
+  const hasReviewed = Boolean(existingReview);
+  const canReview = hasPurchased && !hasReviewed;
+
+  let reason = '';
+  if (!hasPurchased) {
+    reason = 'Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua hàng thành công';
+  } else if (hasReviewed) {
+    reason = 'Bạn đã đánh giá sản phẩm này rồi';
+  }
+
+  return {
+    canReview,
+    hasPurchased,
+    hasReviewed,
+    reason,
+    myReview: existingReview,
+  };
+};
+
 export const addReview = async (userId, productId, reviewData) => {
   const rating = Number(reviewData.rating);
   const comment = String(reviewData.comment || '').trim();
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new ApiError(400, 'Số sao đánh giá phải từ 1 đến 5');
   if (comment.length > 1000) throw new ApiError(400, 'Nội dung đánh giá tối đa 1000 ký tự');
+
+  // Điều kiện tiên quyết: Phải từng mua sản phẩm mới được đánh giá
+  const hasPurchased = await Order.exists({
+    user: userId,
+    'items.product': productId,
+    status: { $in: ['delivered', 'confirmed', 'shipping', 'pending'] },
+  });
+  if (!hasPurchased) {
+    throw new ApiError(403, 'Bạn chỉ có thể đánh giá sản phẩm sau khi đã mua hàng thành công');
+  }
+
   const existing = await Review.findOne({ user: userId, product: productId });
   if (existing) {
     throw new ApiError(400, 'Bạn đã đánh giá sản phẩm này rồi');
@@ -46,4 +88,3 @@ export const addReview = async (userId, productId, reviewData) => {
 
   return await review.populate('user', 'name');
 };
-
