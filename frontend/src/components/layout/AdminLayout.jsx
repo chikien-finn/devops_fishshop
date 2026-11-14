@@ -8,6 +8,7 @@ import {
   Fish,
   LogOut,
   Layers,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/hooks/useAuth.jsx';
 
@@ -33,6 +34,7 @@ export default function AdminLayout() {
     if (location.pathname.startsWith('/admin/products')) return 'Quản lý cá cảnh & thủy sinh';
     if (location.pathname.startsWith('/admin/orders')) return 'Quản lý đơn đặt hàng';
     if (location.pathname.startsWith('/admin/users')) return 'Quản lý khách hàng & người dùng';
+    if (location.pathname.startsWith('/admin/reviews')) return 'Quản lý đánh giá & bình luận';
     return 'Quản trị hệ thống';
   };
 
@@ -136,6 +138,11 @@ export default function AdminLayout() {
           <NavLink to="/admin/users" style={navItemStyle}>
             <Users size={18} />
             <span>Khách hàng & User</span>
+          </NavLink>
+
+          <NavLink to="/admin/reviews" style={navItemStyle}>
+            <MessageSquare size={18} />
+            <span>Đánh giá &amp; Bình luận</span>
           </NavLink>
         </nav>
 

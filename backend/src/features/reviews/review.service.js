@@ -88,3 +88,82 @@ export const addReview = async (userId, productId, reviewData) => {
 
   return await review.populate('user', 'name');
 };
+
+/**
+ * Quản lý toàn bộ đánh giá dành cho Admin (Hỗ trợ lọc số sao, tìm kiếm, phân trang)
+ */
+export const getAllReviewsAdmin = async (filters = {}) => {
+  const limit = Math.min(50, Math.max(1, parseInt(filters.limit, 10) || 10));
+  const page = Math.max(1, parseInt(filters.page, 10) || 1);
+  const skip = (page - 1) * limit;
+
+  const query = {};
+
+  if (filters.rating) {
+    const star = parseInt(filters.rating, 10);
+    if (star >= 1 && star <= 5) {
+      query.rating = star;
+    }
+  }
+
+  if (filters.search) {
+    const regex = new RegExp(filters.search.trim(), 'i');
+    query.comment = regex;
+  }
+
+  const [items, totalItems, statsSummary] = await Promise.all([
+    Review.find(query)
+      .populate('user', 'name email')
+      .populate('product', 'name slug price images category categoryName')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Review.countDocuments(query),
+    Review.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          avgRating: { $avg: '$rating' },
+          fiveStarCount: { $sum: { $cond: [{ $eq: ['$rating', 5] }, 1, 0] } },
+          lowStarCount: { $sum: { $cond: [{ $lte: ['$rating', 2] }, 1, 0] } },
+        },
+      },
+    ]),
+  ]);
+
+  const stats = statsSummary[0] || {
+    total: 0,
+    avgRating: 5.0,
+    fiveStarCount: 0,
+    lowStarCount: 0,
+  };
+
+  return {
+    items,
+    pagination: {
+      page,
+      limit,
+      totalItems,
+      totalPages: Math.max(1, Math.ceil(totalItems / limit)),
+    },
+    stats: {
+      total: stats.total || 0,
+      avgRating: stats.avgRating ? Number(stats.avgRating.toFixed(1)) : 5.0,
+      fiveStarCount: stats.fiveStarCount || 0,
+      lowStarCount: stats.lowStarCount || 0,
+    },
+  };
+};
+
+/**
+ * Xóa / Kiểm duyệt đánh giá không phù hợp (Chỉ Admin)
+ */
+export const deleteReviewAdmin = async (reviewId) => {
+  const review = await Review.findByIdAndDelete(reviewId);
+  if (!review) {
+    throw new ApiError(404, 'Không tìm thấy đánh giá cần xóa');
+  }
+  return review;
+};

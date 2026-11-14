@@ -54,6 +54,22 @@ export const reviewApi = {
     const response = await api.post(`/reviews/product/${productId}`, review);
     return response.data?.data;
   },
+
+  /**
+   * Lấy danh sách toàn bộ đánh giá dành cho Admin (Quản trị viên)
+   */
+  async getAllReviewsAdmin(params = {}) {
+    const response = await api.get('/reviews/admin', { params });
+    return response.data?.data || { items: [], pagination: {}, stats: {} };
+  },
+
+  /**
+   * Xóa / kiểm duyệt đánh giá (Chỉ Admin)
+   */
+  async deleteReviewAdmin(reviewId) {
+    const response = await api.delete(`/reviews/${reviewId}`);
+    return response.data?.data;
+  },
 };
 
 export default reviewApi;

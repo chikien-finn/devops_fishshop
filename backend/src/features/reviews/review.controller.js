@@ -40,3 +40,21 @@ export const createReview = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getAllReviewsAdmin = async (req, res, next) => {
+  try {
+    const data = await reviewService.getAllReviewsAdmin(req.query);
+    sendSuccess(res, data, 'Lấy danh sách quản lý đánh giá thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteReviewAdmin = async (req, res, next) => {
+  try {
+    const review = await reviewService.deleteReviewAdmin(req.params.id);
+    sendSuccess(res, review, 'Xóa đánh giá thành công');
+  } catch (error) {
+    next(error);
+  }
+};
