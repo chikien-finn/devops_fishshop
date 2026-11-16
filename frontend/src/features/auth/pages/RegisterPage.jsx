@@ -62,16 +62,16 @@ export default function RegisterPage() {
         padding: '2rem',
         backgroundColor: '#ffffff',
         border: '1px solid #e2e8f0',
-        borderRadius: '6px',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+        borderRadius: '12px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.5rem' }}>
         <div
           style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '4px',
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
             backgroundColor: '#eff6ff',
             display: 'flex',
             alignItems: 'center',

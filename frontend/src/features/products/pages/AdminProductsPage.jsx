@@ -46,6 +46,7 @@ const DEFAULT_FORM_DATA = {
   stock: 10,
   origin: 'Việt Nam',
   imageUrl: '',
+  images: [],
   isActive: true,
 };
 
@@ -70,6 +71,7 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState(null);
+  const [formError, setFormError] = useState('');
 
   // Mặc định tab Cá cảnh (fish) để "bên cá chỉ hiển thị cá"
   const [selectedCategory, setSelectedCategory] = useState(urlCategory || 'fish');
@@ -221,27 +223,33 @@ export default function AdminProductsPage() {
       category: selectedCategory !== 'all' && selectedCategory !== 'accessory' ? selectedCategory : 'fish',
     });
     setCurrentId(null);
+    setFormError('');
     setIsModalOpen(true);
   };
 
-  const toModalFormData = (product) => ({
-    name: product.name || '',
-    description: product.description || '',
-    price: product.price ?? '',
-    category: product.category || 'fish',
-    subCategory: product.subCategory || 'ca-chuot',
-    waterType: product.waterType || 'freshwater',
-    stock: product.stock ?? 0,
-    origin: product.origin || 'Việt Nam',
-    imageUrl: product.images && product.images[0] ? product.images[0] : '',
-    isActive: product.isActive !== undefined ? product.isActive : true,
-  });
+  const toModalFormData = (product) => {
+    const existingImages = Array.isArray(product.images) ? product.images : [];
+    return {
+      name: product.name || '',
+      description: product.description || '',
+      price: product.price ?? '',
+      category: product.category || 'fish',
+      subCategory: product.subCategory || 'ca-chuot',
+      waterType: product.waterType || 'freshwater',
+      stock: product.stock ?? 0,
+      origin: product.origin || 'Việt Nam',
+      imageUrl: existingImages[0] || '',
+      images: existingImages,
+      isActive: product.isActive !== undefined ? product.isActive : true,
+    };
+  };
 
   const openProductModalWithFullDetail = async (product, mode) => {
     const reqId = ++detailRequestRef.current;
     setModalMode(mode);
     setCurrentId(product._id);
     setFormData(toModalFormData(product));
+    setFormError('');
     setLoadingDetail(true);
     setIsModalOpen(true);
 
@@ -279,7 +287,7 @@ export default function AdminProductsPage() {
         setFormData((prev) => ({ ...prev, imageUrl: result.url }));
       }
     } catch (err) {
-      alert('Lỗi tải ảnh: ' + (err.response?.data?.message || 'Không thể tải ảnh lên'));
+      setFormError('Lỗi tải ảnh: ' + (err.response?.data?.message || 'Không thể tải ảnh lên'));
     } finally {
       setUploadingImage(false);
       e.target.value = '';
@@ -290,18 +298,34 @@ export default function AdminProductsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loadingDetail) return;
+    setFormError('');
     if (!formData.name.trim()) {
-      alert('Vui lòng nhập tên sản phẩm / cá cảnh');
+      setFormError('Vui lòng nhập tên sản phẩm / cá cảnh');
       return;
     }
     if (formData.price === '' || Number(formData.price) < 0) {
-      alert('Vui lòng nhập giá bán hợp lệ');
+      setFormError('Vui lòng nhập giá bán hợp lệ');
       return;
     }
 
     try {
       setSubmitting(true);
       const stockNum = Number(formData.stock) || 0;
+
+      // BUG-LOG01: Bảo toàn toàn bộ album ảnh phụ khi chỉnh sửa sản phẩm
+      const primaryUrl = formData.imageUrl.trim();
+      const finalImages = [];
+      if (primaryUrl) {
+        finalImages.push(primaryUrl);
+      }
+      if (Array.isArray(formData.images)) {
+        formData.images.forEach((img) => {
+          if (img && img !== primaryUrl && !finalImages.includes(img)) {
+            finalImages.push(img);
+          }
+        });
+      }
+
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim(),
@@ -313,7 +337,7 @@ export default function AdminProductsPage() {
         stock: stockNum,
         soldOut: stockNum <= 0,
         origin: formData.origin.trim() || 'Việt Nam',
-        images: formData.imageUrl.trim() ? [formData.imageUrl.trim()] : [],
+        images: finalImages,
         isActive: formData.isActive,
       };
 
@@ -330,7 +354,7 @@ export default function AdminProductsPage() {
       fetchStats();
     } catch (err) {
       console.error(err);
-      alert('Lỗi: ' + (err.response?.data?.message || 'Có lỗi xảy ra khi lưu'));
+      setFormError('Lỗi: ' + (err.response?.data?.message || 'Có lỗi xảy ra khi lưu'));
     } finally {
       setSubmitting(false);
     }
@@ -362,7 +386,10 @@ export default function AdminProductsPage() {
       fetchStats();
     } catch (err) {
       console.error(err);
-      alert('Lỗi khi xóa: ' + (err.response?.data?.message || 'Không thể thực hiện'));
+      setFeedback({
+        type: 'error',
+        message: 'Lỗi khi xóa: ' + (err.response?.data?.message || 'Không thể thực hiện'),
+      });
     } finally {
       setDeleting(false);
     }
@@ -380,7 +407,10 @@ export default function AdminProductsPage() {
       fetchStats();
     } catch (err) {
       console.error(err);
-      alert('Lỗi: ' + (err.response?.data?.message || 'Không thể phục hồi'));
+      setFeedback({
+        type: 'error',
+        message: 'Lỗi: ' + (err.response?.data?.message || 'Không thể phục hồi'),
+      });
     }
   };
 
@@ -1285,6 +1315,21 @@ export default function AdminProductsPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {formError && (
+                  <div
+                    style={{
+                      padding: '0.625rem 0.875rem',
+                      backgroundColor: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: '6px',
+                      color: '#dc2626',
+                      fontSize: '0.85rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {formError}
+                  </div>
+                )}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
                     Tên cá cảnh / Sinh vật / Sản phẩm <span style={{ color: '#ef4444' }}>*</span>
@@ -1511,7 +1556,34 @@ export default function AdminProductsPage() {
                           e.target.style.display = 'none';
                         }}
                       />
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Xem trước ảnh sản phẩm</span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Ảnh đại diện chính</span>
+                    </div>
+                  )}
+
+                  {formData.images && formData.images.length > 1 && (
+                    <div style={{ marginTop: '0.625rem', padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '0.35rem' }}>
+                        Album ảnh chi tiết ({formData.images.length} ảnh được bảo toàn):
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        {formData.images.map((img, i) => (
+                          <img
+                            key={i}
+                            src={img}
+                            alt={`Gallery ${i + 1}`}
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              objectFit: 'cover',
+                              borderRadius: '4px',
+                              border: img === formData.imageUrl ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                              cursor: 'pointer',
+                            }}
+                            title={img === formData.imageUrl ? 'Ảnh đại diện chính' : 'Bấm để chọn làm ảnh chính'}
+                            onClick={() => setFormData((prev) => ({ ...prev, imageUrl: img }))}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

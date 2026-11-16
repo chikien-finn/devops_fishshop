@@ -199,7 +199,7 @@ export default function CartPage() {
             gap: '0.5rem',
           }}
         >
-          <ShoppingBag color="#dc2626" />
+          <ShoppingBag color="#0284c7" />
           <span>Giỏ Hàng Của Bạn ({totalItems} món)</span>
         </h1>
 
@@ -275,12 +275,18 @@ export default function CartPage() {
                 }}
               >
                 <button
-                  onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                  onClick={() => {
+                    if (item.quantity <= 1) return;
+                    updateQuantity(item._id, item.quantity - 1);
+                  }}
+                  disabled={item.quantity <= 1}
+                  title={item.quantity <= 1 ? 'Số lượng tối thiểu là 1' : 'Giảm số lượng'}
                   style={{
                     padding: '4px 8px',
                     border: 'none',
-                    backgroundColor: '#f8fafc',
-                    cursor: 'pointer',
+                    backgroundColor: item.quantity <= 1 ? '#f1f5f9' : '#f8fafc',
+                    cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer',
+                    opacity: item.quantity <= 1 ? 0.4 : 1,
                   }}
                 >
                   <Minus size={13} />
@@ -318,7 +324,11 @@ export default function CartPage() {
 
               {/* Remove button */}
               <button
-                onClick={() => removeFromCart(item._id)}
+                onClick={() => {
+                  if (window.confirm(`Xóa "${item.name}" khỏi giỏ hàng?`)) {
+                    removeFromCart(item._id);
+                  }
+                }}
                 title="Xóa món này"
                 style={{
                   background: 'none',
@@ -411,6 +421,27 @@ export default function CartPage() {
             <span style={{ color: '#dc2626' }}>{formatCurrency(checkoutTotal)}</span>
           </div>
 
+          {!isAuthenticated && (
+            <div
+              style={{
+                padding: '0.75rem',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '6px',
+                marginBottom: '1rem',
+                fontSize: '0.8rem',
+                color: '#1e40af',
+                lineHeight: 1.4,
+              }}
+            >
+              💡 <strong>Lưu ý:</strong> Bạn đang thao tác với tư cách khách. Vui lòng{' '}
+              <Link to="/login" style={{ fontWeight: 700, color: '#0284c7', textDecoration: 'underline' }}>
+                Đăng nhập
+              </Link>{' '}
+              để tích điểm và lưu lịch sử đơn hàng của bạn.
+            </div>
+          )}
+
           <form onSubmit={handleCheckout} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.25rem' }}>
@@ -492,7 +523,7 @@ export default function CartPage() {
               disabled={submitting}
               style={{
                 width: '100%',
-                backgroundColor: submitting ? '#94a3b8' : '#dc2626',
+                backgroundColor: submitting ? '#94a3b8' : '#0284c7',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '6px',
@@ -505,6 +536,13 @@ export default function CartPage() {
                 justifyContent: 'center',
                 gap: '0.5rem',
                 marginTop: '0.5rem',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                if (!submitting) e.currentTarget.style.backgroundColor = '#0369a1';
+              }}
+              onMouseLeave={(e) => {
+                if (!submitting) e.currentTarget.style.backgroundColor = '#0284c7';
               }}
             >
               <CheckCircle size={18} /> {submitting ? 'Đang xử lý...' : 'Tiến Hành Đặt Hàng'}

@@ -667,7 +667,7 @@ export default function CollectionPage() {
                       style={{
                         width: '100%',
                         padding: '0.65rem 1rem',
-                        backgroundColor: '#dc2626',
+                        backgroundColor: '#0284c7',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '6px',
@@ -678,6 +678,13 @@ export default function CollectionPage() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '0.5rem',
+                        transition: 'background-color 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#0369a1';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#0284c7';
                       }}
                     >
                       <ShoppingBag size={18} />

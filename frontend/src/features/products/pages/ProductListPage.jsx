@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Fish, ShoppingBag } from 'lucide-react';
+import { Fish, ShoppingBag, CheckCircle2 } from 'lucide-react';
 import productService, { isRequestCanceled } from '../services/productService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
 import { useCart } from '../../cart/hooks/useCart.jsx';
@@ -14,6 +14,20 @@ export default function ProductListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [pageSize, setPageSize] = useState(20);
   const { addToCart } = useCart();
+  const [toast, setToast] = useState(null);
+  const [addedItemId, setAddedItemId] = useState(null);
+
+  const handleAddToCart = (item) => {
+    addToCart(item, 1);
+    setAddedItemId(item._id);
+    setToast(`Đã thêm "${item.name}" vào giỏ hàng!`);
+    setTimeout(() => {
+      setAddedItemId(null);
+    }, 1200);
+    setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
 
   const searchQuery = searchParams.get('search') || '';
   const currentCategory = searchParams.get('category') || 'all';
@@ -457,14 +471,14 @@ export default function ProductListPage() {
                   </div>
 
                   <button
-                    onClick={() => addToCart(item, 1)}
+                    onClick={() => handleAddToCart(item)}
                     title="Thêm vào giỏ hàng"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.35rem',
                       padding: '0.4rem 0.75rem',
-                      backgroundColor: '#dc2626',
+                      backgroundColor: addedItemId === item._id ? '#059669' : '#0284c7',
                       border: 'none',
                       borderRadius: '4px',
                       color: '#ffffff',
@@ -473,11 +487,24 @@ export default function ProductListPage() {
                       cursor: 'pointer',
                       transition: 'background-color 0.15s',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#b91c1c')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#dc2626')}
+                    onMouseEnter={(e) => {
+                      if (addedItemId !== item._id) e.currentTarget.style.backgroundColor = '#0369a1';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (addedItemId !== item._id) e.currentTarget.style.backgroundColor = '#0284c7';
+                    }}
                   >
-                    <ShoppingBag size={14} />
-                    <span>Mua</span>
+                    {addedItemId === item._id ? (
+                      <>
+                        <CheckCircle2 size={14} />
+                        <span>Đã thêm</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag size={14} />
+                        <span>Mua</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -501,6 +528,31 @@ export default function ProductListPage() {
           />
         </div>
         </>
+      )}
+
+      {/* Floating Toast Notification */}
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            backgroundColor: '#059669',
+            color: '#ffffff',
+            padding: '0.75rem 1.25rem',
+            borderRadius: '8px',
+            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+          }}
+        >
+          <CheckCircle2 size={18} />
+          <span>{toast}</span>
+        </div>
       )}
     </div>
   );

@@ -46,13 +46,17 @@ export default function FloatingActions() {
               position: 'absolute',
               top: '-4px',
               right: '-4px',
-              backgroundColor: '#facc15',
-              color: '#0369a1',
-              fontSize: '0.7rem',
+              backgroundColor: '#eab308',
+              color: '#713f12',
+              fontSize: '0.725rem',
               fontWeight: 800,
               borderRadius: '9999px',
-              padding: '1px 5px',
+              padding: '2px 6px',
               border: '1.5px solid #ffffff',
+              lineHeight: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             {totalItems}

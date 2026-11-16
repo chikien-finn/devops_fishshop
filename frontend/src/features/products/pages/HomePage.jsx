@@ -1269,7 +1269,7 @@ export default function HomePage() {
                       style={{
                         width: '100%',
                         padding: '0.65rem 1rem',
-                        backgroundColor: '#dc2626',
+                        backgroundColor: '#0284c7',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '6px',
@@ -1280,6 +1280,13 @@ export default function HomePage() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '0.5rem',
+                        transition: 'background-color 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#0369a1';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#0284c7';
                       }}
                     >
                       <ShoppingBag size={18} />
@@ -1322,7 +1329,7 @@ export default function HomePage() {
       <section
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
           gap: '1rem',
         }}
       >

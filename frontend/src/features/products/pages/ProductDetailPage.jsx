@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import {
   Fish,
   ShoppingBag,
@@ -18,7 +19,9 @@ import {
   Thermometer,
   Utensils,
   Compass,
+  Star,
 } from 'lucide-react';
+import api from '../../../services/api.js';
 import { useCart } from '../../cart/hooks/useCart.jsx';
 import { thienducSections } from '../data/thienducSections.js';
 import { collectionsData } from '../data/collectionsData.js';
@@ -60,6 +63,22 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState('desc');
   const [toastMessage, setToastMessage] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
+
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewMsg, setReviewMsg] = useState(null);
+  const [expandedReviews, setExpandedReviews] = useState({});
+
+  const toggleExpandReview = (reviewKey) => {
+    setExpandedReviews((prev) => ({
+      ...prev,
+      [reviewKey]: !prev[reviewKey],
+    }));
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -128,6 +147,48 @@ export default function ProductDetailPage() {
     return () => controller.abort();
   }, [targetKey]);
 
+  useEffect(() => {
+    if (product?._id) {
+      setReviewsLoading(true);
+      api.get(`/reviews/product/${product._id}`)
+        .then((res) => {
+          setReviews(res.data?.data || []);
+        })
+        .catch(() => {
+          setReviews([]);
+        })
+        .finally(() => {
+          setReviewsLoading(false);
+        });
+    }
+  }, [product?._id]);
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim() || !product?._id) return;
+    try {
+      setReviewSubmitting(true);
+      setReviewMsg(null);
+      const res = await api.post(`/reviews/product/${product._id}`, {
+        rating: Number(newRating),
+        comment: newComment.trim(),
+      });
+      const createdReview = res.data?.data;
+      if (createdReview) {
+        setReviews((prev) => [createdReview, ...prev]);
+      }
+      setNewComment('');
+      setReviewMsg({ type: 'success', text: 'Cảm ơn bạn đã gửi đánh giá!' });
+    } catch (err) {
+      setReviewMsg({
+        type: 'error',
+        text: err.response?.data?.message || 'Vui lòng đăng nhập để gửi đánh giá sản phẩm.',
+      });
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
   const handleAddToCart = () => {
     if (!product || product.soldOut) return;
     addToCart(
@@ -161,7 +222,7 @@ export default function ProductDetailPage() {
             width: '40px',
             height: '40px',
             border: '3px solid #f3f3f3',
-            borderTop: '3px solid #dc2626',
+            borderTop: '3px solid #0284c7',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
           }}
@@ -187,7 +248,7 @@ export default function ProductDetailPage() {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.5rem',
-            backgroundColor: '#dc2626',
+            backgroundColor: '#0284c7',
             color: '#ffffff',
             padding: '0.65rem 1.5rem',
             borderRadius: '6px',
@@ -337,7 +398,7 @@ export default function ProductDetailPage() {
                       height: '72px',
                       borderRadius: '6px',
                       overflow: 'hidden',
-                      border: activeImage === imgUrl ? '2px solid #dc2626' : '1px solid #e2e8f0',
+                      border: activeImage === imgUrl ? '2px solid #0284c7' : '1px solid #e2e8f0',
                       padding: 0,
                       cursor: 'pointer',
                       flexShrink: 0,
@@ -446,7 +507,7 @@ export default function ProductDetailPage() {
             {product.sizes && product.sizes.length > 0 && (
               <div>
                 <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>
-                  Kích Thước: <span style={{ color: '#dc2626' }}>{selectedSize}</span>
+                  Kích Thước: <span style={{ color: '#0284c7' }}>{selectedSize}</span>
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                   {product.sizes.map((sz, idx) => {
@@ -458,9 +519,9 @@ export default function ProductDetailPage() {
                         style={{
                           padding: '0.45rem 1rem',
                           borderRadius: '6px',
-                          border: isSelected ? '2px solid #dc2626' : '1px solid #cbd5e1',
-                          backgroundColor: isSelected ? '#fef2f2' : '#ffffff',
-                          color: isSelected ? '#dc2626' : '#334155',
+                          border: isSelected ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                          backgroundColor: isSelected ? '#f0f9ff' : '#ffffff',
+                          color: isSelected ? '#0284c7' : '#334155',
                           fontSize: '0.875rem',
                           fontWeight: isSelected ? 700 : 500,
                           cursor: 'pointer',
@@ -558,9 +619,9 @@ export default function ProductDetailPage() {
                       flex: 1,
                       minWidth: '180px',
                       padding: '0.85rem 1.5rem',
-                      border: '2px solid #dc2626',
+                      border: '2px solid #0284c7',
                       backgroundColor: '#ffffff',
-                      color: '#dc2626',
+                      color: '#0284c7',
                       borderRadius: '6px',
                       fontSize: '0.95rem',
                       fontWeight: 700,
@@ -572,7 +633,7 @@ export default function ProductDetailPage() {
                       transition: 'all 0.2s ease',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#fef2f2';
+                      e.currentTarget.style.backgroundColor = '#f0f9ff';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = '#ffffff';
@@ -589,7 +650,7 @@ export default function ProductDetailPage() {
                       minWidth: '180px',
                       padding: '0.85rem 1.5rem',
                       border: 'none',
-                      backgroundColor: '#dc2626',
+                      backgroundColor: '#0284c7',
                       color: '#ffffff',
                       borderRadius: '6px',
                       fontSize: '0.95rem',
@@ -599,14 +660,14 @@ export default function ProductDetailPage() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '0.5rem',
-                      boxShadow: '0 4px 10px rgba(220, 38, 38, 0.25)',
+                      boxShadow: '0 4px 10px rgba(2, 132, 199, 0.25)',
                       transition: 'background-color 0.2s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#b91c1c';
+                      e.currentTarget.style.backgroundColor = '#0369a1';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#dc2626';
+                      e.currentTarget.style.backgroundColor = '#0284c7';
                     }}
                   >
                     <span>MUA NGAY</span>
@@ -767,15 +828,15 @@ export default function ProductDetailPage() {
           border: '1px solid #e2e8f0',
         }}
       >
-        <div style={{ display: 'flex', borderBottom: '2px solid #f1f5f9', gap: '1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', borderBottom: '2px solid #f1f5f9', gap: '1.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           <button
             onClick={() => setActiveTab('desc')}
             style={{
               padding: '0.75rem 0.5rem',
               background: 'none',
               border: 'none',
-              borderBottom: activeTab === 'desc' ? '3px solid #dc2626' : '3px solid transparent',
-              color: activeTab === 'desc' ? '#dc2626' : '#64748b',
+              borderBottom: activeTab === 'desc' ? '3px solid #0284c7' : '3px solid transparent',
+              color: activeTab === 'desc' ? '#0284c7' : '#64748b',
               fontSize: '1rem',
               fontWeight: 700,
               cursor: 'pointer',
@@ -792,8 +853,8 @@ export default function ProductDetailPage() {
               padding: '0.75rem 0.5rem',
               background: 'none',
               border: 'none',
-              borderBottom: activeTab === 'guide' ? '3px solid #dc2626' : '3px solid transparent',
-              color: activeTab === 'guide' ? '#dc2626' : '#64748b',
+              borderBottom: activeTab === 'guide' ? '3px solid #0284c7' : '3px solid transparent',
+              color: activeTab === 'guide' ? '#0284c7' : '#64748b',
               fontSize: '1rem',
               fontWeight: 700,
               cursor: 'pointer',
@@ -802,6 +863,28 @@ export default function ProductDetailPage() {
             }}
           >
             Hướng Dẫn Thả & Chăm Sóc Cá Mới
+          </button>
+
+          <button
+            onClick={() => setActiveTab('reviews')}
+            style={{
+              padding: '0.75rem 0.5rem',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'reviews' ? '3px solid #0284c7' : '3px solid transparent',
+              color: activeTab === 'reviews' ? '#0284c7' : '#64748b',
+              fontSize: '1rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              marginBottom: '-2px',
+              transition: 'all 0.15s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Star size={16} fill={activeTab === 'reviews' ? '#0284c7' : 'none'} />
+            <span>Đánh Giá & Nhận Xét ({reviews.length})</span>
           </button>
         </div>
 
@@ -814,12 +897,12 @@ export default function ProductDetailPage() {
             }}
           >
             {product.description ? (
-              <div dangerouslySetInnerHTML={{ __html: product.description }} />
+              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }} />
             ) : (
               <p>Thông tin sản phẩm đang được cập nhật.</p>
             )}
           </div>
-        ) : (
+        ) : activeTab === 'guide' ? (
           <div style={{ lineHeight: 1.8, fontSize: '0.925rem', color: '#334155' }}>
             <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem' }}>
               Quy trình thả cá mới mua vào hồ chuẩn kỹ thuật:
@@ -833,6 +916,224 @@ export default function ProductDetailPage() {
             <p style={{ margin: 0, fontStyle: 'italic', color: '#0284c7' }}>
               💡 Mọi thắc mắc kỹ thuật nuôi, xử lý nước hoặc phòng trị nấm bệnh, quý khách vui lòng liên hệ Zalo 0332127582 để được kỹ thuật viên hỗ trợ miễn phí!
             </p>
+          </div>
+        ) : (
+          <div>
+            {/* Reviews Section */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+              {/* Form gửi review */}
+              <div style={{ minWidth: 0, backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem' }}>
+                  Gửi nhận xét của bạn
+                </h4>
+                {reviewMsg && (
+                  <div
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      marginBottom: '0.75rem',
+                      borderRadius: '4px',
+                      fontSize: '0.825rem',
+                      backgroundColor: reviewMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                      color: reviewMsg.type === 'success' ? '#166534' : '#991b1b',
+                      border: `1px solid ${reviewMsg.type === 'success' ? '#86efac' : '#fecaca'}`,
+                    }}
+                  >
+                    {reviewMsg.text}
+                  </div>
+                )}
+                <form onSubmit={handleReviewSubmit}>
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#475569', marginBottom: '0.25rem' }}>
+                      Đánh giá số sao:
+                    </label>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setNewRating(star)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px',
+                          }}
+                        >
+                          <Star
+                            size={22}
+                            fill={star <= newRating ? '#eab308' : '#e2e8f0'}
+                            color={star <= newRating ? '#ca8a04' : '#cbd5e1'}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#475569', marginBottom: '0.25rem' }}>
+                      Nội dung nhận xét:
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Chia sẻ trải nghiệm về chất lượng cá cảnh, cách đóng gói và sức khỏe cá..."
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '0.85rem',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={reviewSubmitting}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#0284c7',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: reviewSubmitting ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {reviewSubmitting ? 'Đang gửi...' : 'Gửi Đánh Giá'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Danh sách review */}
+              <div style={{ minWidth: 0 }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem' }}>
+                  Khách hàng nhận xét ({reviews.length})
+                </h4>
+                {reviewsLoading ? (
+                  <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Đang tải đánh giá...</p>
+                ) : reviews.length === 0 ? (
+                  <div style={{ padding: '1.5rem', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: '0.875rem' }}>
+                    Chưa có đánh giá nào cho sản phẩm này. Hãy là người đầu tiên chia sẻ cảm nhận!
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '520px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {reviews.map((rev, idx) => (
+                      <div
+                        key={rev._id || idx}
+                        style={{
+                          padding: '0.75rem',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                          backgroundColor: '#ffffff',
+                          overflow: 'hidden',
+                          wordBreak: 'break-word',
+                          overflowWrap: 'anywhere',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span
+                              style={{
+                                fontWeight: 700,
+                                fontSize: '0.85rem',
+                                color: '#0f172a',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'anywhere',
+                              }}
+                            >
+                              {rev.user?.name || 'Khách hàng AquaCraft'}
+                            </span>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                fontSize: '0.6875rem',
+                                fontWeight: 600,
+                                color: '#16a34a',
+                                backgroundColor: '#f0fdf4',
+                                border: '1px solid #bbf7d0',
+                                padding: '1px 6px',
+                                borderRadius: '9999px',
+                              }}
+                              title="Tài khoản đã mua hàng thực tế tại trại cá AquaCraft"
+                            >
+                              <CheckCircle2 size={11} color="#16a34a" />
+                              Đã mua tại AquaCraft
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                size={14}
+                                fill={s <= rev.rating ? '#eab308' : '#e2e8f0'}
+                                color={s <= rev.rating ? '#ca8a04' : '#cbd5e1'}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        {(() => {
+                          const reviewKey = rev._id || String(idx);
+                          const isExpanded = !!expandedReviews[reviewKey];
+                          const commentText = rev.comment || '';
+                          const isLong = commentText.length > 150;
+                          const displayedComment = isLong && !isExpanded
+                            ? `${commentText.slice(0, 150)}...`
+                            : commentText;
+
+                          return (
+                            <>
+                              <p
+                                style={{
+                                  margin: 0,
+                                  fontSize: '0.85rem',
+                                  color: '#334155',
+                                  lineHeight: 1.5,
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'anywhere',
+                                  whiteSpace: 'pre-wrap',
+                                }}
+                              >
+                                {displayedComment}
+                              </p>
+                              {isLong && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpandReview(reviewKey)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    padding: '2px 0',
+                                    marginTop: '4px',
+                                    color: '#0284c7',
+                                    fontWeight: 600,
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer',
+                                    display: 'inline-block',
+                                  }}
+                                >
+                                  {isExpanded ? 'Thu gọn ▲' : 'Xem thêm ▼'}
+                                </button>
+                              )}
+                            </>
+                          );
+                        })()}
+                        {rev.createdAt && (
+                          <span style={{ fontSize: '0.725rem', color: '#94a3b8', display: 'block', marginTop: '4px' }}>
+                            {new Date(rev.createdAt).toLocaleDateString('vi-VN')}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </section>
@@ -968,9 +1269,9 @@ export default function ProductDetailPage() {
                       display: 'block',
                       width: '100%',
                       padding: '0.4rem 0',
-                      border: '1.5px solid #dc2626',
+                      border: '1.5px solid #0284c7',
                       backgroundColor: '#ffffff',
-                      color: '#dc2626',
+                      color: '#0284c7',
                       borderRadius: '4px',
                       fontSize: '0.75rem',
                       fontWeight: 700,
@@ -980,12 +1281,12 @@ export default function ProductDetailPage() {
                       transition: 'all 0.15s ease',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#dc2626';
+                      e.currentTarget.style.backgroundColor = '#0284c7';
                       e.currentTarget.style.color = '#ffffff';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = '#ffffff';
-                      e.currentTarget.style.color = '#dc2626';
+                      e.currentTarget.style.color = '#0284c7';
                     }}
                   >
                     TÙY CHỌN

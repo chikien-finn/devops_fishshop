@@ -15,6 +15,8 @@ import {
 import { useAuth } from '../../features/auth/hooks/useAuth.jsx';
 import { useCart } from '../../features/cart/hooks/useCart.jsx';
 import { FISH_SUBCATEGORIES } from '../../features/products/utils/productMapper.js';
+import productService, { isRequestCanceled } from '../../features/products/services/productService.js';
+import { formatCurrency } from '../../utils/formatters.js';
 import Logo from '../common/Logo.jsx';
 import FloatingActions from '../common/FloatingActions.jsx';
 
@@ -22,10 +24,60 @@ export default function MainLayout() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { totalItems } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchContainerRef = useRef(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const closeDropdownTimer = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (!searchTerm.trim() || searchTerm.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setSearchLoading(true);
+      productService
+        .getProducts({ search: searchTerm.trim(), limit: 5 }, { signal: controller.signal })
+        .then((res) => {
+          setSuggestions(res.items || []);
+          setShowSuggestions(true);
+        })
+        .catch((err) => {
+          if (!isRequestCanceled(err)) {
+            setSuggestions([]);
+          }
+        })
+        .finally(() => setSearchLoading(false));
+    }, 250);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectSuggestion = (item) => {
+    setShowSuggestions(false);
+    setSearchTerm('');
+    navigate(`/products/${item.slug || item._id}`);
+  };
 
   useEffect(() => {
     return () => {
@@ -69,7 +121,8 @@ export default function MainLayout() {
   ];
 
   const handleSearch = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    setShowSuggestions(false);
     if (searchTerm.trim()) {
       navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
     } else {
@@ -108,62 +161,185 @@ export default function MainLayout() {
             <Logo size={46} showText={true} textColor="#0284c7" />
           </div>
 
-          {/* Search Bar - Rounded pill shape */}
-          <form
-            onSubmit={handleSearch}
+          {/* Search Bar - Rounded pill shape with Live Suggestions Dropdown */}
+          <div
+            ref={searchContainerRef}
             style={{
-              flex: '1',
-              maxWidth: '400px',
+              flex: '1 1 240px',
+              maxWidth: '420px',
+              minWidth: '180px',
               position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
             }}
           >
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm kiếm cá cảnh, phụ kiện, thức ăn..."
+            <form
+              onSubmit={handleSearch}
               style={{
-                width: '100%',
-                padding: '0.625rem 3rem 0.625rem 1.25rem',
-                borderRadius: '9999px',
-                border: '1.5px solid #cbd5e1',
-                fontSize: '0.875rem',
-                outline: 'none',
-                backgroundColor: '#f8fafc',
-                transition: 'border-color 0.2s, background-color 0.2s',
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#0284c7';
-                e.target.style.backgroundColor = '#ffffff';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = '#cbd5e1';
-                e.target.style.backgroundColor = '#f8fafc';
-              }}
-            />
-            <button
-              type="submit"
-              title="Tìm kiếm"
-              style={{
-                position: 'absolute',
-                right: '4px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '0.4rem 0.75rem',
-                color: '#64748b',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                position: 'relative',
+                width: '100%',
               }}
             >
-              <Search size={18} />
-            </button>
-          </form>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowSuggestions(true);
+                }}
+                placeholder="Tìm kiếm cá cảnh, phụ kiện, thức ăn..."
+                style={{
+                  width: '100%',
+                  padding: '0.625rem 3rem 0.625rem 1.25rem',
+                  borderRadius: '9999px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '0.875rem',
+                  outline: 'none',
+                  backgroundColor: '#f8fafc',
+                  transition: 'border-color 0.2s, background-color 0.2s',
+                }}
+                onFocusCapture={(e) => {
+                  e.target.style.borderColor = '#0284c7';
+                  e.target.style.backgroundColor = '#ffffff';
+                }}
+                onBlurCapture={(e) => {
+                  e.target.style.borderColor = '#cbd5e1';
+                  e.target.style.backgroundColor = '#f8fafc';
+                }}
+              />
+              <button
+                type="submit"
+                title="Tìm kiếm"
+                style={{
+                  position: 'absolute',
+                  right: '4px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.4rem 0.75rem',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Search size={18} />
+              </button>
+            </form>
+
+            {/* Live Search Suggestions Dropdown */}
+            {showSuggestions && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: '#ffffff',
+                  borderRadius: '10px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+                  border: '1px solid #e2e8f0',
+                  zIndex: 100,
+                  overflow: 'hidden',
+                  padding: '0.35rem 0',
+                }}
+              >
+                {searchLoading && suggestions.length === 0 ? (
+                  <div style={{ padding: '0.75rem 1rem', fontSize: '0.8125rem', color: '#64748b' }}>
+                    Đang tìm kiếm...
+                  </div>
+                ) : suggestions.length === 0 ? (
+                  <div style={{ padding: '0.75rem 1rem', fontSize: '0.8125rem', color: '#64748b' }}>
+                    Không tìm thấy sản phẩm nào khớp với &quot;{searchTerm}&quot;
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        padding: '0.35rem 0.85rem',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        color: '#94a3b8',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      Sản phẩm gợi ý ({suggestions.length})
+                    </div>
+                    {suggestions.map((item) => (
+                      <div
+                        key={item._id}
+                        onClick={() => handleSelectSuggestion(item)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '0.5rem 0.85rem',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.15s',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <img
+                          src={item.image || 'https://placehold.co/40x40?text=Fish'}
+                          alt={item.name}
+                          style={{
+                            width: '38px',
+                            height: '38px',
+                            objectFit: 'cover',
+                            borderRadius: '6px',
+                            border: '1px solid #f1f5f9',
+                            flexShrink: 0,
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://placehold.co/40x40?text=Fish';
+                          }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: '0.8125rem',
+                              fontWeight: 600,
+                              color: '#0f172a',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {item.name}
+                          </p>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#dc2626' }}>
+                            {formatCurrency(item.price)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    <div
+                      onClick={handleSearch}
+                      style={{
+                        padding: '0.5rem 0.85rem',
+                        borderTop: '1px solid #f1f5f9',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        color: '#0284c7',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        backgroundColor: '#f0f9ff',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e0f2fe')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
+                    >
+                      Xem tất cả kết quả cho &quot;{searchTerm}&quot; →
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Right Action Icons & Links */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
@@ -238,10 +414,14 @@ export default function MainLayout() {
                 style={{
                   backgroundColor: '#eab308',
                   color: '#713f12',
-                  fontSize: '0.75rem',
+                  fontSize: '0.725rem',
                   fontWeight: 800,
-                  borderRadius: '4px',
-                  padding: '1px 6px',
+                  borderRadius: '9999px',
+                  padding: '2px 7px',
+                  lineHeight: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
                 {totalItems}
@@ -407,9 +587,11 @@ export default function MainLayout() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '2.5rem',
+            gap: '1.75rem',
+            rowGap: '0.6rem',
+            flexWrap: 'wrap',
             padding: '0.75rem 1rem',
-            fontSize: '0.875rem',
+            fontSize: '0.85rem',
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
