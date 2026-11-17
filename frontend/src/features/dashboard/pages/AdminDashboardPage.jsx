@@ -379,11 +379,11 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', marginTop: '0.5rem' }}>
-            {(stats.products?.total || 0).toLocaleString()} <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#64748b' }}>mẫu cá</span>
+            {(stats.products?.total || 0).toLocaleString()} <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#64748b' }}>sản phẩm</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
-            <span>Tổng tồn kho: <strong>{(stats.products?.totalStock || 0).toLocaleString()}</strong> con</span>
-            <span>Cá cảnh: <strong>{stats.products?.fishCount || 0}</strong></span>
+            <span>Tổng tồn kho: <strong>{(stats.products?.totalStock || 0).toLocaleString()}</strong> món</span>
+            <span>Cá: <strong>{(stats.products?.fishCount || 0).toLocaleString()}</strong> · Cây: <strong>{(stats.products?.plantCount || 0).toLocaleString()}</strong></span>
           </div>
         </div>
 
@@ -518,20 +518,22 @@ export default function AdminDashboardPage() {
               { label: '📦 Hồ kính & Phụ kiện', count: stats.products?.accessoryCount || 0, color: '#8b5cf6' },
             ].map((cat) => {
               const totalPrd = stats.products?.total || 1;
-              const pct = stats.products?.total > 0 ? Math.round((cat.count / totalPrd) * 100) : 0;
+              const rawPct = stats.products?.total > 0 ? (cat.count / totalPrd) * 100 : 0;
+              const pctDisplay = rawPct > 0 && rawPct < 1 ? rawPct.toFixed(1) : Math.round(rawPct);
+              const barWidth = cat.count > 0 ? Math.max(1, Math.round(rawPct)) : 0;
               return (
                 <div key={cat.label}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', marginBottom: '0.25rem' }}>
                     <span style={{ color: '#475569', fontWeight: 500 }}>{cat.label}</span>
                     <span style={{ fontWeight: 600, color: '#0f172a' }}>
-                      {cat.count} loại ({pct}%)
+                      {cat.count.toLocaleString()} loại ({pctDisplay}%)
                     </span>
                   </div>
                   <div style={{ height: '8px', backgroundColor: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
                     <div
                       style={{
                         height: '100%',
-                        width: `${pct}%`,
+                        width: `${barWidth}%`,
                         backgroundColor: cat.color,
                         borderRadius: '999px',
                         transition: 'width 0.4s ease',

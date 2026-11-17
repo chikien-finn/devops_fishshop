@@ -3,6 +3,9 @@ import * as dashboardService from './dashboard.service.js';
 
 export const getStats = async (req, res, next) => {
   try {
+    if (req.query.refresh === 'true') {
+      dashboardService.invalidateDashboardCache();
+    }
     const stats = await dashboardService.getDashboardStats();
     sendSuccess(res, stats, 'Lấy thống kê Dashboard thành công');
   } catch (error) {

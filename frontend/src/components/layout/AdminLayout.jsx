@@ -127,7 +127,7 @@ export default function AdminLayout() {
 
           <NavLink to="/admin/products" style={navItemStyle}>
             <Fish size={18} />
-            <span>Quản lý Cá cảnh</span>
+            <span>Quản lý Cá &amp; Thủy sinh</span>
           </NavLink>
 
           <NavLink to="/admin/orders" style={navItemStyle}>

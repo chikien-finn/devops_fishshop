@@ -30,7 +30,9 @@ export const dashboardApi = {
       const cached = getCached('stats');
       if (cached) return cached;
     }
-    const response = await api.get('/admin/dashboard/stats');
+    const response = await api.get('/admin/dashboard/stats', {
+      params: forceRefresh ? { refresh: 'true' } : {},
+    });
     const data = response.data?.data;
     if (data) setCached('stats', data);
     return data;
