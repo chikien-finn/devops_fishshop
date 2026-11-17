@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { MessageSquareText, CheckCircle2, ShieldCheck, Filter } from 'lucide-react';
 import StarRating from './StarRating.jsx';
 import Pagination from '../../../components/common/Pagination.jsx';
@@ -15,6 +15,15 @@ export default function ReviewList({
   ratingFilter = 0,
   onRatingFilterChange,
 }) {
+  const [expandedReviews, setExpandedReviews] = useState({});
+
+  const toggleExpand = (id) => {
+    setExpandedReviews((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   // Lấy phân bổ số sao chính xác từ summary.breakdown do backend tính trên toàn bộ DB
   const starBreakdown = useMemo(() => {
     return summary.breakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
@@ -305,19 +314,51 @@ export default function ReviewList({
                   </div>
 
                   {/* Bình luận */}
-                  <p
-                    style={{
-                      margin: '0.35rem 0 0 0',
-                      fontSize: '0.875rem',
-                      lineHeight: 1.5,
-                      color: '#334155',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      overflowWrap: 'anywhere',
-                    }}
-                  >
-                    {review.comment || 'Khách hàng không để lại nhận xét chi tiết.'}
-                  </p>
+                  {(() => {
+                    const commentText = review.comment || 'Khách hàng không để lại nhận xét chi tiết.';
+                    const isLong = commentText.length > 150;
+                    const isExpanded = Boolean(expandedReviews[review._id]);
+
+                    return (
+                      <>
+                        <p
+                          style={{
+                            margin: '0.35rem 0 0 0',
+                            fontSize: '0.875rem',
+                            lineHeight: 1.5,
+                            color: '#334155',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'anywhere',
+                          }}
+                        >
+                          {isLong && !isExpanded ? `${commentText.slice(0, 150)}...` : commentText}
+                        </p>
+                        {isLong && (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpand(review._id)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: isExpanded ? '#64748b' : '#0284c7',
+                              fontWeight: 600,
+                              fontSize: '0.8125rem',
+                              cursor: 'pointer',
+                              padding: '2px 0',
+                              marginTop: '0.2rem',
+                              alignSelf: 'flex-start',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                            }}
+                          >
+                            {isExpanded ? 'Thu gọn ▲' : 'Xem tiếp ▼'}
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </article>
             );

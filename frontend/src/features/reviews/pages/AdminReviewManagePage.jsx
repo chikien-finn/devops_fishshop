@@ -40,6 +40,11 @@ export default function AdminReviewManagePage() {
   const [deletingId, setDeletingId] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, review: null });
   const [toast, setToast] = useState({ type: '', message: '' });
+  const [expandedReviews, setExpandedReviews] = useState({});
+
+  const toggleExpand = (id) => {
+    setExpandedReviews((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const showToast = (type, message) => {
     setToast({ type, message });
@@ -484,9 +489,45 @@ export default function AdminReviewManagePage() {
 
                       {/* Nội dung nhận xét */}
                       <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top', maxWidth: '300px' }}>
-                        <p style={{ margin: 0, fontSize: '0.875rem', color: '#334155', lineHeight: 1.45, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                          {rev.comment || <em style={{ color: '#94a3b8' }}>Khách hàng chỉ chấm sao không để lại lời bình.</em>}
-                        </p>
+                        {(() => {
+                          const comment = rev.comment;
+                          if (!comment) {
+                            return (
+                              <p style={{ margin: 0, fontSize: '0.875rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                Khách hàng chỉ chấm sao không để lại lời bình.
+                              </p>
+                            );
+                          }
+                          const isLong = comment.length > 100;
+                          const isExpanded = Boolean(expandedReviews[rev._id]);
+                          return (
+                            <div>
+                              <p style={{ margin: 0, fontSize: '0.875rem', color: '#334155', lineHeight: 1.45, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                                {isLong && !isExpanded ? `${comment.slice(0, 100)}...` : comment}
+                              </p>
+                              {isLong && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpand(rev._id)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: isExpanded ? '#64748b' : '#0284c7',
+                                    fontWeight: 600,
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer',
+                                    padding: '2px 0 0 0',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '2px',
+                                  }}
+                                >
+                                  {isExpanded ? 'Thu gọn ▲' : 'Xem tiếp ▼'}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Ngày gửi */}
