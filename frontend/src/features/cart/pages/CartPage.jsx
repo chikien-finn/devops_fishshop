@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Trash2, Plus, Minus, ArrowLeft, CheckCircle } from 'lucide-react';
+import {
+  ShoppingBag,
+  Trash2,
+  Plus,
+  Minus,
+  ArrowLeft,
+  CheckCircle,
+  Clock,
+  Copy,
+  Check,
+  QrCode,
+  ShieldCheck,
+  AlertCircle,
+} from 'lucide-react';
 import { useCart } from '../hooks/useCart.jsx';
 import { useAuth } from '../../auth/hooks/useAuth.jsx';
 import orderService from '../../orders/services/orderService.js';
@@ -17,6 +30,8 @@ export default function CartPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [createdOrder, setCreatedOrder] = useState(null);
+  const [transferred, setTransferred] = useState(false);
+  const [copiedField, setCopiedField] = useState('');
   const [paymentConfig, setPaymentConfig] = useState(null);
   const [paymentConfigError, setPaymentConfigError] = useState('');
   const [shippingRegion, setShippingRegion] = useState('central');
@@ -38,6 +53,14 @@ export default function CartPage() {
     } catch (err) {
       setAppliedCoupon(null);
       setCouponMessage(err.response?.data?.message || 'Không thể áp dụng mã giảm giá');
+    }
+  };
+
+  const handleCopy = (text, fieldName) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(''), 2500);
     }
   };
 
@@ -113,48 +136,364 @@ export default function CartPage() {
   };
 
   if (createdOrder) {
+    if (createdOrder.paymentMethod === 'cod') {
+      return (
+        <div
+          style={{
+            maxWidth: '600px',
+            margin: '3rem auto',
+            textAlign: 'center',
+            backgroundColor: '#ffffff',
+            padding: '3rem 2rem',
+            borderRadius: '12px',
+            border: '1px solid #bbf7d0',
+            boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)',
+          }}
+        >
+          <CheckCircle size={56} color="#059669" style={{ margin: '0 auto 1rem', display: 'block' }} />
+          <div
+            style={{
+              display: 'inline-block',
+              padding: '0.25rem 0.75rem',
+              backgroundColor: '#ecfdf5',
+              color: '#059669',
+              fontSize: '0.8125rem',
+              fontWeight: 700,
+              borderRadius: '999px',
+              marginBottom: '0.75rem',
+              border: '1px solid #a7f3d0',
+            }}
+          >
+            ✓ ĐẶT HÀNG THÀNH CÔNG (COD)
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+            Đặt hàng thành công!
+          </h2>
+          <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+            Mã đơn hàng của bạn: <strong>#{createdOrder._id?.slice(-6).toUpperCase()}</strong>
+          </p>
+          <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
+            Tổng thanh toán: <strong style={{ color: '#dc2626' }}>{formatCurrency(createdOrder.totalAmount)}</strong> (Thanh toán khi nhận hàng).<br />
+            Trại cá AquaCraft đã tiếp nhận đơn hàng, nhân viên sẽ đóng oxy và giao hàng trong 24-48h!
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#0284c7', color: '#ffffff', padding: '0.625rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
+              <ShoppingBag size={16} /> Xem lịch sử đơn hàng
+            </Link>
+            <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#f1f5f9', color: '#334155', padding: '0.625rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
+              <ArrowLeft size={16} /> Tiếp tục mua sắm
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    // Trường hợp Banking (Chuyển khoản VietQR)
     const transferContent = `AQUA${createdOrder._id?.slice(-8).toUpperCase()}`;
-    const qrUrl = createdOrder.paymentMethod === 'banking' && paymentConfig?.bankBin && paymentConfig?.accountNumber
+    const qrUrl = paymentConfig?.bankBin && paymentConfig?.accountNumber
       ? `https://img.vietqr.io/image/${encodeURIComponent(paymentConfig.bankBin)}-${encodeURIComponent(paymentConfig.accountNumber)}-compact2.svg?amount=${encodeURIComponent(createdOrder.totalAmount)}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(paymentConfig.accountName || '')}`
       : '';
+
+    // Nếu khách hàng đã bấm "Tôi đã chuyển khoản xong"
+    if (transferred) {
+      return (
+        <div
+          style={{
+            maxWidth: '600px',
+            margin: '3rem auto',
+            textAlign: 'center',
+            backgroundColor: '#ffffff',
+            padding: '3rem 2rem',
+            borderRadius: '12px',
+            border: '1px solid #bbf7d0',
+            boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)',
+          }}
+        >
+          <CheckCircle size={56} color="#059669" style={{ margin: '0 auto 1rem', display: 'block' }} />
+          <div
+            style={{
+              display: 'inline-block',
+              padding: '0.25rem 0.75rem',
+              backgroundColor: '#ecfdf5',
+              color: '#059669',
+              fontSize: '0.8125rem',
+              fontWeight: 700,
+              borderRadius: '999px',
+              marginBottom: '0.75rem',
+              border: '1px solid #a7f3d0',
+            }}
+          >
+            ✓ ĐÃ GHI NHẬN THÔNG BÁO CHUYỂN KHOẢN
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+            Đã ghi nhận chuyển khoản!
+          </h2>
+          <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+            Mã đơn hàng của bạn: <strong>#{createdOrder._id?.slice(-6).toUpperCase()}</strong>
+          </p>
+          <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
+            Hệ thống đang đối soát khoản chuyển <strong style={{ color: '#dc2626' }}>{formatCurrency(createdOrder.totalAmount)}</strong> của bạn.<br />
+            Ngay khi tiền về tài khoản, trại cá AquaCraft sẽ tiến hành đóng oxy và giao hàng trong 24-48h!
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#0284c7', color: '#ffffff', padding: '0.625rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
+              <ShoppingBag size={16} /> Xem lịch sử đơn hàng
+            </Link>
+            <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#f1f5f9', color: '#334155', padding: '0.625rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
+              <ArrowLeft size={16} /> Tiếp tục mua sắm
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    // Nếu chưa bấm "Tôi đã chuyển khoản xong" -> Hiển thị màn hình Chờ thanh toán VietQR
     return (
       <div
         style={{
-          maxWidth: '600px',
-          margin: '3rem auto',
-          textAlign: 'center',
+          maxWidth: '640px',
+          margin: '2rem auto',
           backgroundColor: '#ffffff',
-          padding: '3rem 2rem',
-          borderRadius: '8px',
-          border: '1px solid #bbf7d0',
-          boxShadow: '0 4px 12px rgba(5, 150, 105, 0.08)',
+          padding: '2.5rem 2rem',
+          borderRadius: '12px',
+          border: '1px solid #bae6fd',
+          boxShadow: '0 8px 24px rgba(2, 132, 199, 0.08)',
+          textAlign: 'center',
         }}
       >
-        <CheckCircle size={56} color="#059669" style={{ margin: '0 auto 1rem', display: 'block' }} />
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
-          Đặt hàng thành công!
+        <div
+          style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            backgroundColor: '#e0f2fe',
+            color: '#0284c7',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1rem',
+          }}
+        >
+          <Clock size={36} color="#0284c7" />
+        </div>
+
+        <div
+          style={{
+            display: 'inline-block',
+            padding: '0.25rem 0.75rem',
+            backgroundColor: '#fef3c7',
+            color: '#b45309',
+            fontSize: '0.8125rem',
+            fontWeight: 700,
+            borderRadius: '999px',
+            marginBottom: '0.75rem',
+            border: '1px solid #fde68a',
+          }}
+        >
+          ⏳ ĐƠN HÀNG ĐÃ TẠO - CHỜ CHUYỂN KHOẢN
+        </div>
+
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem' }}>
+          Vui lòng thanh toán đơn hàng
         </h2>
-        <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '0.75rem' }}>
-          Mã đơn hàng của bạn: <strong>#{createdOrder._id?.slice(-6).toUpperCase()}</strong>
+        <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+          Mã đơn hàng: <strong>#{createdOrder._id?.slice(-6).toUpperCase()}</strong>
         </p>
-        <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-          Tổng thanh toán: <strong style={{ color: '#dc2626' }}>{formatCurrency(createdOrder.totalAmount)}</strong>. Trại cá AquaCraft sẽ đóng oxy và giao hàng trong 24-48h!
+        <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.5, maxWidth: '520px', margin: '0 auto 1.5rem' }}>
+          Vui lòng quét mã <strong>VietQR</strong> bên dưới hoặc chuyển khoản đúng số tiền <strong style={{ color: '#dc2626' }}>{formatCurrency(createdOrder.totalAmount)}</strong>. Sau khi chuyển tiền thành công, hãy bấm xác nhận bên dưới để shop chuẩn bị cá giao đi nhé!
         </p>
-        {createdOrder.paymentMethod === 'banking' && (
-          <div className="checkout-bank-payment">
-            <h3>Quét QR để chuyển khoản</h3>
-            {qrUrl ? <img src={qrUrl} alt={`Mã QR chuyển khoản ${paymentConfig?.bankName || ''}`} /> : <p>{paymentConfigError || 'Đang tải mã QR…'}</p>}
-            {paymentConfig && <div><strong>{paymentConfig.bankName} · {paymentConfig.accountNumber}</strong><span>{paymentConfig.accountName}</span><span>Số tiền: {formatCurrency(createdOrder.totalAmount)}</span><span>Nội dung: <b>{transferContent}</b></span></div>}
-            <p>Trạng thái thanh toán: <strong>Chờ cửa hàng xác nhận</strong>. Đơn hàng chỉ được cập nhật sau khi đối soát chuyển khoản.</p>
+
+        {/* Khối VietQR Chi Tiết */}
+        <div
+          style={{
+            backgroundColor: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '1.5rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0284c7', fontWeight: 700, fontSize: '1rem' }}>
+            <QrCode size={20} />
+            <span>Quét mã VietQR để thanh toán nhanh</span>
           </div>
-        )}
-        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#0284c7', color: '#ffffff', padding: '0.625rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
-            <ShoppingBag size={16} /> Xem lịch sử đơn hàng
-          </Link>
-          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#f1f5f9', color: '#334155', padding: '0.625rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.875rem' }}>
-            <ArrowLeft size={16} /> Tiếp tục mua sắm
-          </Link>
+
+          {qrUrl ? (
+            <div style={{ padding: '0.75rem', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <img
+                src={qrUrl}
+                alt={`Mã VietQR ${paymentConfig?.bankName || ''}`}
+                style={{ width: '260px', height: 'auto', display: 'block', margin: '0 auto' }}
+              />
+            </div>
+          ) : (
+            <p style={{ color: '#64748b', fontSize: '0.875rem' }}>
+              {paymentConfigError || 'Đang tải thông tin mã VietQR…'}
+            </p>
+          )}
+
+          {/* Bảng chi tiết chuyển khoản kèm nút sao chép */}
+          {paymentConfig && (
+            <div
+              style={{
+                width: '100%',
+                maxWidth: '460px',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.625rem',
+                textAlign: 'left',
+                fontSize: '0.875rem',
+              }}
+            >
+              {/* Ngân hàng */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.4rem' }}>
+                <span style={{ color: '#64748b' }}>Ngân hàng:</span>
+                <strong style={{ color: '#0f172a' }}>{paymentConfig.bankName}</strong>
+              </div>
+
+              {/* Số tài khoản */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.4rem' }}>
+                <span style={{ color: '#64748b' }}>Số tài khoản:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <strong style={{ color: '#0284c7', fontSize: '0.9375rem', letterSpacing: '0.5px' }}>{paymentConfig.accountNumber}</strong>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(paymentConfig.accountNumber, 'account')}
+                    style={{
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      backgroundColor: copiedField === 'account' ? '#dcfce7' : '#f1f5f9',
+                      color: copiedField === 'account' ? '#15803d' : '#475569',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                    }}
+                  >
+                    {copiedField === 'account' ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedField === 'account' ? 'Đã chép' : 'Sao chép'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Chủ tài khoản */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.4rem' }}>
+                <span style={{ color: '#64748b' }}>Chủ tài khoản:</span>
+                <strong style={{ color: '#0f172a', textTransform: 'uppercase' }}>{paymentConfig.accountName}</strong>
+              </div>
+
+              {/* Số tiền */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.4rem' }}>
+                <span style={{ color: '#64748b' }}>Số tiền chuyển:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <strong style={{ color: '#dc2626', fontSize: '1rem' }}>{formatCurrency(createdOrder.totalAmount)}</strong>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(String(createdOrder.totalAmount), 'amount')}
+                    style={{
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      backgroundColor: copiedField === 'amount' ? '#dcfce7' : '#f1f5f9',
+                      color: copiedField === 'amount' ? '#15803d' : '#475569',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                    }}
+                  >
+                    {copiedField === 'amount' ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedField === 'amount' ? 'Đã chép' : 'Sao chép'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Nội dung chuyển khoản */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#64748b' }}>Nội dung CK:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <strong style={{ color: '#b45309', backgroundColor: '#fef3c7', padding: '0.15rem 0.45rem', borderRadius: '4px', border: '1px solid #fde68a' }}>
+                    {transferContent}
+                  </strong>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(transferContent, 'content')}
+                    style={{
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      backgroundColor: copiedField === 'content' ? '#dcfce7' : '#f1f5f9',
+                      color: copiedField === 'content' ? '#15803d' : '#475569',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                    }}
+                  >
+                    {copiedField === 'content' ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedField === 'content' ? 'Đã chép' : 'Sao chép'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ fontSize: '0.75rem', color: '#b45309', backgroundColor: '#fffbeb', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid #fef3c7', maxWidth: '460px', width: '100%', textAlign: 'center' }}>
+            💡 <strong>Lưu ý:</strong> Vui lòng chuyển đúng số tiền và giữ nguyên nội dung chuyển khoản để hệ thống đối soát tự động nhanh nhất.
+          </div>
+        </div>
+
+        {/* Nút Tôi đã chuyển khoản */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            type="button"
+            onClick={() => setTransferred(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              backgroundColor: '#0284c7',
+              color: '#ffffff',
+              padding: '0.75rem 2rem',
+              borderRadius: '6px',
+              border: 'none',
+              fontWeight: 700,
+              fontSize: '0.9375rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)',
+              width: '100%',
+              maxWidth: '360px',
+              transition: 'background-color 0.2s',
+            }}
+          >
+            <Check size={18} />
+            <span>Tôi đã chuyển khoản xong</span>
+          </button>
+
+          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.5rem' }}>
+            <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#f1f5f9', color: '#334155', padding: '0.5rem 1rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.8125rem' }}>
+              <ShoppingBag size={15} /> Xem lịch sử đơn hàng
+            </Link>
+            <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#f1f5f9', color: '#334155', padding: '0.5rem 1rem', borderRadius: '6px', textDecoration: 'none', fontWeight: 600, fontSize: '0.8125rem' }}>
+              <ArrowLeft size={15} /> Tiếp tục mua sắm
+            </Link>
+          </div>
         </div>
       </div>
     );
