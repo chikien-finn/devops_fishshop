@@ -73,14 +73,18 @@ export default function AdminDashboardPage() {
 
   // Tải dữ liệu Dashboard từ các API chuyên biệt của Thành viên 4
   const fetchDashboardData = useCallback(async (isManualRefresh = false) => {
-    if (isManualRefresh) setRefreshing(true);
-    else setLoading(true);
+    if (isManualRefresh) {
+      setRefreshing(true);
+    } else {
+      // Chỉ hiện loading spinner lần đầu tiên, không nhấp nháy khi chuyển tab
+      setLoading((prev) => (stats.products.total > 0 ? false : prev));
+    }
 
     try {
       const [statsRes, ordersRes, topRes] = await Promise.all([
-        dashboardApi.getStats().catch(() => DEFAULT_STATS),
-        dashboardApi.getRecentOrders(5).catch(() => []),
-        dashboardApi.getTopProducts(5).catch(() => []),
+        dashboardApi.getStats(isManualRefresh).catch(() => DEFAULT_STATS),
+        dashboardApi.getRecentOrders(5, isManualRefresh).catch(() => []),
+        dashboardApi.getTopProducts(5, isManualRefresh).catch(() => []),
       ]);
 
       if (statsRes) {
@@ -94,7 +98,7 @@ export default function AdminDashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [stats.products.total]);
 
   // Tải danh sách cá cảnh / sản phẩm sắp hết hàng
   const fetchLowStockData = useCallback(

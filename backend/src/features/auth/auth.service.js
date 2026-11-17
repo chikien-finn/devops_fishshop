@@ -32,7 +32,7 @@ export const login = async (email, password) => {
 };
 
 export const getCurrentUser = async (userId) => {
-  const user = await User.findById(userId).select('-password');
+  const user = await User.findById(userId).select('-password').lean();
   if (!user) {
     throw new ApiError(404, 'Người dùng không tồn tại');
   }

@@ -3,6 +3,9 @@ import { ENV } from './configs/env.config.js';
 import { connectDB } from './configs/db.config.js';
 import { expireOverdueBankTransfers } from './features/orders/order.service.js';
 
+import { getDashboardStats, getTopSellingProducts } from './features/dashboard/dashboard.service.js';
+import { getProductStats } from './features/products/product.service.js';
+
 const startServer = async () => {
   // Connect to MongoDB
   await connectDB();
@@ -19,6 +22,15 @@ const startServer = async () => {
   // Listen on configured PORT
   app.listen(ENV.PORT, () => {
     console.log(`[AquaCraft Server] Running on http://localhost:${ENV.PORT} (${ENV.NODE_ENV})`);
+
+    // Pre-warm caches in background so the very first request to Admin is instant (< 5ms)
+    Promise.allSettled([
+      getDashboardStats(),
+      getTopSellingProducts(5),
+      getProductStats(),
+    ]).then(() => {
+      console.log('[AquaCraft Cache] Admin dashboard & product caches pre-warmed successfully');
+    });
   });
 };
 

@@ -122,4 +122,19 @@ test('Member 4: Dashboard & Review eligibility endpoints enforce authentication 
   }
 });
 
+test('Security: updateUserRole blocks upgrading any account to admin', async () => {
+  const { updateUserRole } = await import('../src/features/users/user.service.js');
+  await assert.rejects(
+    async () => {
+      await updateUserRole('6aec892a5bf2a9de515a95f3', 'admin');
+    },
+    (err) => {
+      assert.strictEqual(err.statusCode, 403);
+      assert.match(err.message, /không cho phép nâng cấp/i);
+      return true;
+    }
+  );
+});
+
+
 

@@ -162,6 +162,7 @@ export const getAllOrders = async (filters = {}) => {
 
   const [items, totalItems] = await Promise.all([
     Order.find(query)
+      .select('user phoneNumber shippingAddress totalAmount paymentMethod paymentStatus status items createdAt')
       .populate('user', 'name email')
       .sort({ createdAt: -1, _id: -1 })
       .skip(skip)

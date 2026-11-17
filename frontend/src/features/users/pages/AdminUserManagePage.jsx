@@ -102,9 +102,12 @@ export default function AdminUserManagePage() {
     }
   }, [feedback]);
 
-  // Đổi role
+  // Đổi role (Chỉ cho phép hạ quyền, không cho nâng cấp lên admin)
   const handleConfirmRoleChange = async () => {
-    if (!roleModal.user) return;
+    if (!roleModal.user || roleModal.targetRole === 'admin') {
+      alert('Hệ thống không cho phép nâng cấp tài khoản lên Quản trị viên (Admin)');
+      return;
+    }
     try {
       setProcessing(true);
       const updated = await userService.updateUserRole(roleModal.user._id, roleModal.targetRole);
@@ -501,36 +504,36 @@ export default function AdminUserManagePage() {
                       {/* Actions */}
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '0.35rem' }}>
-                          {/* Đổi quyền */}
-                          <button
-                            disabled={isCurrentAdmin}
-                            onClick={() =>
-                              setRoleModal({
-                                open: true,
-                                user: u,
-                                targetRole: u.role === 'admin' ? 'user' : 'admin',
-                              })
-                            }
-                            title={
-                              isCurrentAdmin
-                                ? 'Không thể đổi quyền của chính mình'
-                                : u.role === 'admin'
-                                ? 'Hạ xuống Khách hàng (User)'
-                                : 'Thăng lên Quản trị viên (Admin)'
-                            }
-                            style={{
-                              padding: '0.375rem 0.625rem',
-                              backgroundColor: '#ffffff',
-                              border: '1px solid #cbd5e1',
-                              borderRadius: '4px',
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              color: isCurrentAdmin ? '#cbd5e1' : '#0284c7',
-                              cursor: isCurrentAdmin ? 'not-allowed' : 'pointer',
-                            }}
-                          >
-                            {u.role === 'admin' ? 'Hạ User' : 'Lên Admin'}
-                          </button>
+                          {/* Chỉ cho phép hạ quyền Admin xuống User, tuyệt đối không cho nâng cấp lên Admin */}
+                          {u.role === 'admin' && (
+                            <button
+                              disabled={isCurrentAdmin}
+                              onClick={() =>
+                                setRoleModal({
+                                  open: true,
+                                  user: u,
+                                  targetRole: 'user',
+                                })
+                              }
+                              title={
+                                isCurrentAdmin
+                                  ? 'Không thể đổi quyền của chính mình'
+                                  : 'Hạ xuống Khách hàng (User)'
+                              }
+                              style={{
+                                padding: '0.375rem 0.625rem',
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: 500,
+                                color: isCurrentAdmin ? '#cbd5e1' : '#d97706',
+                                cursor: isCurrentAdmin ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              Hạ User
+                            </button>
+                          )}
 
                           {/* Xóa */}
                           <button

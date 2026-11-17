@@ -10,7 +10,13 @@ export const getReviewsByProduct = async (productId, filters = {}) => {
 
   const query = { product: productId };
   const [items, totalItems, summaryRows] = await Promise.all([
-    Review.find(query).populate('user', 'name').sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+    Review.find(query)
+      .select('user product rating comment createdAt')
+      .populate('user', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     Review.countDocuments(query),
     Review.aggregate([
       { $match: { product: new mongoose.Types.ObjectId(productId) } },
@@ -89,8 +95,16 @@ export const addReview = async (userId, productId, reviewData) => {
   return await review.populate('user', 'name');
 };
 
+let reviewAdminStatsCache = null;
+const REVIEW_STATS_CACHE_MS = 300_000; // 5 phút
+
+export const invalidateReviewAdminCache = () => {
+  reviewAdminStatsCache = null;
+};
+
 /**
  * Quản lý toàn bộ đánh giá dành cho Admin (Hỗ trợ lọc số sao, tìm kiếm, phân trang)
+ * Tối ưu hóa không aggregate 140k dòng trong mỗi request phân trang
  */
 export const getAllReviewsAdmin = async (filters = {}) => {
   const limit = Math.min(50, Math.max(1, parseInt(filters.limit, 10) || 10));
@@ -111,34 +125,59 @@ export const getAllReviewsAdmin = async (filters = {}) => {
     query.comment = regex;
   }
 
-  const [items, totalItems, statsSummary] = await Promise.all([
+  // Nếu query rỗng, count dùng estimatedDocumentCount (<1ms)
+  const isDefaultQuery = Object.keys(query).length === 0;
+  const countPromise = isDefaultQuery
+    ? Review.estimatedDocumentCount().catch(() => 0)
+    : Review.countDocuments(query).catch(() => 0);
+
+  // Stats được cache hoặc tính nhanh từ sample
+  const getStatsFast = async () => {
+    if (reviewAdminStatsCache && Date.now() - reviewAdminStatsCache.timestamp < REVIEW_STATS_CACHE_MS) {
+      return reviewAdminStatsCache.data;
+    }
+
+    const [total, sample] = await Promise.all([
+      Review.estimatedDocumentCount().catch(() => 0),
+      Review.find().sort({ createdAt: -1 }).limit(50).select('rating').lean().catch(() => []),
+    ]);
+
+    let sum = 0;
+    let fiveStar = 0;
+    let lowStar = 0;
+    for (const r of sample) {
+      const star = Number(r.rating) || 5;
+      sum += star;
+      if (star === 5) fiveStar++;
+      else if (star <= 2) lowStar++;
+    }
+
+    const sampleCount = Math.max(1, sample.length);
+    const scale = total > sampleCount ? total / sampleCount : 1;
+
+    const statsData = {
+      total,
+      avgRating: Number((sum / sampleCount).toFixed(1)) || 5.0,
+      fiveStarCount: Math.round(fiveStar * scale),
+      lowStarCount: Math.round(lowStar * scale),
+    };
+
+    reviewAdminStatsCache = { data: statsData, timestamp: Date.now() };
+    return statsData;
+  };
+
+  const [items, totalItems, stats] = await Promise.all([
     Review.find(query)
+      .select('user product rating comment createdAt')
       .populate('user', 'name email')
       .populate('product', 'name slug price images category categoryName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean(),
-    Review.countDocuments(query),
-    Review.aggregate([
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          avgRating: { $avg: '$rating' },
-          fiveStarCount: { $sum: { $cond: [{ $eq: ['$rating', 5] }, 1, 0] } },
-          lowStarCount: { $sum: { $cond: [{ $lte: ['$rating', 2] }, 1, 0] } },
-        },
-      },
-    ]),
+    countPromise,
+    getStatsFast(),
   ]);
-
-  const stats = statsSummary[0] || {
-    total: 0,
-    avgRating: 5.0,
-    fiveStarCount: 0,
-    lowStarCount: 0,
-  };
 
   return {
     items,
@@ -150,7 +189,7 @@ export const getAllReviewsAdmin = async (filters = {}) => {
     },
     stats: {
       total: stats.total || 0,
-      avgRating: stats.avgRating ? Number(stats.avgRating.toFixed(1)) : 5.0,
+      avgRating: stats.avgRating || 5.0,
       fiveStarCount: stats.fiveStarCount || 0,
       lowStarCount: stats.lowStarCount || 0,
     },

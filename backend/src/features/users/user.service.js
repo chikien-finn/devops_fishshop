@@ -51,7 +51,7 @@ export const getAllUsers = async (filters = {}) => {
 };
 
 export const getUserById = async (id) => {
-  const user = await User.findById(id).select('-password');
+  const user = await User.findById(id).select('-password').lean();
   if (!user) throw new ApiError(404, 'Không tìm thấy người dùng');
   return user;
 };
@@ -65,10 +65,13 @@ export const updateUserProfile = async (id, updateData) => {
 };
 
 export const updateUserRole = async (id, role) => {
-  if (!['user', 'admin'].includes(role)) {
+  if (role === 'admin') {
+    throw new ApiError(403, 'Hệ thống không cho phép nâng cấp tài khoản lên Quản trị viên (Admin)');
+  }
+  if (!['user', 'customer'].includes(role)) {
     throw new ApiError(400, 'Quyền người dùng không hợp lệ');
   }
-  const user = await User.findByIdAndUpdate(id, { role }, { returnDocument: 'after' }).select('-password');
+  const user = await User.findByIdAndUpdate(id, { role: 'user' }, { returnDocument: 'after' }).select('-password');
   if (!user) throw new ApiError(404, 'Không tìm thấy người dùng');
   return user;
 };

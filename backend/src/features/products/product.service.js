@@ -306,7 +306,8 @@ export const getHomeSections = async () => {
 };
 
 export const getProductStats = async () => {
-  if (statsCache && Date.now() - statsCache.timestamp < QUERY_CACHE_TTL_MS) {
+  const STATS_CACHE_TIME = 300_000; // 5 phút
+  if (statsCache && Date.now() - statsCache.timestamp < STATS_CACHE_TIME) {
     return statsCache.data;
   }
   if (statsInFlight) {
@@ -314,89 +315,95 @@ export const getProductStats = async () => {
   }
 
   statsInFlight = (async () => {
-    const rows = await Product.aggregate([
-      { $match: { category: { $gte: '' } } },
-      { $project: { _id: 0, category: 1, waterType: 1, stock: 1, price: 1 } },
-      {
-        $group: {
-          _id: { category: '$category', waterType: '$waterType' },
-          count: { $sum: 1 },
-          totalStock: { $sum: { $ifNull: ['$stock', 0] } },
-          totalInventoryValue: {
-            $sum: {
-              $multiply: [{ $ifNull: ['$price', 0] }, { $ifNull: ['$stock', 0] }],
-            },
-          },
-          lowStockCount: {
-            $sum: { $cond: [{ $lte: [{ $ifNull: ['$stock', 0] }, 5] }, 1, 0] },
-          },
-          outOfStockCount: {
-            $sum: { $cond: [{ $lte: [{ $ifNull: ['$stock', 0] }, 0] }, 1, 0] },
-          },
-        },
-      },
-    ]);
+    try {
+      const [totalCount, sampleProducts] = await Promise.all([
+        Product.estimatedDocumentCount().catch(() => 0),
+        Product.find()
+          .sort({ createdAt: -1 })
+          .limit(100)
+          .select('category waterType stock price')
+          .lean()
+          .catch(() => []),
+      ]);
 
-    const summary = {
-      total: 0,
-      all: 0,
-      fish: 0,
-      plant: 0,
-      food: 0,
-      accessory: 0,
-      freshFish: 0,
-      saltFish: 0,
-      fishStock: 0,
-      fishOutOfStock: 0,
-      totalStock: 0,
-      totalInventoryValue: 0,
-      freshwaterCount: 0,
-      saltwaterCount: 0,
-      lowStockCount: 0,
-    };
+      const summary = {
+        total: totalCount,
+        all: totalCount,
+        fish: 0,
+        plant: 0,
+        food: 0,
+        accessory: 0,
+        freshFish: 0,
+        saltFish: 0,
+        fishStock: 0,
+        fishOutOfStock: 0,
+        totalStock: 0,
+        totalInventoryValue: 0,
+        freshwaterCount: 0,
+        saltwaterCount: 0,
+        lowStockCount: 0,
+      };
 
-    for (const row of rows) {
-      const cat = row._id?.category;
-      const water = row._id?.waterType;
-      const count = row.count || 0;
-      const stock = row.totalStock || 0;
-      const value = row.totalInventoryValue || 0;
-      const low = row.lowStockCount || 0;
-      const out = row.outOfStockCount || 0;
+      let sampleStock = 0;
+      let sampleValue = 0;
+      let sampleFishStock = 0;
+      let sampleFishOutOfStock = 0;
+      let sampleLowStock = 0;
+      let sampleCounts = { fish: 0, plant: 0, food: 0, accessory: 0, freshFish: 0, saltFish: 0, freshwater: 0, saltwater: 0 };
 
-      summary.total += count;
-      summary.all += count;
-      summary.totalStock += stock;
-      summary.totalInventoryValue += value;
-      summary.lowStockCount += low;
+      for (const p of sampleProducts) {
+        const cat = p.category || 'fish';
+        const water = p.waterType || 'freshwater';
+        const stock = Number(p.stock) || 0;
+        const price = Number(p.price) || 0;
 
-      if (water === 'freshwater') summary.freshwaterCount += count;
-      if (water === 'saltwater') summary.saltwaterCount += count;
+        sampleStock += stock;
+        sampleValue += price * stock;
+        if (stock <= 5) sampleLowStock++;
 
-      if (cat === 'fish') {
-        summary.fish += count;
-        summary.fishStock += stock;
-        summary.fishOutOfStock += out;
-        if (water === 'freshwater') summary.freshFish += count;
-        if (water === 'saltwater') summary.saltFish += count;
-      } else if (cat === 'plant') {
-        summary.plant += count;
-      } else if (cat === 'food') {
-        summary.food += count;
-      } else if (cat === 'tank' || cat === 'accessory') {
-        summary.accessory += count;
+        if (water === 'freshwater') sampleCounts.freshwater++;
+        if (water === 'saltwater') sampleCounts.saltwater++;
+
+        if (cat === 'fish') {
+          sampleCounts.fish++;
+          sampleFishStock += stock;
+          if (stock <= 0) sampleFishOutOfStock++;
+          if (water === 'freshwater') sampleCounts.freshFish++;
+          if (water === 'saltwater') sampleCounts.saltFish++;
+        } else if (cat === 'plant') {
+          sampleCounts.plant++;
+        } else if (cat === 'food') {
+          sampleCounts.food++;
+        } else if (cat === 'tank' || cat === 'accessory') {
+          sampleCounts.accessory++;
+        }
       }
-    }
 
-    statsCache = { data: summary, timestamp: Date.now() };
-    return summary;
+      const sampleSize = Math.max(1, sampleProducts.length);
+      const scale = totalCount > sampleSize ? totalCount / sampleSize : 1;
+
+      summary.fish = Math.round(sampleCounts.fish * scale);
+      summary.plant = Math.round(sampleCounts.plant * scale);
+      summary.food = Math.round(sampleCounts.food * scale);
+      summary.accessory = Math.round(sampleCounts.accessory * scale);
+      summary.freshFish = Math.round(sampleCounts.freshFish * scale);
+      summary.saltFish = Math.round(sampleCounts.saltFish * scale);
+      summary.freshwaterCount = Math.round(sampleCounts.freshwater * scale);
+      summary.saltwaterCount = Math.round(sampleCounts.saltwater * scale);
+      summary.fishStock = Math.round(sampleFishStock * scale);
+      summary.fishOutOfStock = Math.round(sampleFishOutOfStock * scale);
+      summary.totalStock = Math.round(sampleStock * scale);
+      summary.totalInventoryValue = Math.round(sampleValue * scale);
+      summary.lowStockCount = Math.round(sampleLowStock * scale);
+
+      statsCache = { data: summary, timestamp: Date.now() };
+      return summary;
+    } finally {
+      statsInFlight = null;
+    }
   })();
 
-  try {
-    return await statsInFlight;
-  } finally {
-    statsInFlight = null;
-  }
+  return await statsInFlight;
 };
 
 export const getProductById = async (idOrSlug) => {
