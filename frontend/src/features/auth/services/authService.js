@@ -1,17 +1,41 @@
 import api from '../../../services/api.js';
 
-// Không giữ phiên đăng nhập tự động qua các lần mở lại trình duyệt từ localStorage cũ
-if (typeof window !== 'undefined') {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-}
+const getStorageItem = (key) => {
+  try {
+    return localStorage.getItem(key) || sessionStorage.getItem(key);
+  } catch {
+    return sessionStorage.getItem(key);
+  }
+};
+
+const setStorageItem = (key, val) => {
+  try {
+    localStorage.setItem(key, val);
+  } catch {}
+  try {
+    sessionStorage.setItem(key, val);
+  } catch {}
+};
+
+const removeStorageItem = (key) => {
+  try {
+    localStorage.removeItem(key);
+  } catch {}
+  try {
+    sessionStorage.removeItem(key);
+  } catch {}
+};
 
 export const authService = {
+  setAuth(token, user) {
+    if (token) setStorageItem('token', token);
+    if (user) setStorageItem('user', JSON.stringify(user));
+  },
+
   async login(email, password) {
     const response = await api.post('/auth/login', { email, password });
     if (response.data?.data?.token) {
-      sessionStorage.setItem('token', response.data.data.token);
-      sessionStorage.setItem('user', JSON.stringify(response.data.data.user));
+      this.setAuth(response.data.data.token, response.data.data.user);
     }
     return response.data?.data;
   },
@@ -19,8 +43,7 @@ export const authService = {
   async register(userData) {
     const response = await api.post('/auth/register', userData);
     if (response.data?.data?.token) {
-      sessionStorage.setItem('token', response.data.data.token);
-      sessionStorage.setItem('user', JSON.stringify(response.data.data.user));
+      this.setAuth(response.data.data.token, response.data.data.user);
     }
     return response.data?.data;
   },
@@ -28,7 +51,7 @@ export const authService = {
   async getMe() {
     const response = await api.get('/auth/me');
     if (response.data?.data) {
-      sessionStorage.setItem('user', JSON.stringify(response.data.data));
+      setStorageItem('user', JSON.stringify(response.data.data));
     }
     return response.data?.data;
   },
@@ -44,15 +67,13 @@ export const authService = {
   },
 
   logout() {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    removeStorageItem('token');
+    removeStorageItem('user');
   },
 
   getCurrentUser() {
     try {
-      const userStr = sessionStorage.getItem('user');
+      const userStr = getStorageItem('user');
       return userStr ? JSON.parse(userStr) : null;
     } catch {
       return null;
@@ -60,7 +81,7 @@ export const authService = {
   },
 
   getToken() {
-    return sessionStorage.getItem('token');
+    return getStorageItem('token');
   },
 
   isAdmin() {

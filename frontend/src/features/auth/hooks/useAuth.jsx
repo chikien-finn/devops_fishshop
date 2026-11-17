@@ -17,11 +17,14 @@ export function AuthProvider({ children }) {
         try {
           const freshUser = await authService.getMe();
           setUser(freshUser);
-        } catch {
-          // Token hết hạn
-          authService.logout();
-          setUser(null);
-          setToken(null);
+        } catch (err) {
+          // Chỉ đăng xuất khi server xác nhận token không hợp lệ hoặc hết hạn (401)
+          // Không tự động đăng xuất khi gặp lỗi mạng, timeout hoặc server lag tạm thời
+          if (err.response?.status === 401) {
+            authService.logout();
+            setUser(null);
+            setToken(null);
+          }
         }
       }
       setLoading(false);
