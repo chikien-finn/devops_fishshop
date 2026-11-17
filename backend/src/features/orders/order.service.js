@@ -160,18 +160,32 @@ export const getAllOrders = async (filters = {}) => {
     ? Order.estimatedDocumentCount()
     : Order.countDocuments(query);
 
-  const [items, totalItems] = await Promise.all([
-    Order.find(query)
-      .select('user phoneNumber shippingAddress totalAmount paymentMethod paymentStatus status items createdAt')
-      .populate('user', 'name email')
-      .sort({ createdAt: -1, _id: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    countQuery,
-  ]);
-
+  const totalItems = await countQuery;
   const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+  const count = Math.max(0, Math.min(limit, totalItems - skip));
+
+  let items = [];
+  if (count > 0) {
+    if (skip > totalItems / 2) {
+      const tailSkip = Math.max(0, totalItems - (skip + count));
+      items = await Order.find(query)
+        .select('user phoneNumber shippingAddress totalAmount paymentMethod paymentStatus status items createdAt')
+        .populate('user', 'name email')
+        .sort({ createdAt: 1, _id: 1 })
+        .skip(tailSkip)
+        .limit(count)
+        .lean();
+      items.reverse();
+    } else {
+      items = await Order.find(query)
+        .select('user phoneNumber shippingAddress totalAmount paymentMethod paymentStatus status items createdAt')
+        .populate('user', 'name email')
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+    }
+  }
 
   return {
     items,

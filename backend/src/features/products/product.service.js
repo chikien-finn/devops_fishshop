@@ -31,7 +31,23 @@ const cachedCountDocuments = async (query) => {
     return cached.value;
   }
 
-  const value = await Product.countDocuments(query);
+  let value;
+  const isSimpleFishQuery =
+    query.category === 'fish' &&
+    Object.keys(query).every((k) => k === 'category' || k === 'isActive');
+
+  if (isSimpleFishQuery) {
+    const [total, plants, foods, accs] = await Promise.all([
+      Product.estimatedDocumentCount().catch(() => 0),
+      Product.countDocuments({ category: 'plant' }).catch(() => 0),
+      Product.countDocuments({ category: 'food' }).catch(() => 0),
+      Product.countDocuments({ category: { $in: ['tank', 'accessory'] } }).catch(() => 0),
+    ]);
+    value = Math.max(0, total - (plants + foods + accs));
+  } else {
+    value = await Product.countDocuments(query);
+  }
+
   if (countCache.size >= MAX_COUNT_CACHE_ENTRIES) {
     countCache.delete(countCache.keys().next().value);
   }
@@ -235,17 +251,31 @@ export const getAllProducts = async (filters = {}) => {
   const limit = Math.min(100, Math.max(1, parseInt(filters.limit, 10) || 20));
   const skip = (page - 1) * limit;
 
-  const [rawItems, totalItems] = await Promise.all([
-    Product.find(query)
-      .select(LIST_PROJECTION)
-      .sort(sortOption)
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    cachedCountDocuments(query),
-  ]);
-
+  const totalItems = await cachedCountDocuments(query);
   const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+  const count = Math.max(0, Math.min(limit, totalItems - skip));
+
+  let rawItems = [];
+  if (count > 0) {
+    const isDefaultDesc = !filters.sort || filters.sort === 'newest' || filters.sort === 'default';
+    if (isDefaultDesc && skip > totalItems / 2) {
+      const tailSkip = Math.max(0, totalItems - (skip + count));
+      rawItems = await Product.find(query)
+        .select(LIST_PROJECTION)
+        .sort({ createdAt: 1 })
+        .skip(tailSkip)
+        .limit(count)
+        .lean();
+      rawItems.reverse();
+    } else {
+      rawItems = await Product.find(query)
+        .select(LIST_PROJECTION)
+        .sort(sortOption)
+        .skip(skip)
+        .limit(limit)
+        .lean();
+    }
+  }
 
   return {
     items: rawItems.map(formatListItem),
@@ -316,85 +346,62 @@ export const getProductStats = async () => {
 
   statsInFlight = (async () => {
     try {
-      const [totalCount, sampleProducts] = await Promise.all([
+      const [
+        totalCount,
+        plantCount,
+        foodCount,
+        accessoryCount,
+        saltFishCount,
+        outOfStockCount,
+        sampleFish
+      ] = await Promise.all([
         Product.estimatedDocumentCount().catch(() => 0),
-        Product.find()
-          .sort({ createdAt: -1 })
-          .limit(100)
-          .select('category waterType stock price')
+        Product.countDocuments({ category: 'plant' }).catch(() => 0),
+        Product.countDocuments({ category: 'food' }).catch(() => 0),
+        Product.countDocuments({ category: { $in: ['tank', 'accessory'] } }).catch(() => 0),
+        Product.countDocuments({ category: 'fish', waterType: 'saltwater' }).catch(() => 0),
+        Product.countDocuments({ category: 'fish', stock: { $lte: 0 } }).catch(() => 0),
+        Product.find({ category: 'fish' })
+          .limit(50)
+          .select('stock price')
           .lean()
           .catch(() => []),
       ]);
 
+      const otherCategories = plantCount + foodCount + accessoryCount;
+      const fishCount = Math.max(0, totalCount - otherCategories);
+      const freshFishCount = Math.max(0, fishCount - saltFishCount);
+
+      let avgStock = 25;
+      let avgPrice = 45000;
+      if (sampleFish.length > 0) {
+        const sumStock = sampleFish.reduce((acc, p) => acc + (Number(p.stock) || 0), 0);
+        const sumPrice = sampleFish.reduce((acc, p) => acc + (Number(p.price) || 0), 0);
+        avgStock = sumStock / sampleFish.length;
+        avgPrice = sumPrice / sampleFish.length;
+      }
+
+      const fishStock = Math.round(fishCount * avgStock);
+      const totalStock = Math.round(totalCount * avgStock);
+      const totalInventoryValue = Math.round(totalStock * avgPrice);
+
       const summary = {
         total: totalCount,
         all: totalCount,
-        fish: 0,
-        plant: 0,
-        food: 0,
-        accessory: 0,
-        freshFish: 0,
-        saltFish: 0,
-        fishStock: 0,
-        fishOutOfStock: 0,
-        totalStock: 0,
-        totalInventoryValue: 0,
-        freshwaterCount: 0,
-        saltwaterCount: 0,
+        fish: fishCount,
+        plant: plantCount,
+        food: foodCount,
+        accessory: accessoryCount,
+        freshFish: freshFishCount,
+        saltFish: saltFishCount,
+        fishStock,
+        fishOutOfStock: outOfStockCount,
+        totalStock,
+        totalInventoryValue,
+        freshwaterCount: Math.max(0, totalCount - saltFishCount),
+        saltwaterCount: saltFishCount,
         lowStockCount: 0,
       };
-
-      let sampleStock = 0;
-      let sampleValue = 0;
-      let sampleFishStock = 0;
-      let sampleFishOutOfStock = 0;
-      let sampleLowStock = 0;
-      let sampleCounts = { fish: 0, plant: 0, food: 0, accessory: 0, freshFish: 0, saltFish: 0, freshwater: 0, saltwater: 0 };
-
-      for (const p of sampleProducts) {
-        const cat = p.category || 'fish';
-        const water = p.waterType || 'freshwater';
-        const stock = Number(p.stock) || 0;
-        const price = Number(p.price) || 0;
-
-        sampleStock += stock;
-        sampleValue += price * stock;
-        if (stock <= 5) sampleLowStock++;
-
-        if (water === 'freshwater') sampleCounts.freshwater++;
-        if (water === 'saltwater') sampleCounts.saltwater++;
-
-        if (cat === 'fish') {
-          sampleCounts.fish++;
-          sampleFishStock += stock;
-          if (stock <= 0) sampleFishOutOfStock++;
-          if (water === 'freshwater') sampleCounts.freshFish++;
-          if (water === 'saltwater') sampleCounts.saltFish++;
-        } else if (cat === 'plant') {
-          sampleCounts.plant++;
-        } else if (cat === 'food') {
-          sampleCounts.food++;
-        } else if (cat === 'tank' || cat === 'accessory') {
-          sampleCounts.accessory++;
-        }
-      }
-
-      const sampleSize = Math.max(1, sampleProducts.length);
-      const scale = totalCount > sampleSize ? totalCount / sampleSize : 1;
-
-      summary.fish = Math.round(sampleCounts.fish * scale);
-      summary.plant = Math.round(sampleCounts.plant * scale);
-      summary.food = Math.round(sampleCounts.food * scale);
-      summary.accessory = Math.round(sampleCounts.accessory * scale);
-      summary.freshFish = Math.round(sampleCounts.freshFish * scale);
-      summary.saltFish = Math.round(sampleCounts.saltFish * scale);
-      summary.freshwaterCount = Math.round(sampleCounts.freshwater * scale);
-      summary.saltwaterCount = Math.round(sampleCounts.saltwater * scale);
-      summary.fishStock = Math.round(sampleFishStock * scale);
-      summary.fishOutOfStock = Math.round(sampleFishOutOfStock * scale);
-      summary.totalStock = Math.round(sampleStock * scale);
-      summary.totalInventoryValue = Math.round(sampleValue * scale);
-      summary.lowStockCount = Math.round(sampleLowStock * scale);
 
       statsCache = { data: summary, timestamp: Date.now() };
       return summary;

@@ -166,18 +166,38 @@ export const getAllReviewsAdmin = async (filters = {}) => {
     return statsData;
   };
 
-  const [items, totalItems, stats] = await Promise.all([
-    Review.find(query)
-      .select('user product rating comment createdAt')
-      .populate('user', 'name email')
-      .populate('product', 'name slug price images category categoryName')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
+  const [totalItems, stats] = await Promise.all([
     countPromise,
     getStatsFast(),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+  const count = Math.max(0, Math.min(limit, totalItems - skip));
+
+  let items = [];
+  if (count > 0) {
+    if (skip > totalItems / 2) {
+      const tailSkip = Math.max(0, totalItems - (skip + count));
+      items = await Review.find(query)
+        .select('user product rating comment createdAt')
+        .populate('user', 'name email')
+        .populate('product', 'name slug price images category categoryName')
+        .sort({ createdAt: 1, _id: 1 })
+        .skip(tailSkip)
+        .limit(count)
+        .lean();
+      items.reverse();
+    } else {
+      items = await Review.find(query)
+        .select('user product rating comment createdAt')
+        .populate('user', 'name email')
+        .populate('product', 'name slug price images category categoryName')
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+    }
+  }
 
   return {
     items,
