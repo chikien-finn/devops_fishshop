@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Vui lòng nhập họ tên'],
       trim: true,
+      minlength: [2, 'Họ tên tối thiểu 2 ký tự'],
+      maxlength: [50, 'Họ tên tối đa 50 ký tự'],
     },
     email: {
       type: String,
@@ -14,6 +16,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      maxlength: [100, 'Email tối đa 100 ký tự'],
     },
     password: {
       type: String,
@@ -28,10 +31,12 @@ const userSchema = new mongoose.Schema(
     phone: {
       type: String,
       default: '',
+      maxlength: [15, 'Số điện thoại tối đa 15 ký tự'],
     },
     address: {
       type: String,
       default: '',
+      maxlength: [200, 'Địa chỉ tối đa 200 ký tự'],
     },
   },
   {

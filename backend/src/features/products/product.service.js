@@ -78,6 +78,23 @@ const toSlug = (text) =>
 
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const vietnameseDiacriticPattern = (str) => {
+  const map = {
+    a: '[aàáảãạăằắẳẵặâầấẩẫậ]',
+    e: '[eèéẻẽẹêềếểễệ]',
+    i: '[iìíỉĩị]',
+    o: '[oòóỏõọôồốổỗộơờớởỡợ]',
+    u: '[uùúủũụưừứửữự]',
+    y: '[yỳýỷỹỵ]',
+    d: '[dđ]',
+  };
+  return String(str || '')
+    .toLowerCase()
+    .split('')
+    .map((c) => map[c] || escapeRegex(c))
+    .join('');
+};
+
 const toPlainSnippet = (html, maxLength = 160) => {
   if (!html) return '';
   const plain = String(html).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -194,30 +211,42 @@ export const buildProductQuery = (filters = {}) => {
       if (terms.length > 0) {
         const searchOr = [];
         for (const term of terms) {
-          const regex = new RegExp(escapeRegex(term), 'i');
-          searchOr.push({ name: regex }, { categoryName: regex }, { origin: regex });
+          const escaped = escapeRegex(term);
+          const regex = new RegExp(escaped, 'i');
+          const diacriticPattern = vietnameseDiacriticPattern(term);
+          searchOr.push(
+            { name: term },
+            { name: regex },
+            { categoryName: regex },
+            { origin: regex }
+          );
+          if (diacriticPattern && diacriticPattern !== term.toLowerCase()) {
+            searchOr.push({ name: new RegExp(diacriticPattern, 'i') });
+          }
           const slugTerm = toSlug(term);
           if (slugTerm) {
+            searchOr.push({ slug: slugTerm });
             searchOr.push({ slug: new RegExp(escapeRegex(slugTerm), 'i') });
           }
         }
         andConditions.push({ $or: searchOr });
       }
     } else if (rawSearch) {
+      const escaped = escapeRegex(rawSearch);
       const slugTerm = toSlug(rawSearch);
-      const searchOr = [{ name: rawSearch }];
+      const diacriticPattern = vietnameseDiacriticPattern(rawSearch);
+
+      const searchOr = [
+        { name: rawSearch },
+        { name: new RegExp(escaped, 'i') },
+        { categoryName: new RegExp(escaped, 'i') },
+      ];
+      if (diacriticPattern && diacriticPattern !== rawSearch.toLowerCase()) {
+        searchOr.push({ name: new RegExp(diacriticPattern, 'i') });
+      }
       if (slugTerm) {
         searchOr.push({ slug: slugTerm });
-        searchOr.push({ slug: new RegExp('^' + escapeRegex(slugTerm)) });
-        if (!slugTerm.startsWith('ca-')) {
-          searchOr.push({ slug: new RegExp('^ca-' + escapeRegex(slugTerm)) });
-        }
-        if (!slugTerm.startsWith('cay-thuy-sinh-')) {
-          searchOr.push({ slug: new RegExp('^cay-thuy-sinh-' + escapeRegex(slugTerm)) });
-        }
-        if (!slugTerm.startsWith('thuc-an-')) {
-          searchOr.push({ slug: new RegExp('^thuc-an-' + escapeRegex(slugTerm)) });
-        }
+        searchOr.push({ slug: new RegExp(escapeRegex(slugTerm), 'i') });
       }
       andConditions.push({ $or: searchOr });
     }
@@ -275,9 +304,12 @@ export const getAllProducts = async (filters = {}) => {
         .lean();
       rawItems.reverse();
     } else {
-      rawItems = await Product.find(query)
-        .select(LIST_PROJECTION)
-        .sort(sortOption)
+      let q = Product.find(query).select(LIST_PROJECTION);
+      const hasSpecificSort = filters.sort && filters.sort !== 'newest' && filters.sort !== 'default';
+      if (!filters.search || hasSpecificSort) {
+        q = q.sort(sortOption);
+      }
+      rawItems = await q
         .skip(skip)
         .limit(limit)
         .maxTimeMS(5000)
@@ -433,8 +465,47 @@ export const getProductById = async (idOrSlug) => {
   return product;
 };
 
+const validateProductPayload = (data, isUpdate = false) => {
+  if (!isUpdate || data.name !== undefined) {
+    const cleanName = String(data.name || '').trim();
+    if (cleanName.length < 2 || cleanName.length > 150) {
+      throw new ApiError(400, 'Tên sản phẩm phải từ 2 đến 150 ký tự');
+    }
+    data.name = cleanName;
+  }
+  if (!isUpdate || data.price !== undefined) {
+    const p = Number(data.price);
+    if (Number.isNaN(p) || p < 0 || p > 1000000000) {
+      throw new ApiError(400, 'Giá sản phẩm phải từ 0 đến 1.000.000.000 đ');
+    }
+    data.price = p;
+  }
+  if (data.stock !== undefined) {
+    const s = Number(data.stock);
+    if (Number.isNaN(s) || s < 0 || s > 1000000) {
+      throw new ApiError(400, 'Tồn kho sản phẩm từ 0 đến 1.000.000');
+    }
+    data.stock = s;
+  }
+  if (data.origin !== undefined) {
+    const o = String(data.origin || '').trim();
+    if (o.length > 60) {
+      throw new ApiError(400, 'Xuất xứ sản phẩm tối đa 60 ký tự');
+    }
+    data.origin = o;
+  }
+  if (data.description !== undefined) {
+    const d = String(data.description || '').trim();
+    if (d.length > 5000) {
+      throw new ApiError(400, 'Mô tả sản phẩm tối đa 5000 ký tự');
+    }
+    data.description = d;
+  }
+};
+
 export const createProduct = async (productData) => {
   const data = { ...productData };
+  validateProductPayload(data, false);
   if (!data.slug && data.name) {
     data.slug = `${toSlug(data.name)}-${Date.now().toString().slice(-4)}`;
   }
@@ -448,6 +519,7 @@ export const createProduct = async (productData) => {
 
 export const updateProduct = async (id, updateData) => {
   const data = { ...updateData };
+  validateProductPayload(data, true);
   if (data.stock !== undefined && data.soldOut === undefined) {
     data.soldOut = Number(data.stock) <= 0;
   }

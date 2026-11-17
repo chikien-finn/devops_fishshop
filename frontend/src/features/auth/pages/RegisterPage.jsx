@@ -20,15 +20,34 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'phone') {
+      const numeric = value.replace(/\D/g, '').slice(0, 11);
+      setFormData((prev) => ({ ...prev, phone: numeric }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (formData.password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự.');
+    const cleanName = formData.name.trim();
+    if (cleanName.length < 2 || cleanName.length > 50) {
+      setError('Họ và tên phải từ 2 đến 50 ký tự.');
+      return;
+    }
+
+    const cleanEmail = formData.email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail) || cleanEmail.length > 100) {
+      setError('Địa chỉ email không đúng định dạng hoặc vượt quá 100 ký tự.');
+      return;
+    }
+
+    if (formData.password.length < 6 || formData.password.length > 64) {
+      setError('Mật khẩu phải từ 6 đến 64 ký tự.');
       return;
     }
 
@@ -37,11 +56,21 @@ export default function RegisterPage() {
       return;
     }
 
+    if (formData.phone && (formData.phone.length < 10 || formData.phone.length > 11)) {
+      setError('Số điện thoại phải từ 10 đến 11 chữ số.');
+      return;
+    }
+
+    if (formData.address.trim().length > 200) {
+      setError('Địa chỉ nhận hàng tối đa 200 ký tự.');
+      return;
+    }
+
     try {
       setLoading(true);
       await register({
-        name: formData.name.trim(),
-        email: formData.email.trim(),
+        name: cleanName,
+        email: cleanEmail,
         password: formData.password,
         phone: formData.phone.trim(),
         address: formData.address.trim(),
@@ -121,6 +150,7 @@ export default function RegisterPage() {
             type="text"
             name="name"
             required
+            maxLength={50}
             placeholder="Nguyễn Văn A"
             value={formData.name}
             onChange={handleChange}
@@ -144,6 +174,7 @@ export default function RegisterPage() {
             type="email"
             name="email"
             required
+            maxLength={100}
             placeholder="nguyenvana@gmail.com"
             value={formData.email}
             onChange={handleChange}
@@ -168,6 +199,8 @@ export default function RegisterPage() {
               type="password"
               name="password"
               required
+              minLength={6}
+              maxLength={64}
               placeholder="Ít nhất 6 ký tự"
               value={formData.password}
               onChange={handleChange}
@@ -191,6 +224,8 @@ export default function RegisterPage() {
               type="password"
               name="confirmPassword"
               required
+              minLength={6}
+              maxLength={64}
               placeholder="Nhập lại mật khẩu"
               value={formData.confirmPassword}
               onChange={handleChange}
@@ -214,7 +249,8 @@ export default function RegisterPage() {
           <input
             type="tel"
             name="phone"
-            placeholder="0901234567"
+            maxLength={11}
+            placeholder="0901234567 (10 - 11 số)"
             value={formData.phone}
             onChange={handleChange}
             style={{
@@ -236,7 +272,8 @@ export default function RegisterPage() {
           <input
             type="text"
             name="address"
-            placeholder="Số nhà, đường, phường/xã, quận/huyện..."
+            maxLength={200}
+            placeholder="Số nhà, đường, phường/xã, quận/huyện... (tối đa 200 ký tự)"
             value={formData.address}
             onChange={handleChange}
             style={{

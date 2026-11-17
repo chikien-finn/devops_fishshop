@@ -59,6 +59,27 @@ export const getUserById = async (id) => {
 export const updateUserProfile = async (id, updateData) => {
   delete updateData.password;
   delete updateData.role;
+  if (updateData.name !== undefined) {
+    const cleanName = String(updateData.name || '').trim();
+    if (cleanName.length < 2 || cleanName.length > 50) {
+      throw new ApiError(400, 'Họ và tên phải từ 2 đến 50 ký tự');
+    }
+    updateData.name = cleanName;
+  }
+  if (updateData.phone !== undefined) {
+    const cleanPhone = String(updateData.phone || '').replace(/\D/g, '').trim();
+    if (cleanPhone && (cleanPhone.length < 10 || cleanPhone.length > 11)) {
+      throw new ApiError(400, 'Số điện thoại phải từ 10 đến 11 chữ số');
+    }
+    updateData.phone = cleanPhone;
+  }
+  if (updateData.address !== undefined) {
+    const cleanAddress = String(updateData.address || '').trim();
+    if (cleanAddress.length > 200) {
+      throw new ApiError(400, 'Địa chỉ tối đa 200 ký tự');
+    }
+    updateData.address = cleanAddress;
+  }
   const user = await User.findByIdAndUpdate(id, updateData, { returnDocument: 'after' }).select('-password');
   if (!user) throw new ApiError(404, 'Không tìm thấy người dùng');
   return user;

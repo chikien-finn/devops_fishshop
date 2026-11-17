@@ -20,8 +20,13 @@ const mergeCartItems = (serverItems, guestItems) => {
     const key = String(item._id || item.id || '');
     if (!key) return;
     const existing = merged.get(key);
-    if (existing) existing.quantity = (existing.quantity || 1) + (item.quantity || 1);
-    else if (item._id) merged.set(key, { ...item, quantity: item.quantity || 1 });
+    if (existing) {
+      const maxStock = typeof existing.stock === 'number' ? existing.stock : Infinity;
+      existing.quantity = Math.min(maxStock, (existing.quantity || 1) + (item.quantity || 1));
+    } else if (item._id) {
+      const maxStock = typeof item.stock === 'number' ? item.stock : Infinity;
+      merged.set(key, { ...item, quantity: Math.min(maxStock, item.quantity || 1) });
+    }
   });
   return [...merged.values()];
 };
@@ -109,12 +114,22 @@ export function CartProvider({ children }) {
     setCart((previous) => {
       const productId = product._id || product.id;
       const existing = previous.find((item) => String(item._id || item.id) === String(productId));
+      const maxStock = typeof product.stock === 'number'
+        ? Math.max(0, product.stock)
+        : (typeof existing?.stock === 'number' ? Math.max(0, existing.stock) : Infinity);
+
+      if (maxStock <= 0) return previous;
+
       if (existing) {
+        const itemStock = typeof existing.stock === 'number' ? existing.stock : maxStock;
+        const currentQty = existing.quantity || 1;
+        const newQty = Math.min(itemStock, currentQty + Math.max(1, quantity));
         return previous.map((item) => String(item._id || item.id) === String(productId)
-          ? { ...item, quantity: (item.quantity || 1) + quantity }
+          ? { ...item, ...product, stock: itemStock, quantity: newQty }
           : item);
       }
-      return [...previous, { ...product, quantity }];
+      const initialQty = Math.max(1, Math.min(quantity, maxStock));
+      return [...previous, { ...product, stock: maxStock, quantity: initialQty }];
     });
   }, []);
 
@@ -127,9 +142,14 @@ export function CartProvider({ children }) {
       removeFromCart(productId);
       return;
     }
-    setCart((previous) => previous.map((item) => String(item._id || item.id) === String(productId)
-      ? { ...item, quantity }
-      : item));
+    setCart((previous) => previous.map((item) => {
+      if (String(item._id || item.id) === String(productId)) {
+        const maxStock = typeof item.stock === 'number' ? Math.max(1, item.stock) : Infinity;
+        const clampedQty = Math.min(maxStock, Math.max(1, quantity));
+        return { ...item, quantity: clampedQty };
+      }
+      return item;
+    }));
   }, [removeFromCart]);
 
   const clearCart = useCallback(() => setCart([]), []);

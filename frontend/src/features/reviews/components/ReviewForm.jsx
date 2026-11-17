@@ -18,13 +18,24 @@ export default function ReviewForm({
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [localError, setLocalError] = useState('');
 
   const { canReview, hasPurchased, hasReviewed, myReview } = eligibility;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLocalError('');
+    const cleanComment = comment.trim();
+    if (cleanComment.length < 5) {
+      setLocalError('Nội dung nhận xét phải có ít nhất 5 ký tự.');
+      return;
+    }
+    if (cleanComment.length > 1000) {
+      setLocalError('Nội dung nhận xét tối đa 1000 ký tự.');
+      return;
+    }
     if (!onSubmit) return;
-    const res = await onSubmit({ rating, comment });
+    const res = await onSubmit({ rating, comment: cleanComment });
     if (res?.success) {
       setComment('');
       setRating(5);
@@ -261,7 +272,7 @@ export default function ReviewForm({
       </div>
 
       {/* Thông báo lỗi / thành công */}
-      {error && (
+      {(localError || error) && (
         <div
           style={{
             display: 'flex',
@@ -276,7 +287,7 @@ export default function ReviewForm({
           }}
         >
           <AlertCircle size={16} />
-          <span>{error}</span>
+          <span>{localError || error}</span>
         </div>
       )}
 

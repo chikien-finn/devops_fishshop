@@ -13,11 +13,24 @@ export default function ProductListPage() {
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const [pageSize, setPageSize] = useState(20);
-  const { addToCart } = useCart();
+  const { cart, addToCart } = useCart();
   const [toast, setToast] = useState(null);
   const [addedItemId, setAddedItemId] = useState(null);
 
   const handleAddToCart = (item) => {
+    const maxStock = typeof item.stock === 'number' ? Math.max(0, item.stock) : 999;
+    if (maxStock <= 0) {
+      setToast(`Sản phẩm "${item.name}" đã hết hàng!`);
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+    const existing = cart?.find((c) => String(c._id || c.id) === String(item._id || item.id));
+    const inCartQty = existing?.quantity || 0;
+    if (inCartQty >= maxStock) {
+      setToast(`Bạn đã có tối đa ${maxStock} con "${item.name}" trong giỏ!`);
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
     addToCart(item, 1);
     setAddedItemId(item._id);
     setToast(`Đã thêm "${item.name}" vào giỏ hàng!`);

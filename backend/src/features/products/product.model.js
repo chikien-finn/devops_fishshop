@@ -6,6 +6,7 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Tên sản phẩm không được để trống'],
       trim: true,
+      maxlength: [150, 'Tên sản phẩm tối đa 150 ký tự'],
     },
     slug: {
       type: String,
@@ -15,16 +16,19 @@ const productSchema = new mongoose.Schema(
     description: {
       type: String,
       default: '',
+      maxlength: [10000, 'Mô tả tối đa 10000 ký tự'],
     },
     price: {
       type: Number,
       required: [true, 'Giá sản phẩm không được để trống'],
-      min: 0,
+      min: [0, 'Giá sản phẩm không được âm'],
+      max: [1000000000, 'Giá sản phẩm tối đa 1 tỷ VNĐ'],
     },
     oldPrice: {
       type: Number,
       default: null,
       min: 0,
+      max: [1000000000, 'Giá cũ tối đa 1 tỷ VNĐ'],
     },
     discount: {
       type: String,

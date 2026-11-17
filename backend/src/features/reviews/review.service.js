@@ -116,7 +116,7 @@ export const addReview = async (userId, productId, reviewData) => {
   const rating = Number(reviewData.rating);
   const comment = String(reviewData.comment || '').trim();
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new ApiError(400, 'Số sao đánh giá phải từ 1 đến 5');
-  if (comment.length > 1000) throw new ApiError(400, 'Nội dung đánh giá tối đa 1000 ký tự');
+  if (comment.length < 5 || comment.length > 1000) throw new ApiError(400, 'Nội dung đánh giá phải từ 5 đến 1000 ký tự');
 
   // Điều kiện tiên quyết: Phải từng mua sản phẩm mới được đánh giá
   const hasPurchased = await Order.exists({

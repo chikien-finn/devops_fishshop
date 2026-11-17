@@ -53,7 +53,7 @@ export default function ProductDetailPage() {
   const { slug, id } = useParams();
   const targetKey = slug || id;
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { cart, addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +63,21 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState('desc');
   const [toastMessage, setToastMessage] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
+
+  const maxStock = typeof product?.stock === 'number' ? Math.max(0, product.stock) : 999;
+  const existingInCart = cart?.find(
+    (item) => String(item._id || item.id) === String(product?._id || product?.id)
+  );
+  const inCartQty = existingInCart?.quantity || 0;
+
+  useEffect(() => {
+    if (product && typeof product.stock === 'number') {
+      const max = Math.max(0, product.stock);
+      if (max > 0 && quantity > max) {
+        setQuantity(max);
+      }
+    }
+  }, [product, quantity]);
 
 
   useEffect(() => {
@@ -135,6 +150,19 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (!product || product.soldOut) return;
+    if (maxStock <= 0) {
+      setToastMessage('Sản phẩm hiện đã hết hàng trong kho!');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+    const canAdd = Math.max(0, maxStock - inCartQty);
+    if (canAdd <= 0) {
+      setToastMessage(`Bạn đã có ${inCartQty} con trong giỏ (đã đạt giới hạn tồn kho ${maxStock} con)!`);
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    const qtyToAdd = Math.min(quantity, canAdd);
     addToCart(
       {
         _id: product._id || product.id,
@@ -142,15 +170,33 @@ export default function ProductDetailPage() {
         price: product.price,
         images: [activeImage || product.image],
         category: product.category || 'fish',
-        stock: typeof product.stock === 'number' ? product.stock : 25,
+        stock: maxStock,
       },
-      quantity
+      qtyToAdd
     );
-    setToastMessage(`Đã thêm ${quantity} x "${product.name}" (${selectedSize}) vào giỏ hàng!`);
+
+    if (qtyToAdd < quantity) {
+      setToastMessage(`Đã thêm ${qtyToAdd} con (đạt tối đa tồn kho ${maxStock} con, đã có ${inCartQty} con trong giỏ)!`);
+    } else {
+      setToastMessage(`Đã thêm ${qtyToAdd} x "${product.name}" (${selectedSize}) vào giỏ hàng!`);
+    }
     setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleBuyNow = () => {
+    if (!product || product.soldOut) return;
+    if (maxStock <= 0) {
+      setToastMessage('Sản phẩm hiện đã hết hàng trong kho!');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+    if (inCartQty >= maxStock) {
+      setToastMessage(`Bạn đã có tối đa ${maxStock} con trong giỏ hàng! Đang chuyển đến giỏ...`);
+      setTimeout(() => {
+        navigate('/cart');
+      }, 500);
+      return;
+    }
     handleAddToCart();
     setTimeout(() => {
       navigate('/cart');
@@ -483,18 +529,33 @@ export default function ProductDetailPage() {
             {/* Quantity Stepper */}
             {!product.soldOut && (
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.5rem' }}>
-                  Số Lượng:
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1e293b' }}>
+                    Số Lượng:
+                  </label>
+                  <span
+                    style={{
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      color: maxStock <= 3 ? '#dc2626' : '#64748b',
+                    }}
+                  >
+                    (Còn lại: {maxStock} con trong kho{inCartQty > 0 ? ` • Trong giỏ: ${inCartQty}` : ''})
+                  </span>
+                </div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
                   <button
+                    type="button"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    title={quantity <= 1 ? 'Tối thiểu 1 con' : 'Giảm số lượng'}
                     style={{
                       width: '36px',
                       height: '36px',
                       border: 'none',
-                      backgroundColor: '#f8fafc',
-                      cursor: 'pointer',
+                      backgroundColor: quantity <= 1 ? '#f1f5f9' : '#f8fafc',
+                      cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
+                      opacity: quantity <= 1 ? 0.4 : 1,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -515,13 +576,17 @@ export default function ProductDetailPage() {
                     {quantity}
                   </span>
                   <button
-                    onClick={() => setQuantity((q) => q + 1)}
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.min(maxStock, q + 1))}
+                    disabled={quantity >= maxStock}
+                    title={quantity >= maxStock ? `Không thể tăng quá số lượng đang có (${maxStock} con)` : 'Tăng số lượng'}
                     style={{
                       width: '36px',
                       height: '36px',
                       border: 'none',
-                      backgroundColor: '#f8fafc',
-                      cursor: 'pointer',
+                      backgroundColor: quantity >= maxStock ? '#f1f5f9' : '#f8fafc',
+                      cursor: quantity >= maxStock ? 'not-allowed' : 'pointer',
+                      opacity: quantity >= maxStock ? 0.4 : 1,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',

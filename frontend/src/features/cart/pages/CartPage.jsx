@@ -5,6 +5,7 @@ import { useCart } from '../hooks/useCart.jsx';
 import { useAuth } from '../../auth/hooks/useAuth.jsx';
 import orderService from '../../orders/services/orderService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
+import AddressDropdownSelector from '../../../components/common/AddressDropdownSelector.jsx';
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, clearCart, totalAmount, totalItems, syncError } = useCart();
@@ -66,6 +67,18 @@ export default function CartPage() {
     }
     if (!shippingAddress.trim() || !phoneNumber.trim()) {
       setErrorMsg('Vui lòng nhập đầy đủ địa chỉ giao hàng và số điện thoại.');
+      return;
+    }
+
+    const cleanAddress = shippingAddress.trim();
+    if (cleanAddress.length < 5 || cleanAddress.length > 200) {
+      setErrorMsg('Địa chỉ giao hàng phải từ 5 đến 200 ký tự.');
+      return;
+    }
+
+    const cleanPhone = phoneNumber.replace(/\D/g, '').trim();
+    if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+      setErrorMsg('Số điện thoại nhận hàng phải từ 10 đến 11 chữ số.');
       return;
     }
 
@@ -259,9 +272,16 @@ export default function CartPage() {
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem' }}>
                   {item.name}
                 </h4>
-                <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#dc2626' }}>
-                  {formatCurrency(item.price)}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#dc2626' }}>
+                    {formatCurrency(item.price)}
+                  </span>
+                  {typeof item.stock === 'number' && (
+                    <span style={{ fontSize: '0.75rem', color: item.stock <= 3 ? '#dc2626' : '#64748b', fontWeight: 600 }}>
+                      (Kho: {item.stock})
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Quantity Adjuster */}
@@ -303,12 +323,20 @@ export default function CartPage() {
                   {item.quantity}
                 </span>
                 <button
-                  onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                  type="button"
+                  onClick={() => {
+                    const maxStock = typeof item.stock === 'number' ? item.stock : Infinity;
+                    if (item.quantity >= maxStock) return;
+                    updateQuantity(item._id, item.quantity + 1);
+                  }}
+                  disabled={typeof item.stock === 'number' && item.quantity >= item.stock}
+                  title={typeof item.stock === 'number' && item.quantity >= item.stock ? `Đã đạt số lượng tối đa trong kho (${item.stock} con)` : 'Tăng số lượng'}
                   style={{
                     padding: '4px 8px',
                     border: 'none',
-                    backgroundColor: '#f8fafc',
-                    cursor: 'pointer',
+                    backgroundColor: typeof item.stock === 'number' && item.quantity >= item.stock ? '#f1f5f9' : '#f8fafc',
+                    cursor: typeof item.stock === 'number' && item.quantity >= item.stock ? 'not-allowed' : 'pointer',
+                    opacity: typeof item.stock === 'number' && item.quantity >= item.stock ? 0.4 : 1,
                   }}
                 >
                   <Plus size={13} />
@@ -399,7 +427,7 @@ export default function CartPage() {
           <div style={{ marginBottom: '0.75rem' }}>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.25rem' }}>Mã giảm giá</label>
             <div style={{ display: 'flex', gap: '0.4rem' }}>
-              <input value={couponInput} onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setAppliedCoupon(null); setCouponMessage(''); }} placeholder="Nhập mã voucher" style={{ minWidth: 0, flex: 1, padding: '0.5rem 0.65rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+              <input maxLength={20} value={couponInput} onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setAppliedCoupon(null); setCouponMessage(''); }} placeholder="Nhập mã voucher" style={{ minWidth: 0, flex: 1, padding: '0.5rem 0.65rem', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
               <button type="button" onClick={handleApplyCoupon} style={{ padding: '0.5rem 0.7rem', border: '1px solid #0284c7', color: '#0284c7', borderRadius: '6px', background: '#fff', fontWeight: 700, cursor: 'pointer' }}>Áp dụng</button>
             </div>
             {couponMessage && <p style={{ margin: '0.35rem 0 0', color: appliedCoupon ? '#059669' : '#dc2626', fontSize: '0.75rem' }}>{couponMessage}</p>}
@@ -450,9 +478,10 @@ export default function CartPage() {
               <input
                 type="tel"
                 required
-                placeholder="0901234567"
+                maxLength={11}
+                placeholder="0901234567 (10 - 11 số)"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
                 style={{
                   width: '100%',
                   padding: '0.5rem 0.75rem',
@@ -465,22 +494,21 @@ export default function CartPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.25rem' }}>
-                Địa chỉ giao hàng *
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem' }}>
+                Địa chỉ giao hàng (Chọn theo danh mục hành chính) *
               </label>
-              <input
-                type="text"
-                required
-                placeholder="Số nhà, tên đường, Quận/Huyện..."
+              <AddressDropdownSelector
                 value={shippingAddress}
-                onChange={(e) => setShippingAddress(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem 0.75rem',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  outline: 'none',
+                onChange={(addr, reg) => {
+                  setShippingAddress(addr);
+                  if (reg && reg !== shippingRegion) {
+                    setShippingRegion(reg);
+                  }
+                }}
+                onRegionChange={(reg) => {
+                  if (reg && reg !== shippingRegion) {
+                    setShippingRegion(reg);
+                  }
                 }}
               />
             </div>

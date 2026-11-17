@@ -17,6 +17,11 @@ export const addItemToCart = async (userId, productId, quantity = 1) => {
     throw new ApiError(404, 'Sản phẩm không tồn tại');
   }
 
+  const maxStock = typeof product.stock === 'number' ? Math.max(0, product.stock) : 99;
+  if (maxStock <= 0) {
+    throw new ApiError(400, 'Sản phẩm hiện đã hết hàng trong kho');
+  }
+
   let cart = await Cart.findOne({ user: userId });
   if (!cart) {
     cart = new Cart({ user: userId, items: [] });
@@ -27,9 +32,16 @@ export const addItemToCart = async (userId, productId, quantity = 1) => {
   );
 
   if (existingItemIndex > -1) {
+    const currentQty = cart.items[existingItemIndex].quantity;
+    if (currentQty + quantity > maxStock) {
+      throw new ApiError(400, `Sản phẩm "${product.name}" chỉ còn ${maxStock} trong kho`);
+    }
     cart.items[existingItemIndex].quantity += quantity;
   } else {
-    cart.items.push({ product: productId, quantity });
+    if (quantity > maxStock) {
+      throw new ApiError(400, `Sản phẩm "${product.name}" chỉ còn ${maxStock} trong kho`);
+    }
+    cart.items.push({ product: productId, quantity: Math.min(quantity, maxStock) });
   }
 
   await cart.save();
@@ -62,13 +74,22 @@ export const syncCartItems = async (userId, items = []) => {
 
   const productIds = [...normalized.keys()];
   const products = productIds.length
-    ? await Product.find({ _id: { $in: productIds }, isActive: true }).select('_id').lean()
+    ? await Product.find({ _id: { $in: productIds }, isActive: true }).select('_id stock name').lean()
     : [];
   if (products.length !== productIds.length) throw new ApiError(404, 'Có sản phẩm trong giỏ không còn kinh doanh');
 
   const cart = await Cart.findOneAndUpdate(
     { user: userId },
-    { $set: { items: products.map((product) => ({ product: product._id, quantity: normalized.get(String(product._id)) })) } },
+    {
+      $set: {
+        items: products.map((product) => {
+          const reqQty = normalized.get(String(product._id));
+          const maxStock = typeof product.stock === 'number' ? Math.max(0, product.stock) : 99;
+          const finalQty = Math.max(1, Math.min(reqQty, maxStock));
+          return { product: product._id, quantity: finalQty };
+        }),
+      },
+    },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
   return await cart.populate('items.product');

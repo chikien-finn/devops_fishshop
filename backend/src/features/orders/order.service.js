@@ -24,6 +24,16 @@ export const createOrder = async (userId, orderData) => {
     throw new ApiError(400, 'Vui lòng cung cấp đầy đủ địa chỉ giao hàng và số điện thoại');
   }
 
+  const cleanAddress = String(shippingAddress || '').trim();
+  if (cleanAddress.length < 5 || cleanAddress.length > 200) {
+    throw new ApiError(400, 'Địa chỉ giao hàng phải từ 5 đến 200 ký tự');
+  }
+
+  const cleanPhone = String(phoneNumber || '').replace(/\D/g, '').trim();
+  if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+    throw new ApiError(400, 'Số điện thoại nhận hàng phải từ 10 đến 11 chữ số');
+  }
+
   let rawItems = [];
   const cart = await Cart.findOne({ user: userId }).populate('items.product');
 

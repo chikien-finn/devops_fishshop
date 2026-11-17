@@ -299,12 +299,27 @@ export default function AdminProductsPage() {
     e.preventDefault();
     if (loadingDetail) return;
     setFormError('');
-    if (!formData.name.trim()) {
-      setFormError('Vui lòng nhập tên sản phẩm / cá cảnh');
+    const cleanName = formData.name.trim();
+    if (cleanName.length < 2 || cleanName.length > 150) {
+      setFormError('Tên sản phẩm phải từ 2 đến 150 ký tự.');
       return;
     }
-    if (formData.price === '' || Number(formData.price) < 0) {
-      setFormError('Vui lòng nhập giá bán hợp lệ');
+    const priceNum = Number(formData.price);
+    if (formData.price === '' || Number.isNaN(priceNum) || priceNum < 0 || priceNum > 1000000000) {
+      setFormError('Giá bán phải từ 0 đến 1.000.000.000 đ.');
+      return;
+    }
+    const stockNum = Number(formData.stock) || 0;
+    if (Number.isNaN(stockNum) || stockNum < 0 || stockNum > 1000000) {
+      setFormError('Số lượng tồn kho phải từ 0 đến 1.000.000.');
+      return;
+    }
+    if (formData.origin && formData.origin.trim().length > 60) {
+      setFormError('Xuất xứ tối đa 60 ký tự.');
+      return;
+    }
+    if (formData.description && formData.description.trim().length > 5000) {
+      setFormError('Mô tả tối đa 5000 ký tự.');
       return;
     }
 
@@ -1337,7 +1352,8 @@ export default function AdminProductsPage() {
                   <input
                     type="text"
                     required
-                    placeholder="Ví dụ: Cá Betta Halfmoon Xanh, Cá Dĩa Bồ Câu..."
+                    maxLength={150}
+                    placeholder="Ví dụ: Cá Betta Halfmoon Xanh, Cá Dĩa Bồ Câu... (tối đa 150 ký tự)"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     style={{
@@ -1439,6 +1455,7 @@ export default function AdminProductsPage() {
                     <input
                       type="number"
                       min={0}
+                      max={1000000000}
                       required
                       placeholder="150000"
                       value={formData.price}
@@ -1462,6 +1479,7 @@ export default function AdminProductsPage() {
                     <input
                       type="number"
                       min={0}
+                      max={1000000}
                       value={formData.stock}
                       onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                       style={{
@@ -1482,6 +1500,7 @@ export default function AdminProductsPage() {
                     </label>
                     <input
                       type="text"
+                      maxLength={60}
                       placeholder="Việt Nam, Thái Lan..."
                       value={formData.origin}
                       onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
@@ -1594,7 +1613,8 @@ export default function AdminProductsPage() {
                   </label>
                   <textarea
                     rows={3}
-                    placeholder="Mô tả tập tính, kích thước tối đa, nhiệt độ và độ pH thích hợp..."
+                    maxLength={5000}
+                    placeholder="Mô tả tập tính, kích thước tối đa, nhiệt độ và độ pH thích hợp... (tối đa 5000 ký tự)"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     style={{

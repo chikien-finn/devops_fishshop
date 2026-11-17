@@ -26,15 +26,17 @@ const orderSchema = new mongoose.Schema(
     subtotal: { type: Number, default: 0 },
     shippingFee: { type: Number, default: 0 },
     discountAmount: { type: Number, default: 0 },
-    couponCode: { type: String, default: '' },
+    couponCode: { type: String, default: '', maxlength: 20 },
     shippingRegion: { type: String, enum: ['north', 'central', 'south'], default: 'central' },
     shippingAddress: {
       type: String,
       required: true,
+      maxlength: 200,
     },
     phoneNumber: {
       type: String,
       required: true,
+      maxlength: 15,
     },
     paymentMethod: {
       type: String,

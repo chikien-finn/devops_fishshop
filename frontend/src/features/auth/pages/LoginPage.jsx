@@ -14,9 +14,18 @@ export default function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setError('Vui lòng nhập địa chỉ email hợp lệ.');
+      return;
+    }
+    if (!password) {
+      setError('Vui lòng nhập mật khẩu.');
+      return;
+    }
     setLoading(true);
     try {
-      const data = await login(email, password);
+      const data = await login(cleanEmail, password);
       if (data?.user?.role === 'admin') {
         navigate('/admin');
       } else {
@@ -94,6 +103,7 @@ export default function LoginPage() {
           </label>
           <input
             type="email"
+            maxLength={100}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="admin@aquacraft.com"
@@ -121,6 +131,7 @@ export default function LoginPage() {
           </div>
           <input
             type="password"
+            maxLength={64}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"

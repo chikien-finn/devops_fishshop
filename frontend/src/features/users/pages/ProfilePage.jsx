@@ -31,6 +31,7 @@ import { useCart } from '../../cart/hooks/useCart.jsx';
 import orderService from '../../orders/services/orderService.js';
 import { formatCurrency, formatDate } from '../../../utils/formatters.js';
 import Pagination from '../../../components/common/Pagination.jsx';
+import AddressDropdownSelector from '../../../components/common/AddressDropdownSelector.jsx';
 
 const ORDER_FILTERS = [
   { value: 'all', label: 'Tất cả' },
@@ -71,7 +72,13 @@ const formatOrderDate = (date) =>
 
 export default function ProfilePage({ defaultTab }) {
   const { user, updateProfile, isAuthenticated, logout } = useAuth();
-  const { items: cartItems, totalItems: cartCount, totalPrice: cartTotal, removeFromCart, updateQuantity } = useCart();
+  const {
+    cart: cartItems = [],
+    totalItems: cartCount = 0,
+    totalAmount: cartTotal = 0,
+    removeFromCart,
+    updateQuantity,
+  } = useCart() || {};
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -163,16 +170,27 @@ export default function ProfilePage({ defaultTab }) {
   // Handle Profile Update
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      setFeedback({ type: 'error', message: 'Vui lòng nhập họ và tên của bạn.' });
+    const cleanName = formData.name.trim();
+    if (cleanName.length < 2 || cleanName.length > 50) {
+      setFeedback({ type: 'error', message: 'Họ và tên phải từ 2 đến 50 ký tự.' });
+      return;
+    }
+    const cleanPhone = formData.phone ? formData.phone.replace(/\D/g, '').trim() : '';
+    if (cleanPhone && (cleanPhone.length < 10 || cleanPhone.length > 11)) {
+      setFeedback({ type: 'error', message: 'Số điện thoại phải từ 10 đến 11 chữ số.' });
+      return;
+    }
+    const cleanAddress = formData.address.trim();
+    if (cleanAddress.length > 200) {
+      setFeedback({ type: 'error', message: 'Địa chỉ nhận hàng tối đa 200 ký tự.' });
       return;
     }
     try {
       setSaving(true);
       await updateProfile({
-        name: formData.name.trim(),
-        phone: formData.phone.trim(),
-        address: formData.address.trim(),
+        name: cleanName,
+        phone: cleanPhone,
+        address: cleanAddress,
       });
       setFeedback({ type: 'success', message: 'Cập nhật thông tin tài khoản thành công!' });
     } catch (err) {
@@ -193,8 +211,8 @@ export default function ProfilePage({ defaultTab }) {
       setFeedback({ type: 'error', message: 'Vui lòng nhập mật khẩu hiện tại.' });
       return;
     }
-    if (passwordForm.newPassword.length < 6) {
-      setFeedback({ type: 'error', message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+    if (passwordForm.newPassword.length < 6 || passwordForm.newPassword.length > 64) {
+      setFeedback({ type: 'error', message: 'Mật khẩu mới phải từ 6 đến 64 ký tự.' });
       return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -566,9 +584,10 @@ export default function ProfilePage({ defaultTab }) {
                   <input
                     type="text"
                     required
+                    maxLength={50}
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Nhập họ và tên của bạn..."
+                    placeholder="Nhập họ và tên của bạn... (tối đa 50 ký tự)"
                     style={{
                       width: '100%',
                       padding: '0.625rem 0.85rem',
@@ -586,9 +605,15 @@ export default function ProfilePage({ defaultTab }) {
                   </label>
                   <input
                     type="tel"
+                    maxLength={11}
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="Ví dụ: 0905123456"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        phone: e.target.value.replace(/\D/g, '').slice(0, 11),
+                      })
+                    }
+                    placeholder="Ví dụ: 0905123456 (10 - 11 số)"
                     style={{
                       width: '100%',
                       padding: '0.625rem 0.85rem',
@@ -602,22 +627,11 @@ export default function ProfilePage({ defaultTab }) {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
-                    Địa chỉ giao hàng mặc định
+                    Địa chỉ giao hàng mặc định (Chọn qua danh mục)
                   </label>
-                  <textarea
-                    rows={3}
+                  <AddressDropdownSelector
                     value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
-                    style={{
-                      width: '100%',
-                      padding: '0.625rem 0.85rem',
-                      fontSize: '0.875rem',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
-                      outline: 'none',
-                      resize: 'vertical',
-                    }}
+                    onChange={(addr) => setFormData((prev) => ({ ...prev, address: addr }))}
                   />
                 </div>
 
@@ -929,7 +943,7 @@ export default function ProfilePage({ defaultTab }) {
                 </p>
               </div>
 
-              {cartItems.length === 0 ? (
+              {(!cartItems || cartItems.length === 0) ? (
                 <div style={{ padding: '3.5rem 2rem', textAlign: 'center' }}>
                   <ShoppingBag size={52} color="#cbd5e1" style={{ margin: '0 auto 1rem' }} />
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#334155', marginBottom: '0.5rem' }}>
@@ -959,7 +973,7 @@ export default function ProfilePage({ defaultTab }) {
               ) : (
                 <div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                    {cartItems.map((item) => (
+                    {(cartItems || []).map((item) => (
                       <div
                         key={item._id}
                         style={{
@@ -1010,14 +1024,16 @@ export default function ProfilePage({ defaultTab }) {
                           <button
                             type="button"
                             onClick={() => updateQuantity(item._id, Math.max(1, item.quantity - 1))}
+                            disabled={item.quantity <= 1}
                             style={{
                               width: '28px',
                               height: '28px',
                               borderRadius: '4px',
                               border: '1px solid #cbd5e1',
-                              backgroundColor: '#f8fafc',
-                              cursor: 'pointer',
+                              backgroundColor: item.quantity <= 1 ? '#f1f5f9' : '#f8fafc',
+                              cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer',
                               fontWeight: 700,
+                              opacity: item.quantity <= 1 ? 0.4 : 1,
                             }}
                           >
                             -
@@ -1027,15 +1043,22 @@ export default function ProfilePage({ defaultTab }) {
                           </span>
                           <button
                             type="button"
-                            onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                            onClick={() => {
+                              const maxStock = typeof item.stock === 'number' ? item.stock : Infinity;
+                              if (item.quantity >= maxStock) return;
+                              updateQuantity(item._id, item.quantity + 1);
+                            }}
+                            disabled={typeof item.stock === 'number' && item.quantity >= item.stock}
+                            title={typeof item.stock === 'number' && item.quantity >= item.stock ? `Đã đạt giới hạn tồn kho (${item.stock} con)` : 'Tăng số lượng'}
                             style={{
                               width: '28px',
                               height: '28px',
                               borderRadius: '4px',
                               border: '1px solid #cbd5e1',
-                              backgroundColor: '#f8fafc',
-                              cursor: 'pointer',
+                              backgroundColor: typeof item.stock === 'number' && item.quantity >= item.stock ? '#f1f5f9' : '#f8fafc',
+                              cursor: typeof item.stock === 'number' && item.quantity >= item.stock ? 'not-allowed' : 'pointer',
                               fontWeight: 700,
+                              opacity: typeof item.stock === 'number' && item.quantity >= item.stock ? 0.4 : 1,
                             }}
                           >
                             +
@@ -1153,6 +1176,7 @@ export default function ProfilePage({ defaultTab }) {
                   <input
                     type="password"
                     required
+                    maxLength={64}
                     value={passwordForm.currentPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
                     placeholder="Nhập mật khẩu hiện tại..."
@@ -1175,6 +1199,7 @@ export default function ProfilePage({ defaultTab }) {
                     type="password"
                     required
                     minLength={6}
+                    maxLength={64}
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                     placeholder="Tối thiểu 6 ký tự..."
@@ -1196,6 +1221,8 @@ export default function ProfilePage({ defaultTab }) {
                   <input
                     type="password"
                     required
+                    minLength={6}
+                    maxLength={64}
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
                     placeholder="Nhập lại mật khẩu mới..."

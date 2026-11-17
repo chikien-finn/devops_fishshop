@@ -82,7 +82,7 @@ export default function HomePage() {
   const [visibleCounts, setVisibleCounts] = useState(INITIAL_SECTION_COUNTS);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
-  const { addToCart } = useCart();
+  const { cart, addToCart } = useCart();
 
   // 8 fish categories exactly as in reference image 2
   const fishCategories = [
@@ -317,13 +317,26 @@ export default function HomePage() {
 
   const handleAddToCart = (p) => {
     if (p.soldOut) return;
+    const maxStock = typeof p.stock === 'number' ? Math.max(0, p.stock) : 25;
+    if (maxStock <= 0) {
+      setToastMessage(`Sản phẩm "${p.name}" đã hết hàng!`);
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+    const existing = cart?.find((c) => String(c._id || c.id) === String(p._id || p.id));
+    const inCartQty = existing?.quantity || 0;
+    if (inCartQty >= maxStock) {
+      setToastMessage(`Bạn đã có tối đa ${maxStock} con "${p.name}" trong giỏ!`);
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
     addToCart({
       _id: p._id || p.id,
       name: p.name,
       price: p.price,
       images: p.gallery && p.gallery.length > 0 ? p.gallery : [p.image],
       category: p.category || 'fish',
-      stock: typeof p.stock === 'number' ? p.stock : 25,
+      stock: maxStock,
     });
     setToastMessage(`Đã thêm "${p.name}" vào giỏ hàng!`);
     setTimeout(() => setToastMessage(null), 3000);

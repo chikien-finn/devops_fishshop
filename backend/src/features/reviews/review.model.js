@@ -22,6 +22,7 @@ const reviewSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: '',
+      maxlength: [1000, 'Nội dung nhận xét tối đa 1000 ký tự'],
     },
   },
   {

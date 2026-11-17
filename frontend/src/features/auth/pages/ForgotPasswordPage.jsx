@@ -16,8 +16,14 @@ export default function ForgotPasswordPage() {
     setError('');
     setSuccess('');
 
-    if (newPassword.length < 6) {
-      setError('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || cleanEmail.length > 100) {
+      setError('Địa chỉ email không đúng định dạng hoặc vượt quá 100 ký tự.');
+      return;
+    }
+
+    if (newPassword.length < 6 || newPassword.length > 64) {
+      setError('Mật khẩu mới phải từ 6 đến 64 ký tự.');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -27,7 +33,7 @@ export default function ForgotPasswordPage() {
 
     try {
       setLoading(true);
-      await authService.forgotPassword(email.trim(), newPassword);
+      await authService.forgotPassword(cleanEmail, newPassword);
       setSuccess('Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.');
       setNewPassword('');
       setConfirmPassword('');
@@ -122,6 +128,7 @@ export default function ForgotPasswordPage() {
           <input
             type="email"
             required
+            maxLength={100}
             placeholder="khachhang@gmail.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -143,6 +150,8 @@ export default function ForgotPasswordPage() {
           <input
             type="password"
             required
+            minLength={6}
+            maxLength={64}
             placeholder="Ít nhất 6 ký tự"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
@@ -164,6 +173,8 @@ export default function ForgotPasswordPage() {
           <input
             type="password"
             required
+            minLength={6}
+            maxLength={64}
             placeholder="Nhập lại mật khẩu mới"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
