@@ -231,7 +231,7 @@ export default function AdminProductsPage() {
     const existingImages = Array.isArray(product.images) ? product.images : [];
     return {
       name: product.name || '',
-      description: product.description || '',
+      description: stripHtml(product.description || ''),
       price: product.price ?? '',
       category: product.category || 'fish',
       subCategory: product.subCategory || 'ca-chuot',

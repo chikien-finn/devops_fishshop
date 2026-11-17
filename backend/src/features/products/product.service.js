@@ -45,7 +45,7 @@ const cachedCountDocuments = async (query) => {
     ]);
     value = Math.max(0, total - (plants + foods + accs));
   } else {
-    value = await Product.countDocuments(query);
+    value = await Product.countDocuments(query).maxTimeMS(3000).catch(() => 50);
   }
 
   if (countCache.size >= MAX_COUNT_CACHE_ENTRIES) {
@@ -204,16 +204,22 @@ export const buildProductQuery = (filters = {}) => {
         andConditions.push({ $or: searchOr });
       }
     } else if (rawSearch) {
-      const tokens = rawSearch
-        .replace(/"/g, ' ')
-        .split(/\s+/)
-        .map((t) => t.trim())
-        .filter(Boolean);
-      if (tokens.length > 0) {
-        andConditions.push({
-          $text: { $search: tokens.map((token) => `"${token}"`).join(' ') },
-        });
+      const slugTerm = toSlug(rawSearch);
+      const searchOr = [{ name: rawSearch }];
+      if (slugTerm) {
+        searchOr.push({ slug: slugTerm });
+        searchOr.push({ slug: new RegExp('^' + escapeRegex(slugTerm)) });
+        if (!slugTerm.startsWith('ca-')) {
+          searchOr.push({ slug: new RegExp('^ca-' + escapeRegex(slugTerm)) });
+        }
+        if (!slugTerm.startsWith('cay-thuy-sinh-')) {
+          searchOr.push({ slug: new RegExp('^cay-thuy-sinh-' + escapeRegex(slugTerm)) });
+        }
+        if (!slugTerm.startsWith('thuc-an-')) {
+          searchOr.push({ slug: new RegExp('^thuc-an-' + escapeRegex(slugTerm)) });
+        }
       }
+      andConditions.push({ $or: searchOr });
     }
   }
 
@@ -258,13 +264,14 @@ export const getAllProducts = async (filters = {}) => {
   let rawItems = [];
   if (count > 0) {
     const isDefaultDesc = !filters.sort || filters.sort === 'newest' || filters.sort === 'default';
-    if (isDefaultDesc && skip > totalItems / 2) {
+    if (isDefaultDesc && skip > totalItems / 2 && !filters.search) {
       const tailSkip = Math.max(0, totalItems - (skip + count));
       rawItems = await Product.find(query)
         .select(LIST_PROJECTION)
         .sort({ createdAt: 1 })
         .skip(tailSkip)
         .limit(count)
+        .maxTimeMS(5000)
         .lean();
       rawItems.reverse();
     } else {
@@ -273,6 +280,7 @@ export const getAllProducts = async (filters = {}) => {
         .sort(sortOption)
         .skip(skip)
         .limit(limit)
+        .maxTimeMS(5000)
         .lean();
     }
   }

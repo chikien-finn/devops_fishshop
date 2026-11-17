@@ -34,7 +34,8 @@ test('buildProductQuery combines collection, sale, fish filter, price range, and
     maxPrice: '200000',
   });
   assert.strictEqual(query.$and.length, 3);
-  assert.deepStrictEqual(query.$and[2], { $text: { $search: '"panda"' } });
+  assert.ok(Array.isArray(query.$and[2].$or));
+  assert.ok(query.$and[2].$or.some((c) => c.name === 'panda' || c.slug === 'panda'));
   assert.deepStrictEqual(query.stock, { $lte: 5 });
   assert.deepStrictEqual(query.price, { $gte: 50000, $lte: 200000 });
 });

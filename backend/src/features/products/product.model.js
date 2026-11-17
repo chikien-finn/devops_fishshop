@@ -101,6 +101,7 @@ productSchema.index({ isActive: 1, stock: 1 });
 productSchema.index({ category: 1, createdAt: -1 });
 productSchema.index({ stock: 1, createdAt: -1 });
 productSchema.index({ category: 1, waterType: 1, stock: 1, price: 1 });
+productSchema.index({ name: 1 });
 productSchema.index(
   { name: 'text', categoryName: 'text', origin: 'text' },
   { default_language: 'none', name: 'product_text_idx' }

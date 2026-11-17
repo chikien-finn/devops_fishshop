@@ -103,7 +103,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'orders',
-        element: <MyOrdersPage />,
+        element: <ProfilePage defaultTab="orders" />,
       },
     ],
   },
