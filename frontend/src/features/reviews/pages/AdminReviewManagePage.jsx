@@ -484,7 +484,7 @@ export default function AdminReviewManagePage() {
 
                       {/* Nội dung nhận xét */}
                       <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top', maxWidth: '300px' }}>
-                        <p style={{ margin: 0, fontSize: '0.875rem', color: '#334155', lineHeight: 1.45 }}>
+                        <p style={{ margin: 0, fontSize: '0.875rem', color: '#334155', lineHeight: 1.45, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                           {rev.comment || <em style={{ color: '#94a3b8' }}>Khách hàng chỉ chấm sao không để lại lời bình.</em>}
                         </p>
                       </td>

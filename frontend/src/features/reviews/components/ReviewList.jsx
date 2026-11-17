@@ -48,7 +48,7 @@ export default function ReviewList({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '100%', minWidth: 0, overflow: 'hidden' }}>
       {/* Khối Tổng quan Đánh giá & Phân bổ sao */}
       <div
         style={{
@@ -240,6 +240,9 @@ export default function ReviewList({
                   display: 'flex',
                   gap: '1rem',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  minWidth: 0,
+                  maxWidth: '100%',
+                  overflow: 'hidden',
                 }}
               >
                 {/* Avatar */}
@@ -262,7 +265,7 @@ export default function ReviewList({
                 </div>
 
                 {/* Nội dung đánh giá */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem', overflow: 'hidden' }}>
                   <div
                     style={{
                       display: 'flex',
@@ -320,6 +323,8 @@ export default function ReviewList({
                       lineHeight: 1.5,
                       color: '#334155',
                       whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'anywhere',
                     }}
                   >
                     {review.comment || 'Khách hàng không để lại nhận xét chi tiết.'}

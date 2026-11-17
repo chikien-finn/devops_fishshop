@@ -36,6 +36,8 @@ export default function ProductReviews({ productId }) {
         display: 'flex',
         flexDirection: 'column',
         gap: '2rem',
+        maxWidth: '100%',
+        overflow: 'hidden',
       }}
     >
       {/* Tiêu đề mục */}
