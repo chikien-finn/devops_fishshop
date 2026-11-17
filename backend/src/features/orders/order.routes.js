@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createOrder,
   getMyOrders,
+  getUserOrdersById,
   cancelMyOrder,
   getAllOrders,
   getOrderStats,
@@ -16,9 +17,10 @@ const router = Router();
 router.get('/payment-config', getPaymentConfig);
 router.use(verifyToken);
 
-// Customer routes
+// Customer & user routes
 router.post('/', createOrder);
 router.get('/my-orders', getMyOrders);
+router.get('/user/:id', getUserOrdersById);
 router.patch('/:id/cancel', cancelMyOrder);
 
 // Admin routes

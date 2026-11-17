@@ -147,6 +147,16 @@ export default function ProductDetailPage() {
     return () => controller.abort();
   }, [targetKey]);
 
+  useEffect(() => {
+    if (window.location.hash === '#customer-reviews' && !loading && product) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById('customer-reviews');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, product]);
+
 
   const handleAddToCart = () => {
     if (!product || product.soldOut) return;

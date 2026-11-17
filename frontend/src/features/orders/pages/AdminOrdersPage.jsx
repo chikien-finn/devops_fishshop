@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { ShoppingCart, RefreshCw, CheckCircle2, Clock, Truck, PackageCheck, XCircle } from 'lucide-react';
 import orderService from '../services/orderService.js';
-import { formatCurrency } from '../../../utils/formatters.js';
+import { formatCurrency, formatOrderCode } from '../../../utils/formatters.js';
 import Pagination from '../../../components/common/Pagination.jsx';
 
 const STATUS_MAP = {
@@ -155,13 +156,29 @@ export default function AdminOrdersPage() {
                 return (
                   <tr key={order._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '0.85rem 1rem', fontWeight: 700, color: '#0f172a' }}>
-                      #{order._id.slice(-6).toUpperCase()}
+                      #{formatOrderCode(order._id)}
                       <div style={{ fontSize: '0.75rem', fontWeight: 400, color: '#64748b' }}>
                         {new Date(order.createdAt).toLocaleString('vi-VN')}
                       </div>
                     </td>
                     <td style={{ padding: '0.85rem 1rem' }}>
-                      <div style={{ fontWeight: 600 }}>{order.user?.name || 'Khách hàng'}</div>
+                      {order.user?._id ? (
+                        <Link
+                          to={`/user/${order.user._id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            fontWeight: 600,
+                            color: '#0284c7',
+                            textDecoration: 'none',
+                          }}
+                          title="Xem hồ sơ & tất cả đơn hàng của khách hàng này"
+                        >
+                          {order.user?.name || 'Khách hàng'}
+                        </Link>
+                      ) : (
+                        <div style={{ fontWeight: 600 }}>{order.user?.name || 'Khách hàng'}</div>
+                      )}
                       <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{order.phoneNumber}</div>
                       <div
                         style={{

@@ -774,20 +774,29 @@ export const parseAddressString = (addressStr = '') => {
     if (addressStr.toLowerCase().includes(province.name.toLowerCase())) {
       for (const district of province.districts) {
         if (addressStr.toLowerCase().includes(district.name.toLowerCase())) {
+          let matchedWard = district.wards[0];
           for (const ward of district.wards) {
             if (addressStr.toLowerCase().includes(ward.toLowerCase())) {
-              return {
-                provinceId: province.id,
-                districtId: district.id,
-                wardName: ward,
-                region: province.region,
-              };
+              matchedWard = ward;
+              break;
             }
           }
+
+          let matchedStreet = district.streets?.[0] || 'Tuyến đường trung tâm';
+          if (Array.isArray(district.streets)) {
+            for (const street of district.streets) {
+              if (addressStr.toLowerCase().includes(street.toLowerCase())) {
+                matchedStreet = street;
+                break;
+              }
+            }
+          }
+
           return {
             provinceId: province.id,
             districtId: district.id,
-            wardName: district.wards[0],
+            wardName: matchedWard,
+            streetName: matchedStreet,
             region: province.region,
           };
         }
@@ -796,6 +805,7 @@ export const parseAddressString = (addressStr = '') => {
         provinceId: province.id,
         districtId: province.districts[0]?.id,
         wardName: province.districts[0]?.wards[0],
+        streetName: province.districts[0]?.streets?.[0] || 'Tuyến đường trung tâm',
         region: province.region,
       };
     }

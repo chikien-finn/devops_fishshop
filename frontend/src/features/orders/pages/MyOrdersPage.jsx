@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Clock3, PackageCheck, RefreshCw, ShoppingBag, Truck, User, XCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, CheckCircle2, Clock3, PackageCheck, RefreshCw, ShoppingBag, Truck, User, XCircle, Star, RotateCcw, Package } from 'lucide-react';
 import orderService from '../services/orderService.js';
-import { formatCurrency } from '../../../utils/formatters.js';
+import { formatCurrency, formatOrderCode } from '../../../utils/formatters.js';
 import Pagination from '../../../components/common/Pagination.jsx';
 import { useAuth } from '../../auth/hooks/useAuth.jsx';
+import { useCart } from '../../cart/hooks/useCart.jsx';
 
 const FILTERS = [
   { value: 'all', label: 'Tất cả' },
@@ -50,6 +51,51 @@ export default function MyOrdersPage() {
   const [paymentConfigError, setPaymentConfigError] = useState('');
   const [paymentConfigRequested, setPaymentConfigRequested] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [reviewSelectOrder, setReviewSelectOrder] = useState(null);
+  const navigate = useNavigate();
+  const { addToCart } = useCart() || {};
+
+  const handleReviewOrder = (order) => {
+    if (!order.items || order.items.length === 0) return;
+    if (order.items.length === 1) {
+      const item = order.items[0];
+      const targetSlug = item.product?.slug || item.slug || item.product?._id || item.product;
+      navigate(`/products/${targetSlug}#customer-reviews`);
+      return;
+    }
+    setReviewSelectOrder(order);
+  };
+
+  const handleReorder = (order) => {
+    if (!order.items || order.items.length === 0) {
+      navigate('/products');
+      return;
+    }
+    order.items.forEach((item) => {
+      const prod = item.product && typeof item.product === 'object'
+        ? item.product
+        : {
+            _id: item.product || item._id,
+            name: item.name,
+            price: item.price,
+            images: item.image ? [item.image] : [],
+          };
+      if (addToCart) {
+        addToCart(
+          {
+            _id: prod._id || item.product || item._id,
+            name: item.name || prod.name,
+            price: item.price || prod.price,
+            images: prod.images || (item.image ? [item.image] : []),
+            slug: prod.slug || item.slug || '',
+          },
+          item.quantity || 1
+        );
+      }
+    });
+    navigate('/cart');
+  };
+
   const needsBankTransfer = orders.some((order) => order.paymentMethod === 'banking' && ['pending', 'failed'].includes(order.paymentStatus || 'pending'));
 
   const loadOrders = useCallback(async () => {
@@ -85,7 +131,7 @@ export default function MyOrdersPage() {
   }, [needsBankTransfer, paymentConfigRequested]);
 
   const handleCancelOrder = async (order) => {
-    const orderCode = order._id?.slice(-8).toUpperCase();
+    const orderCode = formatOrderCode(order._id);
     if (!window.confirm(`Bạn có chắc muốn hủy đơn hàng #${orderCode}?`)) return;
     setCancellingOrderId(order._id);
     setCancelErrors((current) => ({ ...current, [order._id]: '' }));
@@ -208,7 +254,7 @@ export default function MyOrdersPage() {
               return (
                 <article className="my-order-card" key={order._id}>
                   <header className="my-order-header">
-                    <div><span className="my-order-label">MÃ ĐƠN HÀNG</span><strong>#{order._id?.slice(-8).toUpperCase()}</strong></div>
+                    <div><span className="my-order-label">MÃ ĐƠN HÀNG</span><strong>#{formatOrderCode(order._id)}</strong></div>
                     <span className="my-order-status" style={{ color: status.color, backgroundColor: status.background }}><StatusIcon size={15} />{status.label}</span>
                   </header>
                   <div className="my-order-meta">
@@ -223,10 +269,13 @@ export default function MyOrdersPage() {
                         {effectivePaymentStatus === 'paid' ? <span>Cửa hàng đã xác nhận giao dịch của bạn.</span>
                           : effectivePaymentStatus === 'refunded' ? <span>Khoản thanh toán đã được cửa hàng hoàn lại.</span>
                             : effectivePaymentStatus === 'expired' ? <span>Thời hạn 24 giờ đã kết thúc. Vui lòng liên hệ cửa hàng trước khi chuyển khoản; nếu đã chuyển, hãy gửi mã đơn để được đối soát.</span>
-                              : effectivePaymentStatus === 'failed' ? <span>Hãy quét mã bên cạnh để chuyển khoản lại đúng số tiền và nội dung trước hạn.</span>
-                                : <span>Hoàn tất chuyển khoản trước hạn để cửa hàng xác nhận đơn hàng.</span>}
+                              : effectivePaymentStatus === 'failed' ? <span>Thanh toán trong 24h nếu không sẽ hủy đơn. Hãy quét mã bên cạnh để chuyển khoản lại đúng số tiền và nội dung trước hạn.</span>
+                                : <span style={{ color: '#b45309', fontWeight: 600 }}>⚠️ Thanh toán trong 24h nếu không sẽ hủy đơn. Hoàn tất chuyển khoản trước hạn để cửa hàng xác nhận đơn hàng.</span>}
                         {['pending', 'failed'].includes(effectivePaymentStatus) && (
                           <div className="my-order-payment-deadline">
+                            <span style={{ color: '#d97706', fontWeight: 700, display: 'block', marginBottom: '2px' }}>
+                              ⚠️ Thanh toán trong 24h nếu không sẽ hủy đơn
+                            </span>
                             {paymentDeadline ? <><span>Hạn thanh toán: <strong>{formatOrderDate(paymentDeadline)}</strong></span><span>{paymentTimeLeft > 0 ? `Còn ${Math.floor(paymentTimeLeft / 3_600_000)} giờ ${Math.floor((paymentTimeLeft % 3_600_000) / 60_000)} phút` : 'Đã hết thời hạn thanh toán'}</span></> : <span>Đơn này chưa lưu hạn thanh toán; vui lòng liên hệ cửa hàng.</span>}
                           </div>
                         )}
@@ -235,10 +284,10 @@ export default function MyOrdersPage() {
                         paymentConfig?.bankBin && paymentConfig?.accountNumber ? (
                           <div className="my-order-repayment">
                             <img
-                              src={`https://img.vietqr.io/image/${encodeURIComponent(paymentConfig.bankBin)}-${encodeURIComponent(paymentConfig.accountNumber)}-compact2.svg?amount=${encodeURIComponent(order.totalAmount)}&addInfo=${encodeURIComponent(`AQUA${order._id?.slice(-8).toUpperCase()}`)}&accountName=${encodeURIComponent(paymentConfig.accountName || '')}`}
+                              src={`https://img.vietqr.io/image/${encodeURIComponent(paymentConfig.bankBin)}-${encodeURIComponent(paymentConfig.accountNumber)}-compact2.svg?amount=${encodeURIComponent(order.totalAmount)}&addInfo=${encodeURIComponent(`AQUA${formatOrderCode(order._id)}`)}&accountName=${encodeURIComponent(paymentConfig.accountName || '')}`}
                               alt={`QR thanh toán lại qua ${paymentConfig.bankName || 'ngân hàng'}`}
                             />
-                            <div><strong>{paymentConfig.bankName} · {paymentConfig.accountNumber}</strong><span>{paymentConfig.accountName}</span><span>Số tiền: {formatCurrency(order.totalAmount || 0)}</span><span>Nội dung: <b>{`AQUA${order._id?.slice(-8).toUpperCase()}`}</b></span></div>
+                            <div><strong>{paymentConfig.bankName} · {paymentConfig.accountNumber}</strong><span>{paymentConfig.accountName}</span><span>Số tiền: {formatCurrency(order.totalAmount || 0)}</span><span>Nội dung: <b>{`AQUA${formatOrderCode(order._id)}`}</b></span></div>
                           </div>
                         ) : <span className="my-order-payment-error">{paymentConfigError || 'Đang tải thông tin thanh toán…'}</span>
                       )}
@@ -262,23 +311,136 @@ export default function MyOrdersPage() {
                   )}
                   {deliveryEstimate && <div className="my-order-delivery-estimate"><Truck size={18} /><div><strong>Thời gian giao dự kiến</strong><span>{deliveryEstimate}</span></div></div>}
                   <div className="my-order-items">
-                    {order.items?.map((item, index) => (
-                      <div className="my-order-item" key={`${item.product || item.name}-${index}`}>
-                        <div className="my-order-product-icon"><ShoppingBag size={18} /></div>
-                        <div className="my-order-product-info"><strong>{item.name || 'Sản phẩm'}</strong><span>Số lượng: {item.quantity || 1}</span></div>
-                        <strong className="my-order-item-price">{formatCurrency((item.price || 0) * (item.quantity || 1))}</strong>
-                      </div>
-                    ))}
+                    {order.items?.map((item, index) => {
+                      const itemImg = item.image || item.product?.images?.[0] || item.product?.image;
+                      return (
+                        <div className="my-order-item" key={`${item.product || item.name}-${index}`}>
+                          {itemImg ? (
+                            <img
+                              src={itemImg}
+                              alt={item.name}
+                              style={{
+                                width: '42px',
+                                height: '42px',
+                                objectFit: 'cover',
+                                borderRadius: '6px',
+                                border: '1px solid #e2e8f0',
+                                flexShrink: 0,
+                              }}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="my-order-product-icon"><ShoppingBag size={18} /></div>
+                          )}
+                          <div className="my-order-product-info">
+                            <strong>{item.name || 'Sản phẩm'}</strong>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '2px' }}>
+                              <span>Số lượng: {item.quantity || 1}</span>
+                              {order.status === 'delivered' && (
+                                <Link
+                                  to={`/products/${item.product?.slug || item.slug || item.product?._id || item.product}#customer-reviews`}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600,
+                                    color: '#b45309',
+                                    textDecoration: 'none',
+                                  }}
+                                >
+                                  <Star size={11} fill="#eab308" color="#ca8a04" />
+                                  Đánh giá
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                          <strong className="my-order-item-price">{formatCurrency((item.price || 0) * (item.quantity || 1))}</strong>
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="my-order-total"><span>Tổng thanh toán</span><strong>{formatCurrency(order.totalAmount || 0)}</strong></div>
-                  <footer className="my-order-shipping">
-                    <span>Địa chỉ: {order.shippingAddress}</span>
-                    <span>Điện thoại: {order.phoneNumber}</span>
-                    {order.status === 'pending' && (
-                      <button className="my-order-cancel-button" type="button" disabled={cancellingOrderId === order._id} onClick={() => handleCancelOrder(order)}>
-                        {cancellingOrderId === order._id ? 'Đang hủy…' : 'Hủy đơn hàng'}
-                      </button>
-                    )}
+                  <footer className="my-order-shipping" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div>
+                      <span>Địa chỉ: {order.shippingAddress}</span>
+                      <span>Điện thoại: {order.phoneNumber}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {order.status === 'pending' && (
+                        <button className="my-order-cancel-button" type="button" disabled={cancellingOrderId === order._id} onClick={() => handleCancelOrder(order)}>
+                          {cancellingOrderId === order._id ? 'Đang hủy…' : 'Hủy đơn hàng'}
+                        </button>
+                      )}
+
+                      {order.status === 'delivered' && (
+                        <button
+                          type="button"
+                          onClick={() => handleReviewOrder(order)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.45rem 0.85rem',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            color: '#854d0e',
+                            backgroundColor: '#fef9c3',
+                            border: '1px solid #fde047',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Star size={14} fill="#eab308" color="#ca8a04" />
+                          Đánh giá
+                        </button>
+                      )}
+
+                      {order.status === 'delivered' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleReorder(order)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.45rem 0.85rem',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            color: '#0284c7',
+                            backgroundColor: '#f0f9ff',
+                            border: '1px solid #bae6fd',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <RotateCcw size={14} />
+                          Mua lại
+                        </button>
+                      ) : order.status !== 'pending' && (
+                        <Link
+                          to="/products"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.45rem 0.85rem',
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            color: '#0284c7',
+                            backgroundColor: '#f0f9ff',
+                            border: '1px solid #bae6fd',
+                            borderRadius: '4px',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          Mua thêm
+                        </Link>
+                      )}
+                    </div>
                     {cancelErrors[order._id] && <span className="my-order-cancel-error" role="alert">{cancelErrors[order._id]}</span>}
                   </footer>
                 </article>
@@ -288,6 +450,105 @@ export default function MyOrdersPage() {
           <Pagination currentPage={page} totalItems={totalItems} pageSize={pageSize}
             onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1); }} itemLabel="đơn hàng" />
         </>
+      )}
+
+      {/* Modal chọn sản phẩm để đánh giá khi đơn hàng có nhiều sản phẩm */}
+      {reviewSelectOrder && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}
+          onClick={() => setReviewSelectOrder(null)}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              maxWidth: '520px',
+              width: '100%',
+              padding: '1.5rem',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
+                Chọn sản phẩm bạn muốn đánh giá
+              </h3>
+              <button
+                type="button"
+                onClick={() => setReviewSelectOrder(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '350px', overflowY: 'auto' }}>
+              {reviewSelectOrder.items?.map((item, idx) => {
+                const itemSlug = item.product?.slug || item.slug || item.product?._id || item.product;
+                const itemImg = item.image || item.product?.images?.[0] || item.product?.image;
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      gap: '0.75rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+                      {itemImg ? (
+                        <img src={itemImg} alt={item.name} style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '4px' }} />
+                      ) : (
+                        <div style={{ width: '42px', height: '42px', backgroundColor: '#f1f5f9', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Package size={20} color="#94a3b8" />
+                        </div>
+                      )}
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReviewSelectOrder(null);
+                        navigate(`/products/${itemSlug}#customer-reviews`);
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '0.4rem 0.75rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: '#854d0e',
+                        backgroundColor: '#fef9c3',
+                        border: '1px solid #fde047',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Star size={13} fill="#eab308" color="#ca8a04" />
+                      Đánh giá
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

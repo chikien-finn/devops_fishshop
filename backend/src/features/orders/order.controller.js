@@ -29,6 +29,22 @@ export const getMyOrders = async (req, res, next) => {
   }
 };
 
+export const getUserOrdersById = async (req, res, next) => {
+  try {
+    const targetId = req.params.id;
+    if (req.user.id !== targetId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền xem đơn hàng của tài khoản này',
+      });
+    }
+    const orders = await orderService.getUserOrders(targetId, req.query);
+    sendSuccess(res, orders, 'Lấy danh sách đơn hàng thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const cancelMyOrder = async (req, res, next) => {
   try {
     const order = await orderService.cancelUserOrder(req.user.id, req.params.id);

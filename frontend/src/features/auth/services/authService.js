@@ -2,7 +2,7 @@ import api from '../../../services/api.js';
 
 const getStorageItem = (key) => {
   try {
-    return localStorage.getItem(key) || sessionStorage.getItem(key);
+    return sessionStorage.getItem(key) || localStorage.getItem(key);
   } catch {
     return sessionStorage.getItem(key);
   }

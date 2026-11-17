@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams, Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   User,
   Shield,
@@ -24,12 +24,19 @@ import {
   Phone,
   Mail,
   Calendar,
+  Copy,
+  Info,
+  ArrowLeft,
+  QrCode,
+  Star,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../../auth/hooks/useAuth.jsx';
 import authService from '../../auth/services/authService.js';
+import userService from '../services/userService.js';
 import { useCart } from '../../cart/hooks/useCart.jsx';
 import orderService from '../../orders/services/orderService.js';
-import { formatCurrency, formatDate } from '../../../utils/formatters.js';
+import { formatCurrency, formatDate, formatOrderCode } from '../../../utils/formatters.js';
 import Pagination from '../../../components/common/Pagination.jsx';
 import AddressDropdownSelector from '../../../components/common/AddressDropdownSelector.jsx';
 
@@ -71,31 +78,95 @@ const formatOrderDate = (date) =>
     : '—';
 
 export default function ProfilePage({ defaultTab }) {
-  const { user, updateProfile, isAuthenticated, logout } = useAuth();
+  const { userId } = useParams();
+  const { user: authUser, updateProfile, isAuthenticated, isAdmin, logout } = useAuth();
+  const [targetUser, setTargetUser] = useState(null);
+  const [targetLoading, setTargetLoading] = useState(false);
+  const [targetError, setTargetError] = useState('');
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const isOtherUser = Boolean(userId && authUser && String(userId) !== String(authUser._id || authUser.id));
+  const user = isOtherUser ? targetUser : authUser;
+
   const {
     cart: cartItems = [],
     totalItems: cartCount = 0,
     totalAmount: cartTotal = 0,
+    addToCart,
     removeFromCart,
     updateQuantity,
   } = useCart() || {};
-  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
 
-  // Tab: 'info' | 'orders' | 'cart' | 'password'
-  const activeTab = searchParams.get('tab') || defaultTab || 'info';
+  const getTabFromUrl = useCallback(() => {
+    const params = new URLSearchParams(location.search);
+    const tabFromUrl = params.get('tab');
+    if (tabFromUrl) {
+      if (isOtherUser && ['cart', 'password'].includes(tabFromUrl)) return 'info';
+      return tabFromUrl;
+    }
+    if (defaultTab) {
+      if (isOtherUser && ['cart', 'password'].includes(defaultTab)) return 'info';
+      return defaultTab;
+    }
+    return 'info';
+  }, [location.search, defaultTab, isOtherUser]);
+
+  const [activeTab, setActiveTab] = useState(getTabFromUrl);
+
+  // Sync state whenever URL search or route changes
+  useEffect(() => {
+    setActiveTab(getTabFromUrl());
+  }, [getTabFromUrl]);
 
   const setTab = (newTab) => {
     setFeedback(null);
-    setSearchParams(newTab === 'info' ? {} : { tab: newTab });
+    setActiveTab(newTab); // Immediately update UI
+
+    const targetPath = userId ? `/user/${userId}` : '/profile';
+    const params = new URLSearchParams(location.search);
+    if (newTab === 'info') {
+      params.delete('tab');
+    } else {
+      params.set('tab', newTab);
+    }
+    const searchStr = params.toString();
+    navigate(
+      {
+        pathname: targetPath,
+        search: searchStr ? `?${searchStr}` : '',
+      },
+      { replace: false }
+    );
   };
 
+  // Fetch target user when viewing another user via URL parameter
+  useEffect(() => {
+    if (!isOtherUser || !userId) {
+      setTargetUser(null);
+      setTargetError('');
+      return;
+    }
+    setTargetLoading(true);
+    setTargetError('');
+    userService
+      .getUserById(userId)
+      .then((data) => setTargetUser(data))
+      .catch((err) =>
+        setTargetError(
+          err.response?.data?.message || 'Không tìm thấy người dùng hoặc bạn không có quyền xem tài khoản này.'
+        )
+      )
+      .finally(() => setTargetLoading(false));
+  }, [isOtherUser, userId]);
+
   // Profile Edit State
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    address: '',
-  });
+  const [formData, setFormData] = useState(() => ({
+    name: user?.name || '',
+    phone: user?.phone || '',
+    address: user?.address || '',
+  }));
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
@@ -119,6 +190,57 @@ export default function ProfilePage({ defaultTab }) {
   const [cancelErrors, setCancelErrors] = useState({});
   const [paymentConfig, setPaymentConfig] = useState(null);
   const [paymentConfigRequested, setPaymentConfigRequested] = useState(false);
+  const [expandedQrOrders, setExpandedQrOrders] = useState({});
+
+  const toggleQr = (orderId) => {
+    setExpandedQrOrders((prev) => ({
+      ...prev,
+      [orderId]: !prev[orderId],
+    }));
+  };
+
+  const [reviewSelectOrder, setReviewSelectOrder] = useState(null);
+
+  const handleReviewOrder = (order) => {
+    if (!order.items || order.items.length === 0) return;
+    if (order.items.length === 1) {
+      const item = order.items[0];
+      const targetSlug = item.product?.slug || item.slug || item.product?._id || item.product;
+      navigate(`/products/${targetSlug}#customer-reviews`);
+      return;
+    }
+    setReviewSelectOrder(order);
+  };
+
+  const handleReorder = (order) => {
+    if (!order.items || order.items.length === 0) {
+      navigate('/products');
+      return;
+    }
+    order.items.forEach((item) => {
+      const prod = item.product && typeof item.product === 'object'
+        ? item.product
+        : {
+            _id: item.product || item._id,
+            name: item.name,
+            price: item.price,
+            images: item.image ? [item.image] : [],
+          };
+      if (addToCart) {
+        addToCart(
+          {
+            _id: prod._id || item.product || item._id,
+            name: item.name || prod.name,
+            price: item.price || prod.price,
+            images: prod.images || (item.image ? [item.image] : []),
+            slug: prod.slug || item.slug || '',
+          },
+          item.quantity || 1
+        );
+      }
+    });
+    navigate('/cart');
+  };
 
   useEffect(() => {
     if (user) {
@@ -136,19 +258,38 @@ export default function ProfilePage({ defaultTab }) {
     setOrdersLoading(true);
     setOrderError('');
     try {
-      const result = await orderService.getMyOrders({
-        page: orderPage,
-        limit: orderPageSize,
-        status: orderFilter,
-      });
+      let result;
+      if (isOtherUser && userId) {
+        result = await orderService.getUserOrders(userId, {
+          page: orderPage,
+          limit: orderPageSize,
+          status: orderFilter,
+        });
+      } else {
+        result = await orderService.getMyOrders({
+          page: orderPage,
+          limit: orderPageSize,
+          status: orderFilter,
+        });
+      }
       setOrders(result.items || []);
       setOrderTotalItems(result.pagination?.totalItems || 0);
+
+      // Nếu tài khoản chưa có địa chỉ hoặc số điện thoại, tự động điền từ đơn mua gần nhất
+      if (result.items && result.items.length > 0) {
+        const latest = result.items[0];
+        setFormData((prev) => ({
+          name: prev.name || user?.name || '',
+          phone: prev.phone || latest.phoneNumber || '',
+          address: prev.address || latest.shippingAddress || '',
+        }));
+      }
     } catch (err) {
       setOrderError(err.response?.data?.message || 'Không thể tải danh sách đơn hàng.');
     } finally {
       setOrdersLoading(false);
     }
-  }, [activeTab, isAuthenticated, orderFilter, orderPage, orderPageSize]);
+  }, [activeTab, isAuthenticated, isOtherUser, orderFilter, orderPage, orderPageSize, userId]);
 
   useEffect(() => {
     loadOrders();
@@ -236,7 +377,7 @@ export default function ProfilePage({ defaultTab }) {
 
   // Handle Cancel Order
   const handleCancelOrder = async (order) => {
-    const orderCode = order._id?.slice(-8).toUpperCase();
+    const orderCode = formatOrderCode(order._id);
     if (!window.confirm(`Bạn có chắc muốn hủy đơn hàng #${orderCode}?`)) return;
     setCancellingOrderId(order._id);
     setCancelErrors((prev) => ({ ...prev, [order._id]: '' }));
@@ -298,12 +439,68 @@ export default function ProfilePage({ defaultTab }) {
     );
   }
 
-  const navMenuItems = [
-    { id: 'info', label: 'Hồ Sơ Của Tôi', icon: User, badge: null },
-    { id: 'orders', label: 'Đơn Mua / Lịch Sử', icon: Package, badge: orderTotalItems > 0 ? orderTotalItems : null },
-    { id: 'cart', label: 'Giỏ Hàng Của Tôi', icon: ShoppingBag, badge: cartCount > 0 ? cartCount : null },
-    { id: 'password', label: 'Đổi Mật Khẩu', icon: Lock, badge: null },
-  ];
+  if (targetLoading) {
+    return (
+      <div style={{ maxWidth: '600px', margin: '4rem auto', textAlign: 'center', padding: '2rem' }}>
+        <RefreshCw size={36} className="animate-spin" color="#0284c7" style={{ margin: '0 auto 1rem' }} />
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>Đang nạp thông tin người dùng...</h3>
+      </div>
+    );
+  }
+
+  if (targetError) {
+    return (
+      <div
+        style={{
+          maxWidth: '520px',
+          margin: '4rem auto',
+          textAlign: 'center',
+          backgroundColor: '#ffffff',
+          padding: '2.5rem 2rem',
+          border: '1px solid #fecaca',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+        }}
+      >
+        <ShieldAlert size={52} color="#dc2626" style={{ margin: '0 auto 1.25rem' }} />
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>
+          Không thể truy cập tài khoản
+        </h2>
+        <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
+          {targetError}
+        </p>
+        <Link
+          to={isAdmin ? '/admin/users' : '/'}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.625rem 1.5rem',
+            backgroundColor: '#0284c7',
+            color: '#ffffff',
+            borderRadius: '6px',
+            textDecoration: 'none',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+          }}
+        >
+          {isAdmin ? 'Quay lại Quản lý tài khoản' : 'Về trang chủ'}
+        </Link>
+      </div>
+    );
+  }
+
+  const navMenuItems = isOtherUser
+    ? [
+        { id: 'info', label: 'Hồ Sơ Khách Hàng', icon: User, badge: null },
+        { id: 'orders', label: 'Lịch Sử Đơn Hàng', icon: Package, badge: orderTotalItems > 0 ? orderTotalItems : null },
+      ]
+    : [
+        { id: 'info', label: 'Hồ Sơ Của Tôi', icon: User, badge: null },
+        { id: 'orders', label: 'Đơn Mua / Lịch Sử', icon: Package, badge: orderTotalItems > 0 ? orderTotalItems : null },
+        { id: 'cart', label: 'Giỏ Hàng Của Tôi', icon: ShoppingBag, badge: cartCount > 0 ? cartCount : null },
+        { id: 'password', label: 'Đổi Mật Khẩu', icon: Lock, badge: null },
+      ];
 
   return (
     <div style={{ maxWidth: '1200px', margin: '1.5rem auto 3rem', padding: '0 1rem' }}>
@@ -311,8 +508,62 @@ export default function ProfilePage({ defaultTab }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#64748b', marginBottom: '1.25rem' }}>
         <Link to="/" style={{ color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}>Trang chủ</Link>
         <ChevronRight size={14} />
-        <span style={{ color: '#0f172a', fontWeight: 700 }}>Tài khoản của tôi</span>
+        {isOtherUser && isAdmin && (
+          <>
+            <Link to="/admin/users" style={{ color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}>Quản lý người dùng</Link>
+            <ChevronRight size={14} />
+          </>
+        )}
+        <span style={{ color: '#0f172a', fontWeight: 700 }}>
+          {isOtherUser ? (user?.name ? `Hồ sơ: ${user.name}` : 'Hồ sơ khách hàng') : 'Tài khoản của tôi'}
+        </span>
       </div>
+
+      {/* Admin viewing other user notice banner */}
+      {isOtherUser && (
+        <div
+          style={{
+            padding: '0.875rem 1.25rem',
+            marginBottom: '1.25rem',
+            backgroundColor: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.875rem', color: '#1e40af' }}>
+            <Shield size={20} color="#2563eb" />
+            <span>
+              <strong>Chế độ Quản trị:</strong> Đang xem hồ sơ và lịch sử đơn hàng riêng của người dùng{' '}
+              <strong>{user?.name}</strong> ({user?.email})
+            </span>
+          </div>
+          {isAdmin && (
+            <Link
+              to="/admin/users"
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: '#2563eb',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '0.35rem 0.75rem',
+                backgroundColor: '#ffffff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '4px',
+              }}
+            >
+              <ArrowLeft size={14} />
+              Quay lại danh sách
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Main 2-Column Shopee Layout */}
       <div style={{ display: 'grid', gridTemplateColumns: '270px 1fr', gap: '1.5rem', alignItems: 'start' }}>
@@ -455,7 +706,7 @@ export default function ProfilePage({ defaultTab }) {
               );
             })}
 
-            {user?.role === 'admin' && (
+            {!isOtherUser && user?.role === 'admin' && (
               <Link
                 to="/admin"
                 style={{
@@ -481,31 +732,55 @@ export default function ProfilePage({ defaultTab }) {
 
             <div style={{ margin: '0.5rem 0', borderTop: '1px solid #f1f5f9' }} />
 
-            <button
-              type="button"
-              onClick={logout}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.75rem 1.25rem',
-                background: 'transparent',
-                border: 'none',
-                borderLeft: '4px solid transparent',
-                color: '#dc2626',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'background-color 0.15s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              <LogOut size={18} color="#dc2626" />
-              <span>Đăng xuất tài khoản</span>
-            </button>
+            {isOtherUser ? (
+              <Link
+                to={isAdmin ? '/admin/users' : '/'}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1.25rem',
+                  color: '#0284c7',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  borderLeft: '4px solid transparent',
+                  transition: 'background-color 0.15s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <ArrowLeft size={18} color="#0284c7" />
+                <span>Quay lại DS tài khoản</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={logout}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1.25rem',
+                  background: 'transparent',
+                  border: 'none',
+                  borderLeft: '4px solid transparent',
+                  color: '#dc2626',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'background-color 0.15s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <LogOut size={18} color="#dc2626" />
+                <span>Đăng xuất tài khoản</span>
+              </button>
+            )}
           </div>
         </aside>
 
@@ -546,12 +821,88 @@ export default function ProfilePage({ defaultTab }) {
             <div>
               <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.25rem' }}>
-                  Hồ Sơ Của Tôi
+                  {isOtherUser ? `Hồ Sơ Khách Hàng: ${user?.name || ''}` : 'Hồ Sơ Của Tôi'}
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>
-                  Quản lý thông tin hồ sơ để bảo vệ tài khoản và nhận hàng chính xác.
+                  {isOtherUser
+                    ? 'Xem chi tiết thông tin hồ sơ và đường dẫn riêng biệt của tài khoản này.'
+                    : 'Quản lý thông tin hồ sơ để bảo vệ tài khoản và nhận hàng chính xác.'}
                 </p>
               </div>
+
+              {/* Dedicated User Link Box */}
+              {user?._id && (
+                <div
+                  style={{
+                    padding: '1rem 1.25rem',
+                    marginBottom: '1.5rem',
+                    backgroundColor: '#f0f9ff',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Info size={16} /> Đường dẫn riêng cho tài khoản này
+                    </span>
+                    {copiedLink && (
+                      <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 700 }}>
+                        ✓ Đã sao chép liên kết!
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#475569' }}>
+                    {isOtherUser
+                      ? 'Đường dẫn cố định dùng để truy cập trực tiếp trang cá nhân & danh sách đơn hàng của khách hàng này.'
+                      : 'Đường dẫn tài khoản cá nhân riêng biệt của bạn trên hệ thống AquaCraft.'}
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${window.location.origin}/user/${user._id}`}
+                      style={{
+                        flex: 1,
+                        padding: '0.5rem 0.75rem',
+                        fontSize: '0.85rem',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        color: '#0f172a',
+                        fontFamily: 'monospace',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/user/${user._id}`);
+                        setCopiedLink(true);
+                        setTimeout(() => setCopiedLink(false), 2000);
+                      }}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#0284c7',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '0.825rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <Copy size={14} />
+                      <span>{copiedLink ? 'Đã chép' : 'Sao chép link'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '600px' }}>
                 <div>
@@ -584,6 +935,7 @@ export default function ProfilePage({ defaultTab }) {
                   <input
                     type="text"
                     required
+                    disabled={isOtherUser}
                     maxLength={50}
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -595,6 +947,7 @@ export default function ProfilePage({ defaultTab }) {
                       border: '1px solid #cbd5e1',
                       borderRadius: '6px',
                       outline: 'none',
+                      backgroundColor: isOtherUser ? '#f1f5f9' : '#ffffff',
                     }}
                   />
                 </div>
@@ -605,6 +958,7 @@ export default function ProfilePage({ defaultTab }) {
                   </label>
                   <input
                     type="tel"
+                    disabled={isOtherUser}
                     maxLength={11}
                     value={formData.phone}
                     onChange={(e) =>
@@ -621,6 +975,7 @@ export default function ProfilePage({ defaultTab }) {
                       border: '1px solid #cbd5e1',
                       borderRadius: '6px',
                       outline: 'none',
+                      backgroundColor: isOtherUser ? '#f1f5f9' : '#ffffff',
                     }}
                   />
                 </div>
@@ -629,34 +984,66 @@ export default function ProfilePage({ defaultTab }) {
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
                     Địa chỉ giao hàng mặc định (Chọn qua danh mục)
                   </label>
-                  <AddressDropdownSelector
-                    value={formData.address}
-                    onChange={(addr) => setFormData((prev) => ({ ...prev, address: addr }))}
-                  />
+                  {isOtherUser ? (
+                    <input
+                      type="text"
+                      disabled
+                      value={formData.address || 'Chưa cập nhật'}
+                      style={{
+                        width: '100%',
+                        padding: '0.625rem 0.85rem',
+                        fontSize: '0.875rem',
+                        backgroundColor: '#f1f5f9',
+                        color: '#64748b',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                      }}
+                    />
+                  ) : (
+                    <AddressDropdownSelector
+                      value={formData.address}
+                      onChange={(addr) => setFormData((prev) => ({ ...prev, address: addr }))}
+                    />
+                  )}
                 </div>
 
-                <div style={{ marginTop: '0.5rem' }}>
-                  <button
-                    type="submit"
-                    disabled={saving}
+                {isOtherUser ? (
+                  <div
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.625rem 1.5rem',
-                      backgroundColor: '#0284c7',
-                      color: '#ffffff',
-                      border: 'none',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
                       borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      fontWeight: 700,
-                      cursor: saving ? 'not-allowed' : 'pointer',
+                      fontSize: '0.85rem',
+                      color: '#64748b',
                     }}
                   >
-                    <Save size={16} />
-                    <span>{saving ? 'Đang lưu...' : 'Lưu Thay Đổi'}</span>
-                  </button>
-                </div>
+                    🔒 <strong>Chế độ xem Quản trị:</strong> Bạn đang xem thông tin hồ sơ của khách hàng với quyền chỉ đọc.
+                  </div>
+                ) : (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.625rem 1.5rem',
+                        backgroundColor: '#0284c7',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        fontWeight: 700,
+                        cursor: saving ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <Save size={16} />
+                      <span>{saving ? 'Đang lưu...' : 'Lưu Thay Đổi'}</span>
+                    </button>
+                  </div>
+                )}
               </form>
             </div>
           )}
@@ -666,10 +1053,12 @@ export default function ProfilePage({ defaultTab }) {
             <div>
               <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.25rem' }}>
-                  Đơn Mua Của Tôi
+                  {isOtherUser ? `Đơn Mua Của: ${user?.name || 'Khách hàng'}` : 'Đơn Mua Của Tôi'}
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>
-                  Theo dõi trạng thái và lịch sử tất cả các đơn hàng cá cảnh &amp; phụ kiện của bạn.
+                  {isOtherUser
+                    ? `Theo dõi toàn bộ lịch sử đơn hàng mà tài khoản ${user?.email || ''} đã đặt.`
+                    : 'Theo dõi trạng thái và lịch sử tất cả các đơn hàng cá cảnh & phụ kiện của bạn.'}
                 </p>
               </div>
 
@@ -757,8 +1146,19 @@ export default function ProfilePage({ defaultTab }) {
                   {orders.map((order) => {
                     const st = ORDER_STATUS_MAP[order.status] || ORDER_STATUS_MAP.pending;
                     const StatusIcon = st.icon;
-                    const orderCode = order._id?.slice(-8).toUpperCase();
+                    const orderCode = formatOrderCode(order._id);
                     const isPending = order.status === 'pending';
+
+                    const isBanking = order.paymentMethod === 'banking';
+                    const isPaid = order.paymentStatus === 'paid';
+                    const isCancelled = order.status === 'cancelled' || order.paymentStatus === 'expired';
+                    const isAwaitingPayment = isBanking && !isPaid && !isCancelled;
+
+                    const paymentDeadline = order.paymentExpiresAt
+                      ? new Date(order.paymentExpiresAt)
+                      : new Date(new Date(order.createdAt).getTime() + 24 * 60 * 60 * 1000);
+                    const paymentTimeLeft = paymentDeadline.getTime() - Date.now();
+                    const isExpired = paymentTimeLeft <= 0;
 
                     return (
                       <div
@@ -811,6 +1211,112 @@ export default function ProfilePage({ defaultTab }) {
                           </div>
                         </div>
 
+                        {/* Cảnh báo thanh toán trong 24h nếu chưa thanh toán chuyển khoản */}
+                        {isAwaitingPayment && (
+                          <div
+                            style={{
+                              padding: '0.75rem 1.25rem',
+                              backgroundColor: '#fffbeb',
+                              borderBottom: '1px solid #fef3c7',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: '0.75rem',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                              <div
+                                style={{
+                                  width: '30px',
+                                  height: '30px',
+                                  borderRadius: '50%',
+                                  backgroundColor: '#fef3c7',
+                                  color: '#d97706',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Clock size={16} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#b45309' }}>
+                                  ⚠️ Thanh toán trong 24h nếu không sẽ hủy đơn
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: '#92400e', marginTop: '2px' }}>
+                                  {isExpired ? (
+                                    <span style={{ color: '#dc2626', fontWeight: 700 }}>
+                                      Đã quá thời hạn 24 giờ. Đơn hàng sẽ bị tự động hủy.
+                                    </span>
+                                  ) : (
+                                    <>
+                                      Hạn thanh toán: <strong>{formatOrderDate(paymentDeadline)}</strong>
+                                      {paymentTimeLeft > 0 && (
+                                        <span style={{ marginLeft: '6px' }}>
+                                          (Còn <strong>{Math.floor(paymentTimeLeft / 3_600_000)} giờ {Math.floor((paymentTimeLeft % 3_600_000) / 60_000)} phút</strong>)
+                                        </span>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {paymentConfig?.bankBin && paymentConfig?.accountNumber && !isExpired && (
+                              <button
+                                type="button"
+                                onClick={() => toggleQr(order._id)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                  padding: '0.35rem 0.7rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  color: '#0284c7',
+                                  backgroundColor: '#f0f9ff',
+                                  border: '1px solid #bae6fd',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <QrCode size={14} />
+                                {expandedQrOrders[order._id] ? 'Đóng mã QR' : 'Quét mã thanh toán'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Mở rộng mã QR VietQR nếu người dùng click */}
+                        {isAwaitingPayment && expandedQrOrders[order._id] && paymentConfig?.bankBin && (
+                          <div
+                            style={{
+                              padding: '1rem 1.25rem',
+                              backgroundColor: '#f8fafc',
+                              borderBottom: '1px solid #e2e8f0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '1.25rem',
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            <img
+                              src={`https://img.vietqr.io/image/${encodeURIComponent(paymentConfig.bankBin)}-${encodeURIComponent(paymentConfig.accountNumber)}-compact2.svg?amount=${encodeURIComponent(order.totalAmount)}&addInfo=${encodeURIComponent(`AQUA${orderCode}`)}&accountName=${encodeURIComponent(paymentConfig.accountName || '')}`}
+                              alt={`QR chuyển khoản AQUA${orderCode}`}
+                              style={{ width: '130px', height: '130px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                            />
+                            <div style={{ fontSize: '0.8125rem', color: '#334155', lineHeight: 1.6 }}>
+                              <div>Ngân hàng: <strong>{paymentConfig.bankName}</strong></div>
+                              <div>Số tài khoản: <strong>{paymentConfig.accountNumber}</strong></div>
+                              <div>Chủ tài khoản: <strong>{paymentConfig.accountName}</strong></div>
+                              <div>Số tiền: <strong style={{ color: '#dc2626' }}>{formatCurrency(order.totalAmount)}</strong></div>
+                              <div>Nội dung CK: <strong style={{ color: '#0284c7' }}>AQUA{orderCode}</strong></div>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Order Items */}
                         <div style={{ padding: '1rem 1.25rem' }}>
                           {(order.items || []).map((item, idx) => (
@@ -826,22 +1332,57 @@ export default function ProfilePage({ defaultTab }) {
                               }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flex: 1, minWidth: 0 }}>
-                                {item.product?.images?.[0] ? (
-                                  <img
-                                    src={item.product.images[0]}
-                                    alt={item.name}
-                                    style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '4px' }}
-                                  />
-                                ) : (
-                                  <div style={{ width: '48px', height: '48px', backgroundColor: '#e2e8f0', borderRadius: '4px' }} />
-                                )}
+                                {(() => {
+                                  const imgUrl = item.image || item.product?.images?.[0] || item.product?.image;
+                                  return imgUrl ? (
+                                    <img
+                                      src={imgUrl}
+                                      alt={item.name}
+                                      style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #f1f5f9' }}
+                                    />
+                                  ) : (
+                                    <div
+                                      style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        backgroundColor: '#f1f5f9',
+                                        borderRadius: '4px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        border: '1px solid #e2e8f0',
+                                      }}
+                                    >
+                                      <Package size={20} color="#94a3b8" />
+                                    </div>
+                                  );
+                                })()}
                                 <div style={{ minWidth: 0 }}>
                                   <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {item.name}
                                   </div>
-                                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                    Số lượng: x{item.quantity}
-                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '2px' }}>
+                                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                      Số lượng: x{item.quantity}
+                                    </span>
+                                    {order.status === 'delivered' && (
+                                      <Link
+                                        to={`/products/${item.product?.slug || item.slug || item.product?._id || item.product}#customer-reviews`}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '3px',
+                                          fontSize: '0.75rem',
+                                          fontWeight: 600,
+                                          color: '#b45309',
+                                          textDecoration: 'none',
+                                        }}
+                                      >
+                                        <Star size={11} fill="#eab308" color="#ca8a04" />
+                                        Đánh giá
+                                      </Link>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                               <div style={{ textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', color: '#0284c7' }}>
@@ -870,12 +1411,18 @@ export default function ProfilePage({ defaultTab }) {
                               {formatCurrency(order.totalAmount)}
                             </strong>
                             <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '8px' }}>
-                              ({order.paymentMethod === 'banking' ? 'Chuyển khoản VietQR' : 'Thanh toán COD'})
+                              ({isBanking
+                                ? isPaid
+                                  ? 'Chuyển khoản VietQR - Đã thanh toán'
+                                  : isCancelled
+                                    ? 'Chuyển khoản VietQR - Đã hủy'
+                                    : 'Chuyển khoản VietQR - Chờ thanh toán trong 24h'
+                                : 'Thanh toán COD'})
                             </span>
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                            {isPending && (
+                            {!isOtherUser && isPending && (
                               <button
                                 type="button"
                                 disabled={cancellingOrderId === order._id}
@@ -895,21 +1442,87 @@ export default function ProfilePage({ defaultTab }) {
                               </button>
                             )}
 
-                            <Link
-                              to="/products"
-                              style={{
-                                padding: '0.45rem 0.85rem',
-                                fontSize: '0.8rem',
-                                fontWeight: 700,
-                                color: '#0284c7',
-                                backgroundColor: '#f0f9ff',
-                                border: '1px solid #bae6fd',
-                                borderRadius: '4px',
-                                textDecoration: 'none',
-                              }}
-                            >
-                              Mua thêm
-                            </Link>
+                            {isOtherUser && isAdmin ? (
+                              <Link
+                                to="/admin/orders"
+                                style={{
+                                  padding: '0.45rem 0.85rem',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 600,
+                                  color: '#0284c7',
+                                  backgroundColor: '#f0f9ff',
+                                  border: '1px solid #bae6fd',
+                                  borderRadius: '4px',
+                                  textDecoration: 'none',
+                                }}
+                              >
+                                Xem ở Quản lý đơn
+                              </Link>
+                            ) : (
+                              <>
+                                {order.status === 'delivered' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReviewOrder(order)}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.35rem',
+                                      padding: '0.45rem 0.85rem',
+                                      fontSize: '0.8rem',
+                                      fontWeight: 700,
+                                      color: '#854d0e',
+                                      backgroundColor: '#fef9c3',
+                                      border: '1px solid #fde047',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <Star size={14} fill="#eab308" color="#ca8a04" />
+                                    Đánh giá
+                                  </button>
+                                )}
+
+                                {order.status === 'delivered' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReorder(order)}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.35rem',
+                                      padding: '0.45rem 0.85rem',
+                                      fontSize: '0.8rem',
+                                      fontWeight: 700,
+                                      color: '#0284c7',
+                                      backgroundColor: '#f0f9ff',
+                                      border: '1px solid #bae6fd',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <RotateCcw size={14} />
+                                    Mua lại
+                                  </button>
+                                ) : (
+                                  <Link
+                                    to="/products"
+                                    style={{
+                                      padding: '0.45rem 0.85rem',
+                                      fontSize: '0.8rem',
+                                      fontWeight: 700,
+                                      color: '#0284c7',
+                                      backgroundColor: '#f0f9ff',
+                                      border: '1px solid #bae6fd',
+                                      borderRadius: '4px',
+                                      textDecoration: 'none',
+                                    }}
+                                  >
+                                    Mua thêm
+                                  </Link>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1264,6 +1877,105 @@ export default function ProfilePage({ defaultTab }) {
           )}
         </main>
       </div>
+
+      {/* Modal chọn sản phẩm để đánh giá khi đơn hàng có nhiều sản phẩm */}
+      {reviewSelectOrder && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}
+          onClick={() => setReviewSelectOrder(null)}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              maxWidth: '520px',
+              width: '100%',
+              padding: '1.5rem',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
+                Chọn sản phẩm bạn muốn đánh giá
+              </h3>
+              <button
+                type="button"
+                onClick={() => setReviewSelectOrder(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '350px', overflowY: 'auto' }}>
+              {reviewSelectOrder.items?.map((item, idx) => {
+                const itemSlug = item.product?.slug || item.slug || item.product?._id || item.product;
+                const itemImg = item.image || item.product?.images?.[0] || item.product?.image;
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      gap: '0.75rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+                      {itemImg ? (
+                        <img src={itemImg} alt={item.name} style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '4px' }} />
+                      ) : (
+                        <div style={{ width: '42px', height: '42px', backgroundColor: '#f1f5f9', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Package size={20} color="#94a3b8" />
+                        </div>
+                      )}
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReviewSelectOrder(null);
+                        navigate(`/products/${itemSlug}#customer-reviews`);
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '0.4rem 0.75rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: '#854d0e',
+                        backgroundColor: '#fef9c3',
+                        border: '1px solid #fde047',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Star size={13} fill="#eab308" color="#ca8a04" />
+                      Đánh giá
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

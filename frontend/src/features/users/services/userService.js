@@ -6,6 +6,11 @@ export const userService = {
     return response.data?.data;
   },
 
+  async getUserById(id) {
+    const response = await api.get(`/users/${id}`);
+    return response.data?.data;
+  },
+
   async updateProfile(profileData) {
     const response = await api.put('/users/profile', profileData);
     if (response.data?.data) {

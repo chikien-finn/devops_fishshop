@@ -19,6 +19,22 @@ export const getProfile = async (req, res, next) => {
   }
 };
 
+export const getUser = async (req, res, next) => {
+  try {
+    const targetId = req.params.id;
+    if (req.user.id !== targetId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền xem thông tin tài khoản này',
+      });
+    }
+    const user = await userService.getUserById(targetId);
+    sendSuccess(res, user, 'Lấy thông tin người dùng thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateProfile = async (req, res, next) => {
   try {
     const updated = await userService.updateUserProfile(req.user.id, req.body);

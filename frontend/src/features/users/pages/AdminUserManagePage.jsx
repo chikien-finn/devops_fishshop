@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Users,
   Search,
@@ -16,6 +17,7 @@ import {
   MapPin,
   Clock,
   Sparkles,
+  ExternalLink,
 } from 'lucide-react';
 import userService from '../services/userService.js';
 import { isRequestCanceled } from '../../products/services/productService.js';
@@ -449,7 +451,23 @@ export default function AdminUserManagePage() {
                           </div>
                           <div>
                             <div style={{ fontWeight: 600, color: '#0f172a' }}>
-                              {u.name} {isCurrentAdmin && <span style={{ fontSize: '0.75rem', color: '#0284c7' }}>(Bạn)</span>}
+                              <Link
+                                to={`/user/${u._id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  color: '#0284c7',
+                                  textDecoration: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                                title="Mở trang cá nhân & lịch sử đơn hàng riêng của người dùng này"
+                              >
+                                {u.name}
+                                <ExternalLink size={12} color="#94a3b8" />
+                              </Link>{' '}
+                              {isCurrentAdmin && <span style={{ fontSize: '0.75rem', color: '#0284c7' }}>(Bạn)</span>}
                             </div>
                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{u.email}</div>
                           </div>
@@ -504,6 +522,30 @@ export default function AdminUserManagePage() {
                       {/* Actions */}
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '0.35rem' }}>
+                          {/* Đường dẫn riêng user */}
+                          <Link
+                            to={`/user/${u._id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Xem trang cá nhân & lịch sử đơn hàng riêng của user này"
+                            style={{
+                              padding: '0.375rem 0.5rem',
+                              backgroundColor: '#f0f9ff',
+                              border: '1px solid #bae6fd',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              color: '#0284c7',
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                            }}
+                          >
+                            <ExternalLink size={12} />
+                            <span>Link User</span>
+                          </Link>
+
                           {/* Chỉ cho phép hạ quyền Admin xuống User, tuyệt đối không cho nâng cấp lên Admin */}
                           {u.role === 'admin' && (
                             <button

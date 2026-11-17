@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { MapPin, Navigation, Building2, Home } from 'lucide-react';
 import { VIETNAM_PROVINCES, parseAddressString } from '../../data/vietnamAddressData.js';
 
@@ -7,19 +7,46 @@ export default function AddressDropdownSelector({
   onChange,
   onRegionChange,
 }) {
-  // Parse initial address if provided, default to Đà Nẵng
-  const parsed = useMemo(() => parseAddressString(value), [value]);
-
   const defaultProvince = VIETNAM_PROVINCES[0]; // Đà Nẵng
-  const [provinceId, setProvinceId] = useState(parsed?.provinceId || defaultProvince.id);
+  const initialParsed = useMemo(() => parseAddressString(value), [value]);
+
+  const [provinceId, setProvinceId] = useState(() => initialParsed?.provinceId || defaultProvince.id);
+  const [districtId, setDistrictId] = useState(() => {
+    if (initialParsed?.districtId) return initialParsed.districtId;
+    const prov = VIETNAM_PROVINCES.find((p) => p.id === (initialParsed?.provinceId || defaultProvince.id));
+    return prov?.districts[0]?.id || '';
+  });
+  const [wardName, setWardName] = useState(() => {
+    if (initialParsed?.wardName) return initialParsed.wardName;
+    const prov = VIETNAM_PROVINCES.find((p) => p.id === (initialParsed?.provinceId || defaultProvince.id));
+    const dist = prov?.districts.find((d) => d.id === initialParsed?.districtId) || prov?.districts[0];
+    return dist?.wards[0] || '';
+  });
+  const [streetName, setStreetName] = useState(() => {
+    if (initialParsed?.streetName) return initialParsed.streetName;
+    const prov = VIETNAM_PROVINCES.find((p) => p.id === (initialParsed?.provinceId || defaultProvince.id));
+    const dist = prov?.districts.find((d) => d.id === initialParsed?.districtId) || prov?.districts[0];
+    return dist?.streets?.[0] || 'Tuyến đường trung tâm';
+  });
+
+  const lastEmittedValueRef = useRef(value || '');
+
+  // Synchronize internal dropdowns when value changes from parent (e.g. loaded user profile or latest order)
+  useEffect(() => {
+    if (!value || value === lastEmittedValueRef.current) return;
+    const parsed = parseAddressString(value);
+    if (!parsed) return;
+
+    if (parsed.provinceId) setProvinceId(parsed.provinceId);
+    if (parsed.districtId) setDistrictId(parsed.districtId);
+    if (parsed.wardName) setWardName(parsed.wardName);
+    if (parsed.streetName) setStreetName(parsed.streetName);
+    lastEmittedValueRef.current = value;
+  }, [value]);
 
   const currentProvince = useMemo(
     () => VIETNAM_PROVINCES.find((p) => p.id === provinceId) || defaultProvince,
     [provinceId, defaultProvince]
-  );
-
-  const [districtId, setDistrictId] = useState(
-    parsed?.districtId || currentProvince.districts[0]?.id || ''
   );
 
   const currentDistrict = useMemo(
@@ -27,56 +54,71 @@ export default function AddressDropdownSelector({
     [currentProvince, districtId]
   );
 
-  const [wardName, setWardName] = useState(
-    parsed?.wardName || currentDistrict?.wards[0] || ''
-  );
+  const notifyChange = (prov, dist, ward, street) => {
+    const pName = prov?.name || '';
+    const dName = dist?.name || '';
+    const wName = ward || '';
+    const sName = street || '';
 
-  const [streetName, setStreetName] = useState(
-    currentDistrict?.streets?.[0] || 'Tuyến đường trung tâm phường/xã'
-  );
+    let full = '';
+    if (sName && !sName.toLowerCase().includes('tuyến đường trung tâm')) {
+      full = `${sName}, ${wName}, ${dName}, ${pName}`;
+    } else {
+      full = `${wName}, ${dName}, ${pName}`;
+    }
 
-  // Sync when province changes
+    lastEmittedValueRef.current = full;
+    if (onChange) onChange(full, prov?.region);
+    if (onRegionChange && prov?.region) onRegionChange(prov.region);
+  };
+
   const handleProvinceChange = (e) => {
     const newProvId = e.target.value;
     setProvinceId(newProvId);
     const newProv = VIETNAM_PROVINCES.find((p) => p.id === newProvId);
     if (newProv) {
       const firstDist = newProv.districts[0];
-      setDistrictId(firstDist?.id || '');
-      setWardName(firstDist?.wards[0] || '');
-      setStreetName(firstDist?.streets?.[0] || 'Tuyến đường trung tâm');
-      if (onRegionChange) {
-        onRegionChange(newProv.region);
-      }
+      const newDistId = firstDist?.id || '';
+      const newWard = firstDist?.wards[0] || '';
+      const newStreet = firstDist?.streets?.[0] || 'Tuyến đường trung tâm';
+      setDistrictId(newDistId);
+      setWardName(newWard);
+      setStreetName(newStreet);
+      notifyChange(newProv, firstDist, newWard, newStreet);
     }
   };
 
-  // Sync when district changes
   const handleDistrictChange = (e) => {
     const newDistId = e.target.value;
     setDistrictId(newDistId);
     const newDist = currentProvince.districts.find((d) => d.id === newDistId);
     if (newDist) {
-      setWardName(newDist.wards[0] || '');
-      setStreetName(newDist.streets?.[0] || 'Tuyến đường trung tâm');
+      const newWard = newDist.wards[0] || '';
+      const newStreet = newDist.streets?.[0] || 'Tuyến đường trung tâm';
+      setWardName(newWard);
+      setStreetName(newStreet);
+      notifyChange(currentProvince, newDist, newWard, newStreet);
     }
   };
 
-  // Sync full address when selections change
+  const handleWardChange = (e) => {
+    const newWard = e.target.value;
+    setWardName(newWard);
+    notifyChange(currentProvince, currentDistrict, newWard, streetName);
+  };
+
+  const handleStreetChange = (e) => {
+    const newStreet = e.target.value;
+    setStreetName(newStreet);
+    notifyChange(currentProvince, currentDistrict, wardName, newStreet);
+  };
+
+  // If initial value was completely empty, populate parent once with default selection
   useEffect(() => {
-    if (!currentProvince || !currentDistrict || !wardName) return;
-
-    let fullAddress = '';
-    if (streetName && !streetName.toLowerCase().includes('tuyến đường trung tâm')) {
-      fullAddress = `${streetName}, ${wardName}, ${currentDistrict.name}, ${currentProvince.name}`;
-    } else {
-      fullAddress = `${wardName}, ${currentDistrict.name}, ${currentProvince.name}`;
+    if (!value && onChange) {
+      notifyChange(currentProvince, currentDistrict, wardName, streetName);
     }
-
-    if (onChange) {
-      onChange(fullAddress, currentProvince.region);
-    }
-  }, [currentProvince, currentDistrict, wardName, streetName, onChange]);
+  }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
@@ -143,7 +185,7 @@ export default function AddressDropdownSelector({
           </label>
           <select
             value={wardName}
-            onChange={(e) => setWardName(e.target.value)}
+            onChange={handleWardChange}
             style={{
               width: '100%',
               padding: '0.5rem 0.75rem',
@@ -172,7 +214,7 @@ export default function AddressDropdownSelector({
         </label>
         <select
           value={streetName}
-          onChange={(e) => setStreetName(e.target.value)}
+          onChange={handleStreetChange}
           style={{
             width: '100%',
             padding: '0.5rem 0.75rem',
@@ -193,31 +235,27 @@ export default function AddressDropdownSelector({
         </select>
       </div>
 
-      {/* Readonly Display: Địa chỉ giao hàng được chọn chuẩn */}
+      {/* Live Preview Badge */}
       <div
         style={{
-          marginTop: '0.25rem',
-          padding: '0.625rem 0.75rem',
-          backgroundColor: '#f0fdf4',
-          border: '1px solid #bbf7d0',
+          padding: '0.45rem 0.75rem',
+          backgroundColor: '#f8fafc',
+          border: '1px dashed #cbd5e1',
           borderRadius: '6px',
-          fontSize: '0.825rem',
-          color: '#166534',
+          fontSize: '0.8rem',
+          color: '#475569',
           display: 'flex',
-          alignItems: 'flex-start',
-          gap: '0.5rem',
-          lineHeight: 1.4,
+          alignItems: 'center',
+          gap: '6px',
         }}
       >
-        <MapPin size={16} color="#16a34a" style={{ flexShrink: 0, marginTop: '2px' }} />
-        <div>
-          <span style={{ fontWeight: 700, display: 'block', marginBottom: '2px' }}>
-            Địa chỉ đặt hàng đã chọn:
-          </span>
-          <span style={{ color: '#0f172a', fontWeight: 600 }}>
-            {value || 'Vui lòng chọn địa chỉ qua dropdown ở trên'}
-          </span>
-        </div>
+        <MapPin size={13} color="#0284c7" />
+        <span style={{ fontWeight: 600, color: '#0f172a' }}>Địa chỉ chọn:</span>
+        <span style={{ fontStyle: 'italic', color: '#0369a1' }}>
+          {streetName && !streetName.toLowerCase().includes('tuyến đường trung tâm')
+            ? `${streetName}, ${wardName}, ${currentDistrict?.name}, ${currentProvince?.name}`
+            : `${wardName}, ${currentDistrict?.name}, ${currentProvince?.name}`}
+        </span>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import User from './user.model.js';
+import Order from '../orders/order.model.js';
 import { ApiError } from '../../utils/apiError.js';
 
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -53,6 +54,29 @@ export const getAllUsers = async (filters = {}) => {
 export const getUserById = async (id) => {
   const user = await User.findById(id).select('-password').lean();
   if (!user) throw new ApiError(404, 'Không tìm thấy người dùng');
+
+  // Nếu người dùng chưa có địa chỉ hoặc số điện thoại, tự động lấy từ đơn hàng gần nhất
+  if (!user.address || !user.phone) {
+    const latestOrder = await Order.findOne({ user: id })
+      .sort({ createdAt: -1, _id: -1 })
+      .select('shippingAddress phoneNumber')
+      .lean();
+    if (latestOrder) {
+      const updates = {};
+      if (!user.address && latestOrder.shippingAddress) {
+        user.address = latestOrder.shippingAddress;
+        updates.address = latestOrder.shippingAddress;
+      }
+      if (!user.phone && latestOrder.phoneNumber) {
+        user.phone = latestOrder.phoneNumber;
+        updates.phone = latestOrder.phoneNumber;
+      }
+      if (Object.keys(updates).length > 0) {
+        await User.findByIdAndUpdate(id, updates).catch(() => {});
+      }
+    }
+  }
+
   return user;
 };
 

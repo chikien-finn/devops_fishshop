@@ -25,3 +25,14 @@ export const formatDate = (date) => {
   }).format(new Date(date));
 };
 
+/**
+ * Format order ID to unified 6-character uppercase order code (e.g. 8A37A4)
+ * @param {string} id
+ * @returns {string}
+ */
+export const formatOrderCode = (id) => {
+  if (!id) return '';
+  return String(id).slice(-6).toUpperCase();
+};
+
+

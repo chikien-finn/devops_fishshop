@@ -36,6 +36,26 @@ export const orderService = {
     };
   },
 
+  async getUserOrders(userId, params = {}) {
+    const response = await api.get(`/orders/user/${userId}`, { params });
+    const payload = response.data?.data;
+    if (Array.isArray(payload)) {
+      return {
+        items: payload,
+        pagination: { page: 1, limit: payload.length || 10, totalItems: payload.length, totalPages: 1 },
+      };
+    }
+    return {
+      items: Array.isArray(payload?.items) ? payload.items : [],
+      pagination: {
+        page: payload?.pagination?.page || 1,
+        limit: payload?.pagination?.limit || 10,
+        totalItems: payload?.pagination?.totalItems || 0,
+        totalPages: payload?.pagination?.totalPages || 1,
+      },
+    };
+  },
+
   async cancelMyOrder(id) {
     const response = await api.patch(`/orders/${id}/cancel`);
     return response.data?.data;

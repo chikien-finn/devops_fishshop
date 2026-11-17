@@ -17,12 +17,12 @@ import {
 import { useCart } from '../hooks/useCart.jsx';
 import { useAuth } from '../../auth/hooks/useAuth.jsx';
 import orderService from '../../orders/services/orderService.js';
-import { formatCurrency } from '../../../utils/formatters.js';
+import { formatCurrency, formatOrderCode } from '../../../utils/formatters.js';
 import AddressDropdownSelector from '../../../components/common/AddressDropdownSelector.jsx';
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, clearCart, totalAmount, totalItems, syncError } = useCart();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateProfile } = useAuth();
 
   const [shippingAddress, setShippingAddress] = useState(user?.address || '');
   const [phoneNumber, setPhoneNumber] = useState(user?.phone || '');
@@ -118,14 +118,26 @@ export default function CartPage() {
         name: item.name,
         quantity: item.quantity || 1,
       }));
+      const cleanAddress = shippingAddress.trim();
+      const cleanPhone = phoneNumber.trim();
       const order = await orderService.createOrder({
-        shippingAddress: shippingAddress.trim(),
-        phoneNumber: phoneNumber.trim(),
+        shippingAddress: cleanAddress,
+        phoneNumber: cleanPhone,
         paymentMethod,
         shippingRegion,
         couponCode: appliedCoupon?.code || '',
         items,
       });
+
+      // Tự động lưu địa chỉ & số điện thoại mua gần nhất vào tài khoản người dùng
+      if (user && updateProfile) {
+        updateProfile({
+          name: user.name,
+          phone: cleanPhone,
+          address: cleanAddress,
+        }).catch(() => {});
+      }
+
       setCreatedOrder(order);
       clearCart();
     } catch (err) {
@@ -136,6 +148,8 @@ export default function CartPage() {
   };
 
   if (createdOrder) {
+    const orderCode = formatOrderCode(createdOrder._id);
+
     if (createdOrder.paymentMethod === 'cod') {
       return (
         <div
@@ -170,7 +184,7 @@ export default function CartPage() {
             Đặt hàng thành công!
           </h2>
           <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-            Mã đơn hàng của bạn: <strong>#{createdOrder._id?.slice(-6).toUpperCase()}</strong>
+            Mã đơn hàng của bạn: <strong>#{orderCode}</strong>
           </p>
           <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
             Tổng thanh toán: <strong style={{ color: '#dc2626' }}>{formatCurrency(createdOrder.totalAmount)}</strong> (Thanh toán khi nhận hàng).<br />
@@ -189,8 +203,8 @@ export default function CartPage() {
     }
 
     // Trường hợp Banking (Chuyển khoản VietQR)
-    const transferContent = `AQUA${createdOrder._id?.slice(-8).toUpperCase()}`;
-    const qrUrl = paymentConfig?.bankBin && paymentConfig?.accountNumber
+    const transferContent = `AQUA${orderCode}`;
+    const qrUrl = createdOrder.paymentMethod === 'banking' && paymentConfig?.bankBin && paymentConfig?.accountNumber
       ? `https://img.vietqr.io/image/${encodeURIComponent(paymentConfig.bankBin)}-${encodeURIComponent(paymentConfig.accountNumber)}-compact2.svg?amount=${encodeURIComponent(createdOrder.totalAmount)}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(paymentConfig.accountName || '')}`
       : '';
 
@@ -229,7 +243,7 @@ export default function CartPage() {
             Đã ghi nhận chuyển khoản!
           </h2>
           <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-            Mã đơn hàng của bạn: <strong>#{createdOrder._id?.slice(-6).toUpperCase()}</strong>
+            Mã đơn hàng của bạn: <strong>#{orderCode}</strong>
           </p>
           <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
             Hệ thống đang đối soát khoản chuyển <strong style={{ color: '#dc2626' }}>{formatCurrency(createdOrder.totalAmount)}</strong> của bạn.<br />
@@ -297,7 +311,7 @@ export default function CartPage() {
           Vui lòng thanh toán đơn hàng
         </h2>
         <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          Mã đơn hàng: <strong>#{createdOrder._id?.slice(-6).toUpperCase()}</strong>
+          Mã đơn hàng của bạn: <strong>#{orderCode}</strong>
         </p>
         <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.5, maxWidth: '520px', margin: '0 auto 1.5rem' }}>
           Vui lòng quét mã <strong>VietQR</strong> bên dưới hoặc chuyển khoản đúng số tiền <strong style={{ color: '#dc2626' }}>{formatCurrency(createdOrder.totalAmount)}</strong>. Sau khi chuyển tiền thành công, hãy bấm xác nhận bên dưới để shop chuẩn bị cá giao đi nhé!

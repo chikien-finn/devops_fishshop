@@ -13,7 +13,7 @@ api.interceptors.request.use(
   (config) => {
     let token = null;
     try {
-      token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      token = sessionStorage.getItem('token') || localStorage.getItem('token');
     } catch {
       token = sessionStorage.getItem('token');
     }

@@ -102,7 +102,19 @@ export const router = createBrowserRouter([
         element: <ProfilePage />,
       },
       {
+        path: 'profile/:userId',
+        element: <ProfilePage />,
+      },
+      {
+        path: 'user/:userId',
+        element: <ProfilePage />,
+      },
+      {
         path: 'orders',
+        element: <ProfilePage defaultTab="orders" />,
+      },
+      {
+        path: 'orders/:userId',
         element: <ProfilePage defaultTab="orders" />,
       },
     ],

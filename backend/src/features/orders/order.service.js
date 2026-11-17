@@ -3,6 +3,7 @@ import Order from './order.model.js';
 import Cart from '../cart/cart.model.js';
 import Product from '../products/product.model.js';
 import Coupon from '../coupons/coupon.model.js';
+import User from '../users/user.model.js';
 import { getValidCoupon } from '../coupons/coupon.service.js';
 import { ApiError } from '../../utils/apiError.js';
 
@@ -88,6 +89,7 @@ export const createOrder = async (userId, orderData) => {
       name: raw.name || product.name,
       price: product.price,
       quantity: qty,
+      image: (product.images && product.images[0]) || '',
     });
   }
 
@@ -136,6 +138,14 @@ export const createOrder = async (userId, orderData) => {
     await cart.save();
   }
 
+  // Luôn lưu lại địa chỉ giao hàng và số điện thoại mua gần nhất vào hồ sơ người dùng
+  if (userId) {
+    await User.findByIdAndUpdate(userId, {
+      address: cleanAddress,
+      phone: cleanPhone,
+    }).catch(() => {});
+  }
+
   invalidateOrderStatsCache();
   return order;
 };
@@ -148,7 +158,12 @@ export const getUserOrders = async (userId, filters = {}) => {
   const query = { user: userId };
   if (filters.status && filters.status !== 'all') query.status = filters.status;
   const [items, totalItems] = await Promise.all([
-    Order.find(query).sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit).lean(),
+    Order.find(query)
+      .populate('items.product', 'name images price slug')
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     Order.countDocuments(query),
   ]);
   const totalPages = Math.max(1, Math.ceil(totalItems / limit));
