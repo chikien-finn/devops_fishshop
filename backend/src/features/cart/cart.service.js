@@ -62,11 +62,25 @@ export const syncCartItems = async (userId, items = []) => {
 
   const normalized = new Map();
   for (const item of items) {
-    const productId = item.productId || item.product || item._id;
+    let productId = item.productId || item.product || item._id;
     const quantity = Number(item.quantity);
-    if (!mongoose.Types.ObjectId.isValid(productId) || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
       throw new ApiError(400, 'Sản phẩm hoặc số lượng trong giỏ không hợp lệ');
     }
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      const targetSlug = item.slug || (typeof productId === 'string' && productId.includes('_') ? productId.split('_').slice(2).join('_') : productId);
+      const found = await Product.findOne({
+        $or: [{ slug: targetSlug }, { slug: item.slug }, { name: item.name }],
+        isActive: true,
+      }).select('_id');
+      if (found) {
+        productId = String(found._id);
+      } else {
+        continue;
+      }
+    }
+
     const totalQuantity = (normalized.get(String(productId)) || 0) + quantity;
     if (totalQuantity > 99) throw new ApiError(400, 'Mỗi sản phẩm được thêm tối đa 99 cái');
     normalized.set(String(productId), totalQuantity);

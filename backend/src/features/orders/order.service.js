@@ -66,7 +66,10 @@ export const createOrder = async (userId, orderData) => {
       product = await Product.findOne({ slug: raw.slug });
     }
     if (!product && raw.name) {
-      product = await Product.findOne({ name: raw.name });
+      const baseName = String(raw.name).replace(/\s*\([^)]*\)\s*$/, '').trim();
+      product = await Product.findOne({
+        $or: [{ name: raw.name }, { name: baseName }],
+      });
     }
 
     if (!product) {
@@ -82,7 +85,7 @@ export const createOrder = async (userId, orderData) => {
 
     verifiedItems.push({
       product: product._id,
-      name: product.name,
+      name: raw.name || product.name,
       price: product.price,
       quantity: qty,
     });
