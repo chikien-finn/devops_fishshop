@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Clock3, PackageCheck, RefreshCw, ShoppingBag, Truck, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Clock3, PackageCheck, RefreshCw, ShoppingBag, Truck, User, XCircle } from 'lucide-react';
 import orderService from '../services/orderService.js';
 import { formatCurrency } from '../../../utils/formatters.js';
 import Pagination from '../../../components/common/Pagination.jsx';
@@ -136,9 +136,29 @@ export default function MyOrdersPage() {
           <h1>Lịch sử đơn hàng</h1>
           <p>Theo dõi trạng thái và xem lại các đơn hàng bạn đã đặt. Trạng thái do cửa hàng cập nhật; trang tự làm mới mỗi 30 giây.</p>
         </div>
-        <button className="my-orders-refresh" type="button" onClick={loadOrders} disabled={loading}>
-          <RefreshCw size={16} className={loading ? 'my-orders-spinning' : ''} /> Làm mới
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <Link
+            to="/profile"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.65rem 0.85rem',
+              border: '1px solid #dbe3eb',
+              borderRadius: '8px',
+              backgroundColor: '#fff',
+              color: '#334155',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              textDecoration: 'none',
+            }}
+          >
+            <User size={16} /> Hồ sơ tài khoản
+          </Link>
+          <button className="my-orders-refresh" type="button" onClick={loadOrders} disabled={loading}>
+            <RefreshCw size={16} className={loading ? 'my-orders-spinning' : ''} /> Làm mới
+          </button>
+        </div>
       </div>
 
       <div className="my-orders-tabs" role="tablist" aria-label="Lọc đơn hàng theo trạng thái">

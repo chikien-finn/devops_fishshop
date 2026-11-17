@@ -490,11 +490,12 @@ export default function MainLayout() {
                       display: 'block',
                       color: '#0369a1',
                       fontSize: '0.75rem',
+                      fontWeight: 600,
                       textDecoration: 'none',
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    Đơn hàng của tôi
+                    Lịch sử đơn hàng
                   </Link>
                   <button
                     onClick={logout}
