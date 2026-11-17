@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { MessageSquareText, CheckCircle2, ShieldCheck, Filter } from 'lucide-react';
 import StarRating from './StarRating.jsx';
 import Pagination from '../../../components/common/Pagination.jsx';
@@ -8,28 +8,17 @@ import Pagination from '../../../components/common/Pagination.jsx';
  */
 export default function ReviewList({
   reviews = [],
-  summary = { count: 0, average: 0 },
+  summary = { count: 0, average: 0, breakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } },
   loading = false,
   pagination = { page: 1, limit: 10, totalItems: 0, totalPages: 1 },
   onPageChange,
+  ratingFilter = 0,
+  onRatingFilterChange,
 }) {
-  const [selectedStarFilter, setSelectedStarFilter] = useState(0); // 0: Tất cả
-
-  // Tính tỷ lệ các mức sao
+  // Lấy phân bổ số sao chính xác từ summary.breakdown do backend tính trên toàn bộ DB
   const starBreakdown = useMemo(() => {
-    const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-    reviews.forEach((r) => {
-      const star = Math.min(5, Math.max(1, Math.round(r.rating || 5)));
-      counts[star] = (counts[star] || 0) + 1;
-    });
-    return counts;
-  }, [reviews]);
-
-  // Lọc đánh giá theo số sao được chọn
-  const filteredReviews = useMemo(() => {
-    if (!selectedStarFilter) return reviews;
-    return reviews.filter((r) => Math.round(r.rating) === selectedStarFilter);
-  }, [reviews, selectedStarFilter]);
+    return summary.breakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  }, [summary.breakdown]);
 
   const avatarColors = [
     '#0284c7', // Sky Blue
@@ -88,14 +77,14 @@ export default function ReviewList({
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.35rem' }}>
           {[5, 4, 3, 2, 1].map((star) => {
             const count = starBreakdown[star] || 0;
-            const total = reviews.length || 1;
-            const percent = reviews.length > 0 ? Math.round((count / total) * 100) : 0;
+            const total = summary.count || 1;
+            const percent = summary.count > 0 ? Math.round((count / total) * 100) : 0;
 
             return (
               <button
                 key={star}
                 type="button"
-                onClick={() => setSelectedStarFilter(selectedStarFilter === star ? 0 : star)}
+                onClick={() => onRatingFilterChange?.(star)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -106,7 +95,7 @@ export default function ReviewList({
                   cursor: 'pointer',
                   padding: '2px 4px',
                   borderRadius: '4px',
-                  backgroundColor: selectedStarFilter === star ? '#e2e8f0' : 'transparent',
+                  backgroundColor: ratingFilter === star ? '#e2e8f0' : 'transparent',
                 }}
               >
                 <span style={{ width: '40px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>
@@ -165,16 +154,16 @@ export default function ReviewList({
           <button
             key={btn.value}
             type="button"
-            onClick={() => setSelectedStarFilter(btn.value)}
+            onClick={() => onRatingFilterChange?.(btn.value)}
             style={{
               padding: '0.35rem 0.75rem',
               borderRadius: '999px',
               fontSize: '0.8125rem',
               fontWeight: 500,
               cursor: 'pointer',
-              border: selectedStarFilter === btn.value ? '1px solid #0284c7' : '1px solid #cbd5e1',
-              backgroundColor: selectedStarFilter === btn.value ? '#eff6ff' : '#ffffff',
-              color: selectedStarFilter === btn.value ? '#0284c7' : '#475569',
+              border: ratingFilter === btn.value ? '1px solid #0284c7' : '1px solid #cbd5e1',
+              backgroundColor: ratingFilter === btn.value ? '#eff6ff' : '#ffffff',
+              color: ratingFilter === btn.value ? '#0284c7' : '#475569',
               transition: 'all 0.15s ease',
             }}
           >
@@ -198,7 +187,7 @@ export default function ReviewList({
         >
           Đang tải danh sách đánh giá...
         </div>
-      ) : filteredReviews.length === 0 ? (
+      ) : reviews.length === 0 ? (
         <div
           style={{
             padding: '3rem 1.5rem',
@@ -214,8 +203,8 @@ export default function ReviewList({
         >
           <MessageSquareText size={32} color="#94a3b8" />
           <div style={{ fontWeight: 600, color: '#334155', fontSize: '0.9375rem' }}>
-            {selectedStarFilter > 0
-              ? `Chưa có đánh giá nào đạt mức ${selectedStarFilter} sao.`
+            {ratingFilter > 0
+              ? `Chưa có đánh giá nào đạt mức ${ratingFilter} sao.`
               : 'Sản phẩm này chưa có đánh giá nào.'}
           </div>
           <p style={{ color: '#64748b', fontSize: '0.8125rem', margin: 0, maxWidth: '360px' }}>
@@ -224,7 +213,7 @@ export default function ReviewList({
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {filteredReviews.map((review) => {
+          {reviews.map((review) => {
             const userName = review.user?.name || 'Khách hàng AquaCraft';
             const initial = userName.slice(0, 1).toUpperCase();
             const avatarColor = getAvatarColor(userName);

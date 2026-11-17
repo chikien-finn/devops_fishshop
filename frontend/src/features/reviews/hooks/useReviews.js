@@ -9,7 +9,7 @@ export const useReviews = (productId) => {
   const validProductId = /^[a-f\d]{24}$/i.test(String(productId || ''));
 
   const [reviews, setReviews] = useState([]);
-  const [summary, setSummary] = useState({ count: 0, average: 0 });
+  const [summary, setSummary] = useState({ count: 0, average: 0, breakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } });
   const [pagination, setPagination] = useState({
     page: 1,
     limit: DEFAULT_PAGE_SIZE,
@@ -17,6 +17,7 @@ export const useReviews = (productId) => {
     totalPages: 1,
   });
   const [page, setPage] = useState(1);
+  const [ratingFilter, setRatingFilter] = useState(0);
   const [eligibility, setEligibility] = useState({
     canReview: false,
     hasPurchased: false,
@@ -28,6 +29,12 @@ export const useReviews = (productId) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Thay đổi bộ lọc số sao
+  const changeRatingFilter = (star) => {
+    setRatingFilter((prev) => (prev === star ? 0 : star));
+    setPage(1);
+  };
 
   // Tải danh sách đánh giá
   const fetchReviews = useCallback(async () => {
@@ -41,16 +48,17 @@ export const useReviews = (productId) => {
       const data = await reviewApi.getProductReviews(productId, {
         page,
         limit: DEFAULT_PAGE_SIZE,
+        rating: ratingFilter > 0 ? ratingFilter : undefined,
       });
       setReviews(data.items);
-      setSummary(data.summary);
+      setSummary(data.summary || { count: 0, average: 0, breakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } });
       setPagination(data.pagination);
     } catch (err) {
       setError(err.response?.data?.message || 'Không thể tải danh sách đánh giá.');
     } finally {
       setLoading(false);
     }
-  }, [page, productId, validProductId]);
+  }, [page, productId, ratingFilter, validProductId]);
 
   // Kiểm tra điều kiện đánh giá của user
   const checkEligibility = useCallback(async () => {
@@ -138,6 +146,8 @@ export const useReviews = (productId) => {
     pagination,
     page,
     setPage,
+    ratingFilter,
+    setRatingFilter: changeRatingFilter,
     eligibility,
     loading,
     submitting,

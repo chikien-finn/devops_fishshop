@@ -13,6 +13,8 @@ export default function ProductReviews({ productId }) {
     summary,
     pagination,
     setPage,
+    ratingFilter,
+    setRatingFilter,
     eligibility,
     loading,
     submitting,
@@ -83,6 +85,8 @@ export default function ProductReviews({ productId }) {
         loading={loading}
         pagination={pagination}
         onPageChange={setPage}
+        ratingFilter={ratingFilter}
+        onRatingFilterChange={setRatingFilter}
       />
     </section>
   );

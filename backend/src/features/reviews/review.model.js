@@ -30,6 +30,7 @@ const reviewSchema = new mongoose.Schema(
 );
 
 reviewSchema.index({ product: 1, createdAt: -1 });
+reviewSchema.index({ product: 1, rating: 1 });
 reviewSchema.index({ user: 1, product: 1 });
 reviewSchema.index({ createdAt: -1, _id: -1 });
 reviewSchema.index({ rating: 1, createdAt: -1 });

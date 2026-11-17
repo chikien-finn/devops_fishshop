@@ -4,31 +4,79 @@ import Order from '../orders/order.model.js';
 import { ApiError } from '../../utils/apiError.js';
 
 export const getReviewsByProduct = async (productId, filters = {}) => {
-  const limit = Math.min(50, Math.max(1, parseInt(filters.limit, 10) || 20));
+  const limit = Math.min(50, Math.max(1, parseInt(filters.limit, 10) || 10));
   const page = Math.max(1, parseInt(filters.page, 10) || 1);
   const skip = (page - 1) * limit;
 
-  const query = { product: productId };
-  const [items, totalItems, summaryRows] = await Promise.all([
-    Review.find(query)
-      .select('user product rating comment createdAt')
-      .populate('user', 'name')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
+  const productObjId = mongoose.Types.ObjectId.isValid(productId)
+    ? new mongoose.Types.ObjectId(productId)
+    : productId;
+  const query = { product: productObjId };
+
+  const ratingNum = parseInt(filters.rating, 10);
+  if (ratingNum >= 1 && ratingNum <= 5) {
+    query.rating = ratingNum;
+  }
+
+  const [totalItems, statsRows] = await Promise.all([
     Review.countDocuments(query),
     Review.aggregate([
-      { $match: { product: new mongoose.Types.ObjectId(productId) } },
-      { $group: { _id: null, count: { $sum: 1 }, average: { $avg: '$rating' } } },
+      { $match: { product: productObjId } },
+      { $group: { _id: '$rating', count: { $sum: 1 } } },
     ]),
   ]);
+
+  const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  let overallTotal = 0;
+  let overallSum = 0;
+
+  statsRows.forEach((row) => {
+    const star = Math.min(5, Math.max(1, Math.round(row._id)));
+    breakdown[star] = (breakdown[star] || 0) + row.count;
+    overallTotal += row.count;
+    overallSum += star * row.count;
+  });
+
+  const overallAverage = overallTotal > 0 ? Number((overallSum / overallTotal).toFixed(1)) : 5.0;
+
+  const useInvertedSort = skip > totalItems / 2 && totalItems > limit;
+  let items;
+  if (useInvertedSort) {
+    const invertedSkip = Math.max(0, totalItems - skip - limit);
+    const invertedLimit = Math.min(limit, totalItems - skip);
+    items = await Review.find(query)
+      .select('user product rating comment createdAt')
+      .populate('user', 'name')
+      .sort({ createdAt: 1, _id: 1 })
+      .skip(invertedSkip)
+      .limit(invertedLimit)
+      .lean();
+    items = items.reverse();
+  } else {
+    items = await Review.find(query)
+      .select('user product rating comment createdAt')
+      .populate('user', 'name')
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
   const result = {
     items,
-    pagination: { page, limit, totalItems, totalPages: Math.max(1, Math.ceil(totalItems / limit)) },
-    summary: { count: summaryRows[0]?.count || 0, average: summaryRows[0]?.average || 0 },
+    pagination: {
+      page,
+      limit,
+      totalItems,
+      totalPages: Math.max(1, Math.ceil(totalItems / limit)),
+    },
+    summary: {
+      count: overallTotal,
+      average: overallAverage,
+      breakdown,
+    },
   };
-  if (filters.page === undefined && filters.limit === undefined) return items;
+  if (filters.page === undefined && filters.limit === undefined && !filters.rating) return items;
   return result;
 };
 
