@@ -455,7 +455,8 @@ export default function MainLayout() {
             {/* Account / Separate Login & Register Buttons (at the end) */}
             {isAuthenticated ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                <div
+                <Link
+                  to="/profile"
                   style={{
                     width: '38px',
                     height: '38px',
@@ -466,11 +467,13 @@ export default function MainLayout() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
+                    textDecoration: 'none',
                   }}
+                  title="Trang cá nhân của tôi"
                 >
                   <User size={18} />
-                </div>
-                <div style={{ lineHeight: 1.2 }}>
+                </Link>
+                <div style={{ lineHeight: 1.3 }}>
                   <Link
                     to="/profile"
                     style={{
@@ -483,19 +486,6 @@ export default function MainLayout() {
                     }}
                   >
                     {user?.name || 'Tài khoản'}
-                  </Link>
-                  <Link
-                    to="/orders"
-                    style={{
-                      display: 'block',
-                      color: '#0369a1',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Lịch sử đơn hàng
                   </Link>
                   <button
                     onClick={logout}
