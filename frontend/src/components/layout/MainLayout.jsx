@@ -9,8 +9,9 @@ import {
   Flame,
   ShieldCheck,
   LogOut,
-  Fish,
-  CheckCircle2,
+  MapPin,
+  Mail,
+  Check,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/hooks/useAuth.jsx';
 import { useCart } from '../../features/cart/hooks/useCart.jsx';
@@ -133,17 +134,16 @@ export default function MainLayout() {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f3f4f6' }}>
-      {/* 1. TOP HEADER (LOGO, SEARCH, HOTLINE, ACCOUNT, CART) */}
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc' }}>
+      {/* 1. TOP HEADER */}
       <header
         style={{
           backgroundColor: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '0.75rem 2rem',
+          borderBottom: '1px solid #e2e8f0',
+          padding: '12px 24px',
           position: 'sticky',
           top: 0,
           zIndex: 40,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
         }}
       >
         <div
@@ -153,21 +153,21 @@ export default function MainLayout() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '1.5rem',
+            gap: '24px',
           }}
         >
-          {/* Logo - No red border, clean AquaCraft branding */}
+          {/* Logo */}
           <div style={{ flexShrink: 0 }}>
-            <Logo size={46} showText={true} textColor="#0284c7" />
+            <Logo size={42} showText={true} textColor="#0284c7" />
           </div>
 
-          {/* Search Bar - Rounded pill shape with Live Suggestions Dropdown */}
+          {/* Search Bar */}
           <div
             ref={searchContainerRef}
             style={{
-              flex: '1 1 240px',
-              maxWidth: '420px',
-              minWidth: '180px',
+              flex: '1 1 280px',
+              maxWidth: '440px',
+              minWidth: '200px',
               position: 'relative',
             }}
           >
@@ -187,23 +187,25 @@ export default function MainLayout() {
                 onFocus={() => {
                   if (suggestions.length > 0) setShowSuggestions(true);
                 }}
-                placeholder="Tìm kiếm cá cảnh, phụ kiện, thức ăn..."
+                placeholder="Tìm cá cảnh, phụ kiện, thức ăn..."
                 style={{
                   width: '100%',
-                  padding: '0.625rem 3rem 0.625rem 1.25rem',
-                  borderRadius: '9999px',
-                  border: '1.5px solid #cbd5e1',
+                  height: '38px',
+                  padding: '0 40px 0 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
                   fontSize: '0.875rem',
                   outline: 'none',
                   backgroundColor: '#f8fafc',
-                  transition: 'border-color 0.2s, background-color 0.2s',
+                  color: '#0f172a',
+                  transition: 'border-color 0.15s, background-color 0.15s',
                 }}
                 onFocusCapture={(e) => {
                   e.target.style.borderColor = '#0284c7';
                   e.target.style.backgroundColor = '#ffffff';
                 }}
                 onBlurCapture={(e) => {
-                  e.target.style.borderColor = '#cbd5e1';
+                  e.target.style.borderColor = '#e2e8f0';
                   e.target.style.backgroundColor = '#f8fafc';
                 }}
               />
@@ -218,14 +220,14 @@ export default function MainLayout() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  padding: '0.4rem 0.75rem',
+                  padding: '6px 10px',
                   color: '#64748b',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Search size={18} />
+                <Search size={16} />
               </button>
             </form>
 
@@ -238,35 +240,33 @@ export default function MainLayout() {
                   left: 0,
                   right: 0,
                   backgroundColor: '#ffffff',
-                  borderRadius: '10px',
-                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 16px rgba(15, 23, 42, 0.08)',
                   border: '1px solid #e2e8f0',
                   zIndex: 100,
                   overflow: 'hidden',
-                  padding: '0.35rem 0',
+                  padding: '4px 0',
                 }}
               >
                 {searchLoading && suggestions.length === 0 ? (
-                  <div style={{ padding: '0.75rem 1rem', fontSize: '0.8125rem', color: '#64748b' }}>
+                  <div style={{ padding: '12px 16px', fontSize: '0.8125rem', color: '#64748b' }}>
                     Đang tìm kiếm...
                   </div>
                 ) : suggestions.length === 0 ? (
-                  <div style={{ padding: '0.75rem 1rem', fontSize: '0.8125rem', color: '#64748b' }}>
+                  <div style={{ padding: '12px 16px', fontSize: '0.8125rem', color: '#64748b' }}>
                     Không tìm thấy sản phẩm nào khớp với &quot;{searchTerm}&quot;
                   </div>
                 ) : (
                   <>
                     <div
                       style={{
-                        padding: '0.35rem 0.85rem',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        color: '#94a3b8',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
+                        padding: '6px 14px',
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                        color: '#64748b',
                       }}
                     >
-                      Sản phẩm gợi ý ({suggestions.length})
+                      Gợi ý ({suggestions.length})
                     </div>
                     {suggestions.map((item) => (
                       <div
@@ -275,8 +275,8 @@ export default function MainLayout() {
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.75rem',
-                          padding: '0.5rem 0.85rem',
+                          gap: '12px',
+                          padding: '8px 14px',
                           cursor: 'pointer',
                           transition: 'background-color 0.15s',
                         }}
@@ -287,11 +287,11 @@ export default function MainLayout() {
                           src={item.image || 'https://placehold.co/40x40?text=Fish'}
                           alt={item.name}
                           style={{
-                            width: '38px',
-                            height: '38px',
+                            width: '36px',
+                            height: '36px',
                             objectFit: 'cover',
                             borderRadius: '6px',
-                            border: '1px solid #f1f5f9',
+                            border: '1px solid #e2e8f0',
                             flexShrink: 0,
                           }}
                           onError={(e) => {
@@ -303,7 +303,7 @@ export default function MainLayout() {
                             style={{
                               margin: 0,
                               fontSize: '0.8125rem',
-                              fontWeight: 600,
+                              fontWeight: 500,
                               color: '#0f172a',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
@@ -312,7 +312,14 @@ export default function MainLayout() {
                           >
                             {item.name}
                           </p>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#dc2626' }}>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              color: '#0f172a',
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
                             {formatCurrency(item.price)}
                           </span>
                         </div>
@@ -321,17 +328,17 @@ export default function MainLayout() {
                     <div
                       onClick={handleSearch}
                       style={{
-                        padding: '0.5rem 0.85rem',
+                        padding: '8px 14px',
                         borderTop: '1px solid #f1f5f9',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
                         color: '#0284c7',
                         cursor: 'pointer',
                         textAlign: 'center',
-                        backgroundColor: '#f0f9ff',
+                        backgroundColor: '#f8fafc',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e0f2fe')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
                     >
                       Xem tất cả kết quả cho &quot;{searchTerm}&quot; →
                     </div>
@@ -341,144 +348,130 @@ export default function MainLayout() {
             )}
           </div>
 
-          {/* Right Action Icons & Links */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+          {/* Right Action Items */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
             {/* Hotline */}
             <a
               href="tel:0332127582"
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.625rem',
+                gap: '8px',
                 textDecoration: 'none',
-                color: 'inherit',
+                color: '#334155',
+                fontSize: '0.8125rem',
               }}
             >
-              <div
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  backgroundColor: '#0284c7',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
-                }}
-              >
-                <Phone size={18} />
-              </div>
-              <div style={{ lineHeight: 1.2 }}>
-                <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block' }}>Hỗ Trợ Khách Hàng</span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>0332127582</span>
+              <Phone size={15} color="#0284c7" />
+              <div>
+                <span style={{ fontSize: '0.6875rem', color: '#64748b', display: 'block', lineHeight: 1.2 }}>Tư vấn 24/7</span>
+                <span style={{ fontWeight: 600, color: '#0f172a' }}>0332 127 582</span>
               </div>
             </a>
 
-            {/* Cart Button with badge count */}
+            {/* Cart Button with quiet badge */}
             <Link
               to="/cart"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.5rem',
+                gap: '8px',
                 textDecoration: 'none',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '6px',
-                border: '1.5px solid #0284c7',
+                height: '36px',
+                padding: '0 12px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
                 backgroundColor: '#ffffff',
-                color: '#0284c7',
-                fontWeight: 700,
-                fontSize: '0.875rem',
+                color: '#0f172a',
+                fontWeight: 500,
+                fontSize: '0.8125rem',
                 whiteSpace: 'nowrap',
-                transition: 'background-color 0.2s',
+                transition: 'border-color 0.15s, background-color 0.15s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f9ff')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#cbd5e1';
+                e.currentTarget.style.backgroundColor = '#f8fafc';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#e2e8f0';
+                e.currentTarget.style.backgroundColor = '#ffffff';
+              }}
             >
-              <div
-                style={{
-                  backgroundColor: '#0284c7',
-                  color: '#ffffff',
-                  padding: '4px',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <ShoppingBag size={16} />
-              </div>
-              <span>Giỏ Hàng</span>
+              <ShoppingBag size={16} color="#0284c7" />
+              <span>Giỏ hàng</span>
               <span
                 style={{
-                  backgroundColor: '#eab308',
-                  color: '#713f12',
-                  fontSize: '0.725rem',
-                  fontWeight: 800,
+                  backgroundColor: totalItems > 0 ? '#0284c7' : '#f1f5f9',
+                  color: totalItems > 0 ? '#ffffff' : '#64748b',
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  fontVariantNumeric: 'tabular-nums',
                   borderRadius: '9999px',
-                  padding: '2px 7px',
-                  lineHeight: 1,
+                  minWidth: '18px',
+                  height: '18px',
+                  padding: '0 4px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  lineHeight: 1,
                 }}
               >
                 {totalItems}
               </span>
             </Link>
 
-            {/* Admin Badge if admin */}
+            {/* Admin Badge */}
             {isAdmin && (
               <Link
                 to="/admin"
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.35rem',
+                  gap: '4px',
                   textDecoration: 'none',
                   color: '#0284c7',
                   fontSize: '0.75rem',
-                  fontWeight: 700,
-                  padding: '0.45rem 0.65rem',
-                  backgroundColor: '#eff6ff',
+                  fontWeight: 600,
+                  height: '32px',
+                  padding: '0 10px',
+                  backgroundColor: '#f0f9ff',
                   borderRadius: '6px',
-                  border: '1px solid #bfdbfe',
+                  border: '1px solid #bae6fd',
                   whiteSpace: 'nowrap',
                 }}
               >
-                <ShieldCheck size={16} />
+                <ShieldCheck size={14} />
                 <span>Admin</span>
               </Link>
             )}
 
-            {/* Account / Separate Login & Register Buttons (at the end) */}
+            {/* Account */}
             {isAuthenticated ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Link
                   to="/profile"
                   style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '50%',
-                    backgroundColor: '#0284c7',
-                    color: '#ffffff',
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '8px',
+                    backgroundColor: '#f1f5f9',
+                    color: '#0284c7',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
+                    border: '1px solid #e2e8f0',
                     textDecoration: 'none',
                   }}
-                  title="Trang cá nhân của tôi"
+                  title="Hồ sơ tài khoản"
                 >
-                  <User size={18} />
+                  <User size={16} />
                 </Link>
                 <div style={{ lineHeight: 1.3 }}>
                   <Link
                     to="/profile"
                     style={{
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
                       color: '#0f172a',
                       textDecoration: 'none',
                       display: 'block',
@@ -493,69 +486,73 @@ export default function MainLayout() {
                       background: 'none',
                       border: 'none',
                       padding: 0,
-                      fontSize: '0.75rem',
-                      color: '#dc2626',
+                      fontSize: '0.6875rem',
+                      color: '#64748b',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '2px',
+                      gap: '3px',
+                      transition: 'color 0.15s',
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
                   >
-                    <LogOut size={11} /> Đăng xuất
+                    <LogOut size={10} /> Đăng xuất
                   </button>
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Link
-                  to="/register"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0.5rem 0.9rem',
-                    borderRadius: '6px',
-                    border: '1.5px solid #cbd5e1',
-                    backgroundColor: '#ffffff',
-                    color: '#334155',
-                    fontSize: '0.84rem',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    whiteSpace: 'nowrap',
-                    transition: 'border-color 0.2s, color 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#0284c7';
-                    e.currentTarget.style.color = '#0284c7';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#cbd5e1';
-                    e.currentTarget.style.color = '#334155';
-                  }}
-                >
-                  Đăng Ký
-                </Link>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Link
                   to="/login"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: '0.5rem 1rem',
+                    height: '34px',
+                    padding: '0 12px',
                     borderRadius: '6px',
-                    border: '1.5px solid #0284c7',
-                    backgroundColor: '#0284c7',
-                    color: '#ffffff',
-                    fontSize: '0.84rem',
-                    fontWeight: 700,
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#ffffff',
+                    color: '#334155',
+                    fontSize: '0.8125rem',
+                    fontWeight: 500,
                     textDecoration: 'none',
                     whiteSpace: 'nowrap',
-                    transition: 'background-color 0.2s',
+                    transition: 'border-color 0.15s, color 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#0284c7';
+                    e.currentTarget.style.color = '#0284c7';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.color = '#334155';
+                  }}
+                >
+                  Đăng nhập
+                </Link>
+                <Link
+                  to="/register"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '34px',
+                    padding: '0 12px',
+                    borderRadius: '6px',
+                    backgroundColor: '#0284c7',
+                    color: '#ffffff',
+                    fontSize: '0.8125rem',
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    transition: 'background-color 0.15s',
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0369a1')}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0284c7')}
                 >
-                  Đăng Nhập
+                  Đăng ký
                 </Link>
               </div>
             )}
@@ -563,12 +560,11 @@ export default function MainLayout() {
         </div>
       </header>
 
-      {/* 2. NAVIGATION BAR (MENU) */}
+      {/* 2. NAVIGATION BAR */}
       <nav
         style={{
           backgroundColor: '#ffffff',
           borderBottom: '1px solid #e2e8f0',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
         }}
       >
         <div
@@ -578,27 +574,25 @@ export default function MainLayout() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '1.75rem',
-            rowGap: '0.6rem',
+            gap: '28px',
+            rowGap: '8px',
             flexWrap: 'wrap',
-            padding: '0.75rem 1rem',
-            fontSize: '0.85rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
+            padding: '10px 16px',
+            fontSize: '0.875rem',
+            fontWeight: 500,
           }}
         >
           <Link
             to="/"
             style={{
               textDecoration: 'none',
-              color: isActive('/') ? '#0284c7' : '#1e293b',
+              color: isActive('/') ? '#0284c7' : '#334155',
               borderBottom: isActive('/') ? '2px solid #0284c7' : '2px solid transparent',
-              paddingBottom: '2px',
+              paddingBottom: '4px',
               transition: 'color 0.15s',
             }}
           >
-            TRANG CHỦ
+            Trang chủ
           </Link>
 
           {/* Danh Sách Sản Phẩm with Dropdown */}
@@ -611,14 +605,17 @@ export default function MainLayout() {
               to="/products"
               style={{
                 textDecoration: 'none',
-                color: isActive('/products') ? '#0284c7' : '#1e293b',
+                color: isActive('/products') ? '#0284c7' : '#334155',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '4px',
+                paddingBottom: '4px',
+                borderBottom: isActive('/products') ? '2px solid #0284c7' : '2px solid transparent',
+                transition: 'color 0.15s',
               }}
             >
-              <span>DANH SÁCH SẢN PHẨM</span>
-              <ChevronDown size={15} />
+              <span>Danh mục sản phẩm</span>
+              <ChevronDown size={14} />
             </Link>
 
             {dropdownOpen && (
@@ -627,7 +624,7 @@ export default function MainLayout() {
                   position: 'absolute',
                   top: '100%',
                   left: 0,
-                  paddingTop: '0.25rem',
+                  paddingTop: '6px',
                   zIndex: 50,
                 }}
               >
@@ -635,12 +632,12 @@ export default function MainLayout() {
                   style={{
                     backgroundColor: '#ffffff',
                     border: '1px solid #e2e8f0',
-                    borderRadius: '4px',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.06)',
-                    minWidth: '230px',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 16px rgba(15, 23, 42, 0.08)',
+                    minWidth: '220px',
                     maxHeight: '70vh',
                     overflowY: 'auto',
-                    padding: '0.4rem 0',
+                    padding: '6px 0',
                   }}
                 >
                   {productCategoriesMenu.map((item, idx) => (
@@ -650,22 +647,21 @@ export default function MainLayout() {
                       onClick={closeDropdownNow}
                       style={{
                         display: 'block',
-                        padding: '0.55rem 1.25rem',
+                        padding: '8px 16px',
                         textDecoration: 'none',
-                        color: '#1e293b',
-                        fontSize: '0.875rem',
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        lineHeight: 1.3,
+                        color: '#334155',
+                        fontSize: '0.8125rem',
+                        fontWeight: 400,
+                        lineHeight: 1.4,
                         transition: 'background-color 0.15s, color 0.15s',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
                         e.currentTarget.style.color = '#0284c7';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = '#1e293b';
+                        e.currentTarget.style.color = '#334155';
                       }}
                     >
                       {item.name}
@@ -680,56 +676,62 @@ export default function MainLayout() {
             to="/products?sale=true"
             style={{
               textDecoration: 'none',
-              color: '#dc2626',
+              color: isActive('/products?sale=true') ? '#0284c7' : '#334155',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
+              paddingBottom: '4px',
+              borderBottom: '2px solid transparent',
+              transition: 'color 0.15s',
             }}
           >
-            <Flame size={16} color="#dc2626" />
-            <span>CÁ GIẢM GIÁ</span>
+            <Flame size={14} color="#0284c7" />
+            <span>Ưu đãi & Khuyến mãi</span>
           </Link>
 
           <Link
             to="/tank-models"
             style={{
               textDecoration: 'none',
-              color: isActive('/tank-models') ? '#0284c7' : '#1e293b',
+              color: isActive('/tank-models') ? '#0284c7' : '#334155',
               borderBottom: isActive('/tank-models') ? '2px solid #0284c7' : '2px solid transparent',
-              paddingBottom: '2px',
+              paddingBottom: '4px',
+              transition: 'color 0.15s',
             }}
           >
-            MẪU HỒ CÁ
+            Mẫu hồ cá
           </Link>
 
           <Link
             to="/knowledge"
             style={{
               textDecoration: 'none',
-              color: isActive('/knowledge') ? '#0284c7' : '#1e293b',
+              color: isActive('/knowledge') ? '#0284c7' : '#334155',
               borderBottom: isActive('/knowledge') ? '2px solid #0284c7' : '2px solid transparent',
-              paddingBottom: '2px',
+              paddingBottom: '4px',
+              transition: 'color 0.15s',
             }}
           >
-            KIẾN THỨC NUÔI CÁ
+            Kinh nghiệm nuôi
           </Link>
 
           <Link
             to="/about"
             style={{
               textDecoration: 'none',
-              color: isActive('/about') ? '#0284c7' : '#1e293b',
+              color: isActive('/about') ? '#0284c7' : '#334155',
               borderBottom: isActive('/about') ? '2px solid #0284c7' : '2px solid transparent',
-              paddingBottom: '2px',
+              paddingBottom: '4px',
+              transition: 'color 0.15s',
             }}
           >
-            GIỚI THIỆU
+            Giới thiệu
           </Link>
         </div>
       </nav>
 
       {/* 3. MAIN CONTENT */}
-      <main style={{ flex: 1, padding: '1.5rem 1rem' }}>
+      <main style={{ flex: 1, padding: '24px 16px' }}>
         <Outlet />
       </main>
 
@@ -737,9 +739,9 @@ export default function MainLayout() {
       <footer
         style={{
           backgroundColor: '#0f172a',
-          color: '#cbd5e1',
-          padding: '2.5rem 1.5rem 1.5rem',
-          borderTop: '3px solid #0284c7',
+          color: '#94a3b8',
+          padding: '40px 24px 24px',
+          borderTop: '1px solid #1e293b',
         }}
       >
         <div
@@ -747,49 +749,66 @@ export default function MainLayout() {
             maxWidth: '1240px',
             margin: '0 auto',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '2rem',
-            marginBottom: '2rem',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '32px',
+            marginBottom: '32px',
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-              <img src="/logo.png" alt="AquaCraft" style={{ height: '42px', width: 'auto' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <img src="/logo.png" alt="AquaCraft" style={{ height: '36px', width: 'auto' }} />
               <div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '1px' }}>
-                  AQUACRAFT
-                </h3>
+                <span style={{ fontSize: '1.125rem', fontWeight: 600, color: '#f8fafc', letterSpacing: '-0.01em' }}>
+                  AquaCraft
+                </span>
               </div>
             </div>
-            <p style={{ fontSize: '0.875rem', lineHeight: 1.6, color: '#94a3b8' }}>
-              Trang trại nuôi và cung cấp các dòng cá cảnh thuần chủng, cây thủy sinh và phụ kiện hồ cá cao cấp chuẩn quốc tế.
+            <p style={{ fontSize: '0.8125rem', lineHeight: 1.6, color: '#94a3b8', maxWidth: '34ch' }}>
+              Trang trại sinh vật cảnh và cung cấp các dòng cá thủy sinh thuần chủng, phụ kiện hồ cá đạt tiêu chuẩn tuyển chọn.
             </p>
           </div>
 
           <div>
-            <h4 style={{ color: '#ffffff', fontWeight: 700, marginBottom: '0.75rem', fontSize: '1rem' }}>
-              THÔNG TIN LIÊN HỆ
+            <h4 style={{ color: '#f8fafc', fontWeight: 600, marginBottom: '12px', fontSize: '0.875rem' }}>
+              Thông tin liên hệ
             </h4>
-            <p style={{ fontSize: '0.875rem', marginBottom: '0.5rem', color: '#cbd5e1', lineHeight: 1.5 }}>
-              📍 <strong>Khu vực:</strong> TP. Đà Nẵng (Giao hỏa tốc nội thành & 48h toàn quốc)
-            </p>
-            <p style={{ fontSize: '0.875rem', marginBottom: '0.5rem', color: '#cbd5e1' }}>
-              📞 <strong>Hotline:</strong> 0332127582 (Zalo 24/7)
-            </p>
-            <p style={{ fontSize: '0.875rem', color: '#cbd5e1' }}>
-              ✉️ <strong>Email:</strong> support@aquacraft.vn
-            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8125rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <MapPin size={15} color="#38bdf8" style={{ marginTop: '2px', flexShrink: 0 }} />
+                <span>TP. Đà Nẵng (Giao hỏa tốc nội thành & 48h toàn quốc)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Phone size={15} color="#38bdf8" style={{ flexShrink: 0 }} />
+                <span>Hotline: 0332 127 582 (Zalo 24/7)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Mail size={15} color="#38bdf8" style={{ flexShrink: 0 }} />
+                <span>Email: support@aquacraft.vn</span>
+              </div>
+            </div>
           </div>
 
           <div>
-            <h4 style={{ color: '#ffffff', fontWeight: 700, marginBottom: '0.75rem', fontSize: '1rem' }}>
-              CHÍNH SÁCH BÁN HÀNG
+            <h4 style={{ color: '#f8fafc', fontWeight: 600, marginBottom: '12px', fontSize: '0.875rem' }}>
+              Chính sách bán hàng
             </h4>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.875rem', lineHeight: 2, color: '#94a3b8' }}>
-              <li>✓ Đóng bao oxy 48h giao tận nhà toàn quốc</li>
-              <li>✓ Cam kết cá khỏe 100% khi nhận hàng</li>
-              <li>✓ Bảo hành 1 đổi 1 nếu rủi ro vận chuyển</li>
-              <li>✓ Hướng dẫn kỹ thuật dưỡng nước & thuần cá</li>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8125rem', color: '#94a3b8' }}>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Check size={14} color="#38bdf8" style={{ flexShrink: 0 }} />
+                <span>Đóng bao oxy 48h giao tận nhà toàn quốc</span>
+              </li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Check size={14} color="#38bdf8" style={{ flexShrink: 0 }} />
+                <span>Cam kết cá khỏe mạnh 100% khi nhận hàng</span>
+              </li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Check size={14} color="#38bdf8" style={{ flexShrink: 0 }} />
+                <span>Bảo hành 1 đổi 1 nếu có rủi ro vận chuyển</span>
+              </li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Check size={14} color="#38bdf8" style={{ flexShrink: 0 }} />
+                <span>Hướng dẫn kỹ thuật dưỡng nước và thuần cá</span>
+              </li>
             </ul>
           </div>
         </div>
@@ -799,9 +818,9 @@ export default function MainLayout() {
             maxWidth: '1240px',
             margin: '0 auto',
             borderTop: '1px solid #1e293b',
-            paddingTop: '1rem',
+            paddingTop: '16px',
             textAlign: 'center',
-            fontSize: '0.8125rem',
+            fontSize: '0.75rem',
             color: '#64748b',
           }}
         >
@@ -809,7 +828,7 @@ export default function MainLayout() {
         </div>
       </footer>
 
-      {/* Floating Action Buttons (Cart, Hotline, Zalo, Messenger) */}
+      {/* Floating Action Buttons */}
       <FloatingActions />
     </div>
   );

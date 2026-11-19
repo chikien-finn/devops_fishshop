@@ -425,23 +425,23 @@ export default function ProductDetailPage() {
                 <span
                   style={{
                     fontSize: '0.75rem',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     color: '#0284c7',
-                    textTransform: 'uppercase',
                     backgroundColor: '#f0f9ff',
                     padding: '2px 8px',
                     borderRadius: '4px',
+                    border: '1px solid #bae6fd',
                   }}
                 >
-                  {product.categoryName || 'Cá Cảnh Thuần Chủng'}
+                  {product.categoryName || 'Cá cảnh thuần chủng'}
                 </span>
 
                 <span
                   style={{
                     fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: product.soldOut ? '#ef4444' : '#10b981',
-                    backgroundColor: product.soldOut ? '#fef2f2' : '#ecfdf5',
+                    fontWeight: 500,
+                    color: product.soldOut ? '#b91c1c' : '#047857',
+                    backgroundColor: product.soldOut ? '#fef2f2' : '#f0fdf4',
                     padding: '2px 8px',
                     borderRadius: '4px',
                   }}
@@ -452,8 +452,8 @@ export default function ProductDetailPage() {
 
               <h1
                 style={{
-                  fontSize: '1.75rem',
-                  fontWeight: 800,
+                  fontSize: '1.5rem',
+                  fontWeight: 600,
                   color: '#0f172a',
                   lineHeight: 1.3,
                   margin: '0.25rem 0',
@@ -462,8 +462,8 @@ export default function ProductDetailPage() {
                 {product.name}
               </h1>
 
-              <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                Thương hiệu: <strong style={{ color: '#0f172a' }}>AquaCraft</strong> | <span style={{ color: '#059669', fontWeight: 600 }}>Cá khỏe mạnh 100%</span>
+              <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+                Thương hiệu: <strong style={{ color: '#0f172a' }}>AquaCraft</strong> | <span style={{ color: '#047857', fontWeight: 500 }}>Cá khỏe mạnh 100%</span>
               </div>
             </div>
 
@@ -479,21 +479,22 @@ export default function ProductDetailPage() {
                 gap: '1rem',
               }}
             >
-              <span style={{ fontSize: '2rem', fontWeight: 900, color: '#dc2626' }}>
+              <span style={{ fontSize: '1.75rem', fontWeight: 600, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                 {product.priceFormatted}
               </span>
               {product.oldPriceFormatted && (
-                <span style={{ fontSize: '1.1rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                <span style={{ fontSize: '1rem', color: '#94a3b8', textDecoration: 'line-through', fontVariantNumeric: 'tabular-nums' }}>
                   {product.oldPriceFormatted}
                 </span>
               )}
               {product.discount && (
                 <span
                   style={{
-                    backgroundColor: '#dc2626',
+                    backgroundColor: '#b91c1c',
                     color: '#ffffff',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    fontVariantNumeric: 'tabular-nums',
                     padding: '2px 8px',
                     borderRadius: '4px',
                   }}
@@ -616,19 +617,18 @@ export default function ProductDetailPage() {
                   disabled
                   style={{
                     flex: 1,
-                    padding: '0.85rem 1.5rem',
-                    border: '1px solid #fecaca',
-                    backgroundColor: '#fef2f2',
-                    color: '#ef4444',
-                    borderRadius: '6px',
-                    fontSize: '0.95rem',
-                    fontWeight: 700,
+                    padding: '0.75rem 1.5rem',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#f8fafc',
+                    color: '#94a3b8',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
                     cursor: 'not-allowed',
                     textAlign: 'center',
-                    textTransform: 'uppercase',
                   }}
                 >
-                  TẠM HẾT HÀNG TẠI TRẠI
+                  Tạm hết hàng tại trại
                 </button>
               ) : (
                 <>
@@ -637,29 +637,32 @@ export default function ProductDetailPage() {
                     style={{
                       flex: 1,
                       minWidth: '180px',
-                      padding: '0.85rem 1.5rem',
-                      border: '2px solid #0284c7',
+                      height: '42px',
+                      padding: '0 1.25rem',
+                      border: '1px solid #e2e8f0',
                       backgroundColor: '#ffffff',
-                      color: '#0284c7',
-                      borderRadius: '6px',
-                      fontSize: '0.95rem',
-                      fontWeight: 700,
+                      color: '#0f172a',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '0.5rem',
-                      transition: 'all 0.2s ease',
+                      transition: 'border-color 0.15s, background-color 0.15s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f0f9ff';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
                     }}
                     onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#e2e8f0';
                       e.currentTarget.style.backgroundColor = '#ffffff';
                     }}
                   >
-                    <ShoppingBag size={18} />
-                    <span>THÊM VÀO GIỎ HÀNG</span>
+                    <ShoppingBag size={16} color="#0284c7" />
+                    <span>Thêm vào giỏ hàng</span>
                   </button>
 
                   <button
@@ -667,20 +670,20 @@ export default function ProductDetailPage() {
                     style={{
                       flex: 1,
                       minWidth: '180px',
-                      padding: '0.85rem 1.5rem',
+                      height: '42px',
+                      padding: '0 1.25rem',
                       border: 'none',
                       backgroundColor: '#0284c7',
                       color: '#ffffff',
-                      borderRadius: '6px',
-                      fontSize: '0.95rem',
-                      fontWeight: 700,
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '0.5rem',
-                      boxShadow: '0 4px 10px rgba(2, 132, 199, 0.25)',
-                      transition: 'background-color 0.2s',
+                      transition: 'background-color 0.15s',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#0369a1';
@@ -689,7 +692,7 @@ export default function ProductDetailPage() {
                       e.currentTarget.style.backgroundColor = '#0284c7';
                     }}
                   >
-                    <span>MUA NGAY</span>
+                    <span>Mua ngay</span>
                   </button>
                 </>
               )}
@@ -699,30 +702,30 @@ export default function ProductDetailPage() {
             <div
               style={{
                 marginTop: '0.5rem',
-                border: '1px dashed #cbd5e1',
+                border: '1px solid #e2e8f0',
                 borderRadius: '8px',
                 padding: '1rem',
-                backgroundColor: '#fafaf9',
+                backgroundColor: '#ffffff',
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: '0.75rem',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.825rem', color: '#334155' }}>
-                <Truck size={18} color="#0284c7" />
-                <span>Đóng gói oxy giao toàn quốc 48H</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8125rem', color: '#475569' }}>
+                <Truck size={16} color="#0284c7" />
+                <span>Đóng gói oxy giao toàn quốc 48h</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.825rem', color: '#334155' }}>
-                <ShieldCheck size={18} color="#059669" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8125rem', color: '#475569' }}>
+                <ShieldCheck size={16} color="#0284c7" />
                 <span>Bảo hành cá sống 100% khi nhận hàng</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.825rem', color: '#334155' }}>
-                <HeartHandshake size={18} color="#dc2626" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8125rem', color: '#475569' }}>
+                <HeartHandshake size={16} color="#0284c7" />
                 <span>1 đổi 1 nhanh chóng nếu có hao hụt</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.825rem', color: '#334155' }}>
-                <Phone size={18} color="#f59e0b" />
-                <span>Hỗ trợ kỹ thuật: <strong>0332127582</strong></span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.8125rem', color: '#475569' }}>
+                <Phone size={16} color="#0284c7" />
+                <span>Hỗ trợ kỹ thuật: <strong>0332 127 582</strong></span>
               </div>
             </div>
           </div>

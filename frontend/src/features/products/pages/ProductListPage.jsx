@@ -141,8 +141,8 @@ export default function ProductListPage() {
           <div>
             <h1
               style={{
-                fontSize: '1.75rem',
-                fontWeight: 800,
+                fontSize: '1.5rem',
+                fontWeight: 600,
                 color: '#0f172a',
                 marginBottom: '0.25rem',
                 display: 'flex',
@@ -150,10 +150,10 @@ export default function ProductListPage() {
                 gap: '0.5rem',
               }}
             >
-              <Fish color="#0284c7" size={28} />
-              <span>Sinh Vật Cảnh & Thủy Sinh AquaCraft</span>
+              <Fish color="#0284c7" size={24} />
+              <span>Sinh vật cảnh & Thủy sinh AquaCraft</span>
             </h1>
-            <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
+            <p style={{ color: '#64748b', fontSize: '0.875rem' }}>
               {subtitleText}
             </p>
           </div>
@@ -188,14 +188,15 @@ export default function ProductListPage() {
                   setSearchParams(newParams);
                 }}
                 style={{
-                  padding: '0.4rem 0.85rem',
-                  borderRadius: '20px',
-                  border: currentCategory === tab.id ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  border: currentCategory === tab.id ? '1px solid #0284c7' : '1px solid #e2e8f0',
                   backgroundColor: currentCategory === tab.id ? '#0284c7' : '#ffffff',
                   color: currentCategory === tab.id ? '#ffffff' : '#475569',
                   fontSize: '0.8125rem',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   cursor: 'pointer',
+                  transition: 'background-color 0.15s, border-color 0.15s',
                 }}
               >
                 {tab.label}
@@ -218,13 +219,13 @@ export default function ProductListPage() {
                   setSearchParams(newParams);
                 }}
                 style={{
-                  padding: '0.4rem 0.75rem',
-                  borderRadius: '20px',
-                  border: currentSubCategory ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  border: currentSubCategory ? '1px solid #0284c7' : '1px solid #e2e8f0',
                   backgroundColor: '#ffffff',
                   color: '#334155',
                   fontSize: '0.8125rem',
-                  fontWeight: 600,
+                  fontWeight: 500,
                   cursor: 'pointer',
                   outline: 'none',
                 }}
@@ -344,24 +345,26 @@ export default function ProductListPage() {
               style={{
                 backgroundColor: '#ffffff',
                 border: '1px solid #e2e8f0',
-                borderRadius: '8px',
+                borderRadius: '10px',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                transition: 'transform 0.2s, box-shadow 0.2s',
+                transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1)';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(15, 23, 42, 0.05)';
               }}
               onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#e2e8f0';
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
               <Link
                 to={`/products/${item.slug || item._id}`}
-                style={{ height: '180px', backgroundColor: '#f1f5f9', overflow: 'hidden', position: 'relative', display: 'block' }}
+                style={{ height: '180px', backgroundColor: '#f8fafc', overflow: 'hidden', position: 'relative', display: 'block' }}
               >
                 {item.images && item.images[0] ? (
                   <img
@@ -390,10 +393,11 @@ export default function ProductListPage() {
                       position: 'absolute',
                       top: '8px',
                       left: '8px',
-                      backgroundColor: item.waterType === 'saltwater' ? '#1e40af' : '#065f46',
-                      color: '#ffffff',
+                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                      color: item.waterType === 'saltwater' ? '#0369a1' : '#047857',
+                      border: '1px solid #e2e8f0',
                       fontSize: '0.6875rem',
-                      fontWeight: 700,
+                      fontWeight: 600,
                       padding: '2px 8px',
                       borderRadius: '4px',
                     }}
@@ -407,11 +411,12 @@ export default function ProductListPage() {
                       position: 'absolute',
                       top: '8px',
                       right: '8px',
-                      backgroundColor: '#dc2626',
+                      backgroundColor: '#b91c1c',
                       color: '#ffffff',
                       fontSize: '0.6875rem',
-                      fontWeight: 700,
-                      padding: '2px 7px',
+                      fontWeight: 600,
+                      fontVariantNumeric: 'tabular-nums',
+                      padding: '2px 6px',
                       borderRadius: '4px',
                     }}
                   >
@@ -420,20 +425,23 @@ export default function ProductListPage() {
                 )}
               </Link>
 
-              <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <Link
                   to={`/products/${item.slug || item._id}`}
                   style={{ textDecoration: 'none' }}
                 >
                   <h3
                     style={{
-                      fontSize: '1rem',
-                      fontWeight: 700,
+                      fontSize: '0.9375rem',
+                      fontWeight: 500,
                       color: '#0f172a',
-                      marginBottom: '0.4rem',
+                      marginBottom: '6px',
                       lineHeight: 1.4,
                       minHeight: '2.8em',
+                      transition: 'color 0.15s',
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = '#0284c7')}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = '#0f172a')}
                   >
                     {item.name}
                   </h3>
@@ -443,7 +451,7 @@ export default function ProductListPage() {
                   style={{
                     fontSize: '0.8125rem',
                     color: '#64748b',
-                    marginBottom: '1rem',
+                    marginBottom: '16px',
                     lineHeight: 1.5,
                     flex: 1,
                     display: '-webkit-box',
@@ -461,12 +469,19 @@ export default function ProductListPage() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     borderTop: '1px solid #f1f5f9',
-                    paddingTop: '0.75rem',
+                    paddingTop: '12px',
                     marginTop: 'auto',
                   }}
                 >
                   <div>
-                    <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#dc2626' }}>
+                    <span
+                      style={{
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        color: '#0f172a',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
                       {formatCurrency(item.price)}
                     </span>
                     {item.oldPrice > item.price && (
@@ -475,7 +490,8 @@ export default function ProductListPage() {
                           fontSize: '0.75rem',
                           color: '#94a3b8',
                           textDecoration: 'line-through',
-                          marginLeft: '0.4rem',
+                          marginLeft: '6px',
+                          fontVariantNumeric: 'tabular-nums',
                         }}
                       >
                         {formatCurrency(item.oldPrice)}
@@ -489,14 +505,15 @@ export default function ProductListPage() {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.35rem',
-                      padding: '0.4rem 0.75rem',
+                      gap: '4px',
+                      height: '32px',
+                      padding: '0 12px',
                       backgroundColor: addedItemId === item._id ? '#059669' : '#0284c7',
                       border: 'none',
-                      borderRadius: '4px',
+                      borderRadius: '6px',
                       color: '#ffffff',
-                      fontSize: '0.8125rem',
-                      fontWeight: 700,
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
                       cursor: 'pointer',
                       transition: 'background-color 0.15s',
                     }}
@@ -515,7 +532,7 @@ export default function ProductListPage() {
                     ) : (
                       <>
                         <ShoppingBag size={14} />
-                        <span>Mua</span>
+                        <span>Chọn mua</span>
                       </>
                     )}
                   </button>

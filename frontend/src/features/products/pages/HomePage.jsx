@@ -13,6 +13,7 @@ import {
   HeartHandshake,
   Search,
   X,
+  Check,
 } from 'lucide-react';
 import productService, { isRequestCanceled } from '../services/productService.js';
 import { useCart } from '../../cart/hooks/useCart.jsx';
@@ -84,7 +85,6 @@ export default function HomePage() {
   const [toastMessage, setToastMessage] = useState(null);
   const { cart, addToCart } = useCart();
 
-  // 8 fish categories exactly as in reference image 2
   const fishCategories = [
     { id: 'neon', name: 'Cá Neon', image: '/fish_neon.jpg?v=2', search: 'Neon', subCategory: 'ca-neon' },
     { id: 'dia', name: 'Cá Dĩa', image: '/fish_dia.jpg?v=2', search: 'Dĩa', subCategory: 'ca-dia' },
@@ -96,30 +96,31 @@ export default function HomePage() {
     { id: 'betta', name: 'Cá Betta', image: '/fish_betta.jpg?v=2', search: 'Betta', subCategory: 'ca-betta' },
   ];
 
-  // Banner slides
   const slides = [
     {
       id: 1,
       farmImg: '/banner_farm.jpg?v=3',
-      title: 'MÔ HÌNH TRANG TRẠI NUÔI CÁ',
+      eyebrow: 'Trang trại sinh vật cảnh',
+      title: 'Mô hình trang trại nuôi cá cảnh',
       bulletPoints: [
-        'Trang trại xây dựng theo mô hình hiện đại',
-        'Cá được chăm sóc và nuôi dưỡng khỏe mạnh',
-        'Nguồn thức ăn từ tự nhiên',
-        'Cá sinh sản, nuôi dưỡng đúng kỹ thuật',
-        'Quy trình chọn cá và kiểm tra kỹ càng trước khi xuất đi',
+        'Trang trại xây dựng theo mô hình thủy sinh hiện đại',
+        'Cá được chăm sóc và dưỡng khỏe mạnh trong nước sạch',
+        'Nguồn thức ăn tự nhiên giàu dinh dưỡng',
+        'Sinh sản và tuyển chọn con giống thuần chủng',
+        'Kiểm tra sức khỏe nghiêm ngặt trước khi xuất giao',
       ],
     },
     {
       id: 2,
       farmImg: '/banner_fish.jpg?v=2',
-      title: 'HỆ THỐNG CÁ CẢNH THUẦN CHỦNG',
+      eyebrow: 'Tuyển chọn giống cá',
+      title: 'Hệ thống cá cảnh thuần chủng',
       bulletPoints: [
-        'Hơn 50 giống cá cảnh nhiệt đới & thủy sinh tuyển chọn',
-        'Quy trình cách ly và kiểm dịch nghiêm ngặt',
+        'Hơn 50 giống cá nhiệt đới và thủy sinh tuyển chọn',
+        'Quy trình cách ly và kiểm dịch tiêu chuẩn',
         'Hỗ trợ đóng bao oxy chuyển phát nhanh 48h toàn quốc',
-        'Tư vấn kỹ thuật setup hồ và xử lý nước miễn phí',
-        'Cam kết cá sống 100% khi nhận hàng',
+        'Tư vấn kỹ thuật setup hồ và dưỡng nước miễn phí',
+        'Cam kết cá khỏe mạnh 100% khi nhận hàng',
       ],
     },
   ];
@@ -248,7 +249,7 @@ export default function HomePage() {
     if (remaining === 0 && !canCollapse) return null;
 
     return (
-      <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+      <div style={{ textAlign: 'center', marginTop: '24px' }}>
         <button
           type="button"
           disabled={isLoadingMore}
@@ -258,25 +259,25 @@ export default function HomePage() {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.3rem',
-            backgroundColor: 'transparent',
-            border: '1.5px solid #dc2626',
-            color: '#dc2626',
-            borderRadius: '9999px',
-            padding: '0.45rem 1.75rem',
-            fontSize: '0.875rem',
-            fontWeight: 600,
+            gap: '6px',
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            color: '#334155',
+            borderRadius: '8px',
+            padding: '8px 20px',
+            fontSize: '0.8125rem',
+            fontWeight: 500,
             cursor: isLoadingMore ? 'wait' : 'pointer',
             opacity: isLoadingMore ? 0.7 : 1,
-            transition: 'all 0.2s',
+            transition: 'background-color 0.15s, border-color 0.15s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#dc2626';
-            e.currentTarget.style.color = '#ffffff';
+            e.currentTarget.style.backgroundColor = '#f8fafc';
+            e.currentTarget.style.borderColor = '#cbd5e1';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = '#dc2626';
+            e.currentTarget.style.backgroundColor = '#ffffff';
+            e.currentTarget.style.borderColor = '#e2e8f0';
           }}
         >
           {isLoadingMore ? (
@@ -284,12 +285,12 @@ export default function HomePage() {
           ) : remaining > 0 ? (
             <>
               <span>Xem thêm</span>
-              <ChevronDown size={16} />
+              <ChevronDown size={15} />
             </>
           ) : (
             <>
               <span>Thu gọn</span>
-              <ChevronUp size={16} />
+              <ChevronUp size={15} />
             </>
           )}
         </button>
@@ -338,7 +339,7 @@ export default function HomePage() {
       category: p.category || 'fish',
       stock: maxStock,
     });
-    setToastMessage(`Đã thêm "${p.name}" vào giỏ hàng!`);
+    setToastMessage(`Đã thêm "${p.name}" vào giỏ hàng`);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
@@ -351,21 +352,23 @@ export default function HomePage() {
         className="thienduc-card"
         style={{
           backgroundColor: '#ffffff',
-          borderRadius: '6px',
-          border: '1px solid #f1f5f9',
-          padding: '0.625rem',
+          borderRadius: '10px',
+          border: '1px solid #e2e8f0',
+          padding: '12px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          transition: 'all 0.2s ease',
+          transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.06)';
-          e.currentTarget.style.borderColor = '#e2e8f0';
+          e.currentTarget.style.borderColor = '#cbd5e1';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(15, 23, 42, 0.05)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
         }}
         onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#e2e8f0';
           e.currentTarget.style.boxShadow = 'none';
-          e.currentTarget.style.borderColor = '#f1f5f9';
+          e.currentTarget.style.transform = 'translateY(0)';
         }}
       >
         <div>
@@ -375,7 +378,7 @@ export default function HomePage() {
               position: 'relative',
               width: '100%',
               aspectRatio: '1/1',
-              borderRadius: '4px',
+              borderRadius: '8px',
               overflow: 'hidden',
               backgroundColor: '#f8fafc',
             }}
@@ -384,14 +387,15 @@ export default function HomePage() {
               <span
                 style={{
                   position: 'absolute',
-                  top: '6px',
-                  left: '6px',
-                  backgroundColor: '#dc2626',
+                  top: '8px',
+                  left: '8px',
+                  backgroundColor: '#b91c1c',
                   color: '#ffffff',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  fontVariantNumeric: 'tabular-nums',
                   padding: '2px 6px',
-                  borderRadius: '3px',
+                  borderRadius: '4px',
                   zIndex: 2,
                 }}
               >
@@ -412,16 +416,13 @@ export default function HomePage() {
                   height: '100%',
                   objectFit: 'cover',
                   display: 'block',
-                  transition: 'transform 0.3s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
               />
             </Link>
 
-            {/* Quick View Search Icon Overlay (Clicking opens Quick View Modal) */}
-            <div
-              className="thienduc-search-overlay"
+            {/* Quick View Button overlay on hover */}
+            <button
+              className="thienduc-quickview-btn"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -430,35 +431,30 @@ export default function HomePage() {
               title="Xem nhanh"
               style={{
                 position: 'absolute',
-                inset: 0,
+                right: '8px',
+                bottom: '8px',
+                width: '30px',
+                height: '30px',
+                borderRadius: '6px',
+                backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                border: '1px solid #e2e8f0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                opacity: 0,
-                transition: 'opacity 0.2s ease',
-                zIndex: 2,
+                color: '#334155',
                 cursor: 'pointer',
+                opacity: 0,
+                transition: 'opacity 0.15s, background-color 0.15s',
+                zIndex: 2,
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.92)')}
             >
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  backgroundColor: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                }}
-              >
-                <Search size={16} color="#dc2626" />
-              </div>
-            </div>
+              <Search size={14} />
+            </button>
           </div>
 
-          {/* Product Name (Click navigates to Detail Page) */}
+          {/* Product Name */}
           <Link
             to={productDetailUrl}
             style={{ textDecoration: 'none' }}
@@ -467,11 +463,11 @@ export default function HomePage() {
               title={p.name}
               style={{
                 fontSize: '0.8125rem',
-                fontWeight: 600,
-                color: '#1e293b',
-                marginTop: '0.6rem',
-                marginBottom: '0.35rem',
-                lineHeight: 1.35,
+                fontWeight: 500,
+                color: '#0f172a',
+                marginTop: '10px',
+                marginBottom: '6px',
+                lineHeight: 1.4,
                 height: '2.4rem',
                 overflow: 'hidden',
                 display: '-webkit-box',
@@ -480,74 +476,80 @@ export default function HomePage() {
                 cursor: 'pointer',
                 transition: 'color 0.15s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#1e293b')}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#0284c7')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#0f172a')}
             >
               {p.name}
             </h4>
           </Link>
 
           {/* Price Row */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', flexWrap: 'wrap' }}>
-            <span style={{ color: '#dc2626', fontSize: '0.95rem', fontWeight: 800 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                color: '#0f172a',
+                fontSize: '0.9375rem',
+                fontWeight: 600,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
               {p.priceFormatted}
             </span>
             {p.oldPriceFormatted && (
-              <span style={{ color: '#94a3b8', fontSize: '0.75rem', textDecoration: 'line-through' }}>
+              <span
+                style={{
+                  color: '#94a3b8',
+                  fontSize: '0.75rem',
+                  textDecoration: 'line-through',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
                 {p.oldPriceFormatted}
               </span>
             )}
           </div>
         </div>
 
-        {/* Action Button: Luồng TÙY CHỌN click vào chuyển đến trang chi tiết sản phẩm */}
-        <div style={{ marginTop: '0.65rem' }}>
+        {/* Action Button */}
+        <div style={{ marginTop: '12px' }}>
           {p.soldOut ? (
             <Link
               to={productDetailUrl}
               style={{
                 display: 'block',
                 width: '100%',
-                padding: '0.4rem 0',
-                border: '1px solid #fecaca',
-                backgroundColor: '#ffffff',
-                color: '#ef4444',
-                borderRadius: '4px',
+                padding: '7px 0',
+                border: '1px solid #e2e8f0',
+                backgroundColor: '#f8fafc',
+                color: '#94a3b8',
+                borderRadius: '6px',
                 fontSize: '0.75rem',
-                fontWeight: 700,
+                fontWeight: 500,
                 textAlign: 'center',
                 textDecoration: 'none',
-                textTransform: 'uppercase',
               }}
             >
-              HẾT HÀNG
+              Hết hàng
             </Link>
           ) : p.actionText === 'CHỌN MUA' ? (
             <button
               onClick={() => handleAddToCart(p)}
               style={{
                 width: '100%',
-                padding: '0.4rem 0',
-                border: '1.5px solid #dc2626',
-                backgroundColor: '#ffffff',
-                color: '#dc2626',
-                borderRadius: '4px',
+                padding: '7px 0',
+                border: 'none',
+                backgroundColor: '#0284c7',
+                color: '#ffffff',
+                borderRadius: '6px',
                 fontSize: '0.75rem',
-                fontWeight: 700,
+                fontWeight: 500,
                 cursor: 'pointer',
-                textTransform: 'uppercase',
-                transition: 'all 0.15s ease',
+                transition: 'background-color 0.15s',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#dc2626';
-                e.currentTarget.style.color = '#ffffff';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#ffffff';
-                e.currentTarget.style.color = '#dc2626';
-              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0369a1')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0284c7')}
             >
-              CHỌN MUA
+              Chọn mua
             </button>
           ) : (
             <Link
@@ -555,28 +557,27 @@ export default function HomePage() {
               style={{
                 display: 'block',
                 width: '100%',
-                padding: '0.4rem 0',
-                border: '1.5px solid #dc2626',
+                padding: '6px 0',
+                border: '1px solid #e2e8f0',
                 backgroundColor: '#ffffff',
-                color: '#dc2626',
-                borderRadius: '4px',
+                color: '#334155',
+                borderRadius: '6px',
                 fontSize: '0.75rem',
-                fontWeight: 700,
+                fontWeight: 500,
                 textAlign: 'center',
                 textDecoration: 'none',
-                textTransform: 'uppercase',
-                transition: 'all 0.15s ease',
+                transition: 'background-color 0.15s, border-color 0.15s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#dc2626';
-                e.currentTarget.style.color = '#ffffff';
+                e.currentTarget.style.backgroundColor = '#f8fafc';
+                e.currentTarget.style.borderColor = '#cbd5e1';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = '#ffffff';
-                e.currentTarget.style.color = '#dc2626';
+                e.currentTarget.style.borderColor = '#e2e8f0';
               }}
             >
-              TÙY CHỌN
+              Xem chi tiết
             </Link>
           )}
         </div>
@@ -585,15 +586,14 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {/* 1. HERO BANNER / SLIDER (EXACTLY AS IN IMAGE 2) */}
+    <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      {/* 1. HERO BANNER / SLIDER */}
       <section
         style={{
           position: 'relative',
           backgroundColor: '#ffffff',
-          borderRadius: '8px',
+          borderRadius: '10px',
           overflow: 'hidden',
-          boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
           border: '1px solid #e2e8f0',
         }}
       >
@@ -605,7 +605,7 @@ export default function HomePage() {
             alignItems: 'stretch',
           }}
         >
-          {/* Left: Farm Collage Photo */}
+          {/* Left: Farm Photo */}
           <div
             style={{
               position: 'relative',
@@ -616,7 +616,7 @@ export default function HomePage() {
               minHeight: '280px',
             }}
           >
-            {/* Overlay arrow left */}
+            {/* Prev arrow */}
             <button
               onClick={handlePrevSlide}
               title="Slide trước"
@@ -625,28 +625,30 @@ export default function HomePage() {
                 left: '12px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255,255,255,0.85)',
-                border: '1px solid #cbd5e1',
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                border: '1px solid #e2e8f0',
                 color: '#334155',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
                 zIndex: 10,
+                transition: 'background-color 0.15s',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)')}
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={18} />
             </button>
           </div>
 
-          {/* Right: Info Card with Logo & Bullet Points */}
+          {/* Right: Info Card */}
           <div
             style={{
-              padding: '2rem 2.25rem',
+              padding: '32px 36px',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
@@ -654,46 +656,27 @@ export default function HomePage() {
               position: 'relative',
             }}
           >
-            {/* Logo in the banner */}
-            <div
+            {/* Eyebrow */}
+            <span
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                marginBottom: '1rem',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: '#0284c7',
+                marginBottom: '8px',
+                display: 'block',
               }}
             >
-              <img
-                src="/logo.png"
-                alt="AquaCraft"
-                style={{ height: '42px', width: 'auto', objectFit: 'contain' }}
-              />
-              <div>
-                <span
-                  style={{
-                    fontSize: '1.25rem',
-                    fontWeight: 800,
-                    letterSpacing: '1px',
-                    color: '#0f172a',
-                    textTransform: 'uppercase',
-                    display: 'block',
-                    lineHeight: 1,
-                  }}
-                >
-                  AQUACRAFT
-                </span>
-              </div>
-            </div>
+              {slides[currentSlide].eyebrow}
+            </span>
 
             {/* Title */}
             <h2
               style={{
-                fontSize: '1.45rem',
-                fontWeight: 800,
+                fontSize: '1.375rem',
+                fontWeight: 600,
                 color: '#0f172a',
-                marginBottom: '1rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
+                marginBottom: '16px',
+                lineHeight: 1.3,
               }}
             >
               {slides[currentSlide].title}
@@ -707,7 +690,7 @@ export default function HomePage() {
                 margin: 0,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.5rem',
+                gap: '8px',
               }}
             >
               {slides[currentSlide].bulletPoints.map((text, idx) => (
@@ -716,26 +699,36 @@ export default function HomePage() {
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
-                    gap: '0.5rem',
-                    fontSize: '0.9rem',
-                    color: '#334155',
-                    lineHeight: 1.4,
+                    gap: '8px',
+                    fontSize: '0.8125rem',
+                    color: '#475569',
+                    lineHeight: 1.5,
                   }}
                 >
-                  <span
-                    style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      backgroundColor: '#10b981',
-                      marginTop: '6px',
-                      flexShrink: 0,
-                    }}
-                  />
+                  <Check size={14} color="#0284c7" style={{ marginTop: '3px', flexShrink: 0 }} />
                   <span>{text}</span>
                 </li>
               ))}
             </ul>
+
+            {/* Action Link */}
+            <div style={{ marginTop: '20px' }}>
+              <Link
+                to="/products"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  color: '#0284c7',
+                  textDecoration: 'none',
+                }}
+              >
+                <span>Xem danh mục cá tuyển chọn</span>
+                <ChevronRight size={14} />
+              </Link>
+            </div>
 
             {/* Next Slide Arrow Button */}
             <button
@@ -746,32 +739,33 @@ export default function HomePage() {
                 right: '12px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255,255,255,0.85)',
-                border: '1px solid #cbd5e1',
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                border: '1px solid #e2e8f0',
                 color: '#334155',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                transition: 'background-color 0.15s',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)')}
             >
-              <ChevronRight size={20} />
+              <ChevronRight size={18} />
             </button>
           </div>
         </div>
       </section>
 
-      {/* 2. CATEGORY CIRCLES (8 FISH ITEMS - CENTERED) */}
+      {/* 2. CATEGORY CIRCLES */}
       <section
         style={{
           backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          padding: '1.75rem 1.5rem',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          borderRadius: '10px',
+          padding: '24px 20px',
           border: '1px solid #e2e8f0',
         }}
       >
@@ -781,7 +775,7 @@ export default function HomePage() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '1.5rem',
+            marginBottom: '20px',
             textAlign: 'center',
           }}
         >
@@ -790,26 +784,26 @@ export default function HomePage() {
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.5rem',
-              marginBottom: selectedFish ? '0.5rem' : '0',
+              gap: '8px',
+              marginBottom: selectedFish ? '8px' : '0',
             }}
           >
-            <Fish color="#0284c7" size={24} />
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
-              CÁC DÒNG CÁ CẢNH NỔI BẬT
+            <Fish color="#0284c7" size={18} />
+            <h3 style={{ fontSize: '1.0625rem', fontWeight: 600, color: '#0f172a' }}>
+              Các dòng cá cảnh nổi bật
             </h3>
           </div>
           {selectedFish && (
             <button
               onClick={() => setSelectedFish(null)}
               style={{
-                backgroundColor: '#eff6ff',
+                backgroundColor: '#f8fafc',
                 color: '#0284c7',
-                border: '1px solid #bfdbfe',
-                borderRadius: '4px',
-                padding: '0.25rem 0.75rem',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                padding: '4px 12px',
                 fontSize: '0.75rem',
-                fontWeight: 600,
+                fontWeight: 500,
                 cursor: 'pointer',
               }}
             >
@@ -818,14 +812,14 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 8 Circles Row - Centered with flex */}
+        {/* 8 Circles Row */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
             flexWrap: 'wrap',
-            gap: '2rem',
+            gap: '24px',
             margin: '0 auto',
             maxWidth: '1100px',
           }}
@@ -841,37 +835,28 @@ export default function HomePage() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   cursor: 'pointer',
-                  transition: 'transform 0.2s',
-                  transform: isSelected ? 'scale(1.06)' : 'scale(1)',
-                  minWidth: '95px',
+                  minWidth: '88px',
                   textAlign: 'center',
                 }}
               >
                 <div
                   style={{
-                    width: '84px',
-                    height: '84px',
+                    width: '72px',
+                    height: '72px',
                     borderRadius: '50%',
                     overflow: 'hidden',
-                    border: isSelected ? '3px solid #0284c7' : '3px solid #e2e8f0',
-                    boxShadow: isSelected
-                      ? '0 6px 14px rgba(2, 132, 199, 0.35)'
-                      : '0 3px 6px rgba(0,0,0,0.06)',
+                    border: isSelected ? '2px solid #0284c7' : '1px solid #e2e8f0',
                     backgroundColor: '#ffffff',
-                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    transition: 'border-color 0.15s, box-shadow 0.15s',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#0284c7';
-                    e.currentTarget.style.boxShadow = '0 6px 14px rgba(2, 132, 199, 0.3)';
+                    if (!isSelected) e.currentTarget.style.borderColor = '#cbd5e1';
                   }}
                   onMouseLeave={(e) => {
-                    if (!isSelected) {
-                      e.currentTarget.style.borderColor = '#e2e8f0';
-                      e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.06)';
-                    }
+                    if (!isSelected) e.currentTarget.style.borderColor = '#e2e8f0';
                   }}
                 >
                   <img
@@ -882,16 +867,15 @@ export default function HomePage() {
                       height: '100%',
                       objectFit: 'cover',
                       display: 'block',
-                      transform: 'scale(1.05)',
                     }}
                   />
                 </div>
                 <span
                   style={{
-                    marginTop: '0.5rem',
-                    fontSize: '0.85rem',
-                    fontWeight: isSelected ? 800 : 600,
-                    color: isSelected ? '#0284c7' : '#1e293b',
+                    marginTop: '8px',
+                    fontSize: '0.8125rem',
+                    fontWeight: isSelected ? 600 : 500,
+                    color: isSelected ? '#0284c7' : '#334155',
                     whiteSpace: 'nowrap',
                   }}
                 >
@@ -903,23 +887,22 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Kết quả lọc theo dòng cá nổi bật (khi chọn 1 trong 8 hình tròn) */}
+      {/* Kết quả lọc theo dòng cá nổi bật */}
       {selectedFish && (
         <section
           style={{
             backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            padding: '1.75rem 1.5rem',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            border: '2px solid #0284c7',
+            borderRadius: '10px',
+            padding: '24px 20px',
+            border: '1px solid #bae6fd',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h2
               style={{
-                fontSize: '1.35rem',
-                fontWeight: 800,
-                color: '#0284c7',
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: '#0f172a',
                 margin: 0,
               }}
             >
@@ -931,13 +914,13 @@ export default function HomePage() {
                 setSelectedFishPage(1);
               }}
               style={{
-                backgroundColor: '#f1f5f9',
+                backgroundColor: '#ffffff',
                 color: '#475569',
-                border: '1px solid #cbd5e1',
-                borderRadius: '4px',
-                padding: '0.35rem 0.85rem',
-                fontSize: '0.8rem',
-                fontWeight: 600,
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 500,
                 cursor: 'pointer',
               }}
             >
@@ -945,11 +928,11 @@ export default function HomePage() {
             </button>
           </div>
           {selectedFishLoading && selectedFishItems.length === 0 ? (
-            <p style={{ color: '#64748b', textAlign: 'center', padding: '1.5rem 0' }}>
+            <p style={{ color: '#64748b', textAlign: 'center', padding: '24px 0', fontSize: '0.875rem' }}>
               Đang tìm sản phẩm phù hợp...
             </p>
           ) : selectedFishItems.length === 0 ? (
-            <p style={{ color: '#64748b', textAlign: 'center', padding: '1.5rem 0' }}>
+            <p style={{ color: '#64748b', textAlign: 'center', padding: '24px 0', fontSize: '0.875rem' }}>
               Chưa có sản phẩm nào thuộc dòng này trong kho.
             </p>
           ) : (
@@ -959,13 +942,13 @@ export default function HomePage() {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                  gap: '1rem',
+                  gap: '16px',
                 }}
               >
                 {selectedFishItems.map((p) => renderProductCard(p))}
               </div>
               {selectedFishItems.length < selectedFishTotal && (
-                <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+                <div style={{ textAlign: 'center', marginTop: '20px' }}>
                   <button
                     type="button"
                     disabled={selectedFishLoading}
@@ -973,14 +956,14 @@ export default function HomePage() {
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '0.3rem',
-                      backgroundColor: 'transparent',
-                      border: '1.5px solid #0284c7',
+                      gap: '6px',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e2e8f0',
                       color: '#0284c7',
-                      borderRadius: '9999px',
-                      padding: '0.45rem 1.75rem',
-                      fontSize: '0.875rem',
-                      fontWeight: 600,
+                      borderRadius: '8px',
+                      padding: '8px 20px',
+                      fontSize: '0.8125rem',
+                      fontWeight: 500,
                       cursor: selectedFishLoading ? 'wait' : 'pointer',
                     }}
                   >
@@ -997,28 +980,28 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* 4 PHẦN CÁ CẢNH NỔI BẬT */}
       {/* Toast Notification */}
       {toastMessage && (
         <div
           style={{
             position: 'fixed',
-            top: '80px',
+            top: '72px',
             right: '20px',
-            backgroundColor: '#059669',
+            backgroundColor: '#0f172a',
             color: '#ffffff',
-            padding: '0.75rem 1.25rem',
-            borderRadius: '6px',
-            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)',
+            padding: '10px 16px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 16px rgba(15, 23, 42, 0.15)',
+            border: '1px solid #334155',
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem',
-            fontSize: '0.875rem',
-            fontWeight: 600,
+            gap: '8px',
+            fontSize: '0.8125rem',
+            fontWeight: 500,
           }}
         >
-          <CheckCircle2 size={18} />
+          <CheckCircle2 size={16} color="#38bdf8" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -1040,7 +1023,7 @@ export default function HomePage() {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
           }
         }
-        .thienduc-card:hover .thienduc-search-overlay {
+        .thienduc-card:hover .thienduc-quickview-btn {
           opacity: 1 !important;
         }
       `}</style>
@@ -1049,22 +1032,21 @@ export default function HomePage() {
       <section
         style={{
           backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          padding: '1.75rem 1.5rem',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          borderRadius: '10px',
+          padding: '24px 20px',
           border: '1px solid #e2e8f0',
         }}
       >
-        <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ marginBottom: '16px' }}>
           <h2
             style={{
-              fontSize: '1.45rem',
-              fontWeight: 800,
-              color: '#1e293b',
+              fontSize: '1.1875rem',
+              fontWeight: 600,
+              color: '#0f172a',
               margin: 0,
             }}
           >
-            Cá Chuột Vệ Sinh Hồ
+            Cá chuột vệ sinh hồ
           </h2>
         </div>
 
@@ -1073,7 +1055,7 @@ export default function HomePage() {
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: '1rem',
+            gap: '16px',
           }}
         >
           {homeSections.chuot.items.slice(0, visibleCounts.chuot).map((p) => renderProductCard(p))}
@@ -1086,22 +1068,21 @@ export default function HomePage() {
       <section
         style={{
           backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          padding: '1.75rem 1.5rem',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          borderRadius: '10px',
+          padding: '24px 20px',
           border: '1px solid #e2e8f0',
         }}
       >
-        <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ marginBottom: '16px' }}>
           <h2
             style={{
-              fontSize: '1.45rem',
-              fontWeight: 800,
-              color: '#1e293b',
+              fontSize: '1.1875rem',
+              fontWeight: 600,
+              color: '#0f172a',
               margin: 0,
             }}
           >
-            Cá Dĩa
+            Cá dĩa
           </h2>
         </div>
 
@@ -1110,7 +1091,7 @@ export default function HomePage() {
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: '1rem',
+            gap: '16px',
           }}
         >
           {homeSections.dia.items.slice(0, visibleCounts.dia).map((p) => renderProductCard(p))}
@@ -1119,26 +1100,25 @@ export default function HomePage() {
         {renderLoadMoreButton('dia', homeSections.dia.total)}
       </section>
 
-      {/* 3. CÁ PHƯỢNG HOÀNG – CÁ CẢNH DỄ NUÔI */}
+      {/* 3. CÁ PHƯỢNG HOÀNG */}
       <section
         style={{
           backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          padding: '1.75rem 1.5rem',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          borderRadius: '10px',
+          padding: '24px 20px',
           border: '1px solid #e2e8f0',
         }}
       >
-        <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ marginBottom: '16px' }}>
           <h2
             style={{
-              fontSize: '1.45rem',
-              fontWeight: 800,
-              color: '#1e293b',
+              fontSize: '1.1875rem',
+              fontWeight: 600,
+              color: '#0f172a',
               margin: 0,
             }}
           >
-            Cá Phượng Hoàng – Cá Cảnh Dễ Nuôi
+            Cá phượng hoàng – Cá cảnh dễ nuôi
           </h2>
         </div>
 
@@ -1147,7 +1127,7 @@ export default function HomePage() {
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: '1rem',
+            gap: '16px',
           }}
         >
           {homeSections.phuonghoang.items.slice(0, visibleCounts.phuonghoang).map((p) => renderProductCard(p))}
@@ -1160,22 +1140,21 @@ export default function HomePage() {
       <section
         style={{
           backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          padding: '1.75rem 1.5rem',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          borderRadius: '10px',
+          padding: '24px 20px',
           border: '1px solid #e2e8f0',
         }}
       >
-        <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ marginBottom: '16px' }}>
           <h2
             style={{
-              fontSize: '1.45rem',
-              fontWeight: 800,
-              color: '#1e293b',
+              fontSize: '1.1875rem',
+              fontWeight: 600,
+              color: '#0f172a',
               margin: 0,
             }}
           >
-            Tép Thủy Sinh
+            Tép thủy sinh
           </h2>
         </div>
 
@@ -1184,7 +1163,7 @@ export default function HomePage() {
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: '1rem',
+            gap: '16px',
           }}
         >
           {homeSections.tep.items
@@ -1201,24 +1180,25 @@ export default function HomePage() {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.6)',
+            backgroundColor: 'rgba(15, 23, 42, 0.45)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
-            padding: '1rem',
+            padding: '16px',
           }}
           onClick={() => setQuickViewProduct(null)}
         >
           <div
             style={{
               backgroundColor: '#ffffff',
-              borderRadius: '8px',
+              borderRadius: '12px',
               maxWidth: '560px',
               width: '100%',
-              padding: '1.75rem',
+              padding: '24px',
               position: 'relative',
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+              boxShadow: '0 20px 25px -5px rgba(15, 23, 42, 0.1)',
+              border: '1px solid #e2e8f0',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1232,13 +1212,17 @@ export default function HomePage() {
                 border: 'none',
                 cursor: 'pointer',
                 color: '#64748b',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <X size={20} />
+              <X size={18} />
             </button>
 
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-              <div style={{ width: '220px', height: '220px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              <div style={{ width: '200px', height: '200px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, border: '1px solid #e2e8f0' }}>
                 <img
                   src={quickViewProduct.image}
                   alt={quickViewProduct.name}
@@ -1247,32 +1231,38 @@ export default function HomePage() {
               </div>
 
               <div style={{ flex: 1, minWidth: '200px' }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem' }}>
+                <h3 style={{ fontSize: '1.0625rem', fontWeight: 600, color: '#0f172a', marginBottom: '8px' }}>
                   {quickViewProduct.name}
                 </h3>
 
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#dc2626' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '1.125rem', fontWeight: 600, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
                     {quickViewProduct.priceFormatted}
                   </span>
                   {quickViewProduct.oldPriceFormatted && (
-                    <span style={{ fontSize: '0.875rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                    <span style={{ fontSize: '0.8125rem', color: '#94a3b8', textDecoration: 'line-through', fontVariantNumeric: 'tabular-nums' }}>
                       {quickViewProduct.oldPriceFormatted}
                     </span>
                   )}
                   {quickViewProduct.discount && (
-                    <span style={{ backgroundColor: '#dc2626', color: '#ffffff', fontSize: '0.75rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px' }}>
+                    <span style={{ backgroundColor: '#b91c1c', color: '#ffffff', fontSize: '0.6875rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px' }}>
                       {quickViewProduct.discount}
                     </span>
                   )}
                 </div>
 
-                <div style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-                  <p style={{ margin: '0 0 0.25rem' }}>✓ Tình trạng: <strong>{quickViewProduct.soldOut ? 'Hết hàng' : 'Còn hàng'}</strong></p>
-                  <p style={{ margin: 0 }}>✓ Bảo hành cá khỏe mạnh 100%, đóng oxy chuyển phát an toàn.</p>
+                <div style={{ fontSize: '0.8125rem', color: '#475569', marginBottom: '16px', lineHeight: 1.5 }}>
+                  <p style={{ margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Check size={14} color="#0284c7" />
+                    <span>Tình trạng: <strong style={{ color: '#0f172a' }}>{quickViewProduct.soldOut ? 'Hết hàng' : 'Còn hàng'}</strong></span>
+                  </p>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Check size={14} color="#0284c7" />
+                    <span>Bảo hành cá khỏe mạnh 100%, đóng oxy chuyển phát an toàn.</span>
+                  </p>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {!quickViewProduct.soldOut && (
                     <button
                       onClick={() => {
@@ -1281,29 +1271,25 @@ export default function HomePage() {
                       }}
                       style={{
                         width: '100%',
-                        padding: '0.65rem 1rem',
+                        height: '38px',
                         backgroundColor: '#0284c7',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '6px',
-                        fontSize: '0.875rem',
-                        fontWeight: 700,
+                        fontSize: '0.8125rem',
+                        fontWeight: 500,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '0.5rem',
-                        transition: 'background-color 0.2s',
+                        gap: '6px',
+                        transition: 'background-color 0.15s',
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#0369a1';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#0284c7';
-                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0369a1')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0284c7')}
                     >
-                      <ShoppingBag size={18} />
-                      <span>Thêm Vào Giỏ Hàng</span>
+                      <ShoppingBag size={16} />
+                      <span>Thêm vào giỏ hàng</span>
                     </button>
                   )}
 
@@ -1312,24 +1298,27 @@ export default function HomePage() {
                     onClick={() => setQuickViewProduct(null)}
                     style={{
                       width: '100%',
-                      padding: '0.6rem 1rem',
-                      border: '1.5px solid #0284c7',
-                      backgroundColor: '#f0f9ff',
-                      color: '#0284c7',
+                      height: '36px',
+                      border: '1px solid #e2e8f0',
+                      backgroundColor: '#ffffff',
+                      color: '#334155',
                       borderRadius: '6px',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
+                      fontSize: '0.8125rem',
+                      fontWeight: 500,
                       textAlign: 'center',
                       textDecoration: 'none',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.4rem',
+                      gap: '4px',
                       boxSizing: 'border-box',
+                      transition: 'background-color 0.15s',
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
                   >
-                    <span>Xem Chi Tiết Đầy Đủ</span>
-                    <ChevronRight size={16} />
+                    <span>Xem chi tiết đầy đủ</span>
+                    <ChevronRight size={14} />
                   </Link>
                 </div>
               </div>
@@ -1342,59 +1331,27 @@ export default function HomePage() {
       <section
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '1rem',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '16px',
         }}
       >
         <div
           style={{
             backgroundColor: '#ffffff',
-            padding: '1.25rem',
-            borderRadius: '8px',
+            padding: '16px 20px',
+            borderRadius: '10px',
             border: '1px solid #e2e8f0',
             display: 'flex',
             alignItems: 'center',
-            gap: '1rem',
+            gap: '12px',
           }}
         >
           <div
             style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              backgroundColor: '#ecfdf5',
-              color: '#059669',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <ShieldCheck size={24} />
-          </div>
-          <div>
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>100% Cá Khỏe Mạnh</h4>
-            <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>Cách ly kiểm dịch kỹ trước khi xuất bán</p>
-          </div>
-        </div>
-
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            padding: '1.25rem',
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-          }}
-        >
-          <div
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              backgroundColor: '#eff6ff',
+              width: '38px',
+              height: '38px',
+              borderRadius: '8px',
+              backgroundColor: '#f0f9ff',
               color: '#0284c7',
               display: 'flex',
               alignItems: 'center',
@@ -1402,10 +1359,46 @@ export default function HomePage() {
               flexShrink: 0,
             }}
           >
-            <Truck size={24} />
+            <ShieldCheck size={20} />
           </div>
           <div>
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>Đóng Gói Oxy 48H</h4>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a', margin: 0, marginBottom: '2px' }}>
+              100% Cá khỏe mạnh
+            </h4>
+            <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>Cách ly kiểm dịch kỹ trước khi xuất bán</p>
+          </div>
+        </div>
+
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            padding: '16px 20px',
+            borderRadius: '10px',
+            border: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+          }}
+        >
+          <div
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '8px',
+              backgroundColor: '#f0f9ff',
+              color: '#0284c7',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Truck size={20} />
+          </div>
+          <div>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a', margin: 0, marginBottom: '2px' }}>
+              Đóng gói oxy 48h
+            </h4>
             <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>Giao hàng hỏa tốc an toàn toàn quốc</p>
           </div>
         </div>
@@ -1413,31 +1406,33 @@ export default function HomePage() {
         <div
           style={{
             backgroundColor: '#ffffff',
-            padding: '1.25rem',
-            borderRadius: '8px',
+            padding: '16px 20px',
+            borderRadius: '10px',
             border: '1px solid #e2e8f0',
             display: 'flex',
             alignItems: 'center',
-            gap: '1rem',
+            gap: '12px',
           }}
         >
           <div
             style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              backgroundColor: '#fef2f2',
-              color: '#dc2626',
+              width: '38px',
+              height: '38px',
+              borderRadius: '8px',
+              backgroundColor: '#f0f9ff',
+              color: '#0284c7',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <HeartHandshake size={24} />
+            <HeartHandshake size={20} />
           </div>
           <div>
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>Bảo Hành 1 Đổi 1</h4>
+            <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a', margin: 0, marginBottom: '2px' }}>
+              Bảo hành 1 đổi 1
+            </h4>
             <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>Đảm bảo quyền lợi khách hàng tối đa</p>
           </div>
         </div>
@@ -1445,4 +1440,3 @@ export default function HomePage() {
     </div>
   );
 }
-

@@ -5,16 +5,44 @@ import { useCart } from '../../features/cart/hooks/useCart.jsx';
 export default function FloatingActions() {
   const { totalItems } = useCart();
 
+  const buttonStyle = {
+    width: '40px',
+    height: '40px',
+    borderRadius: '10px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #e2e8f0',
+    color: '#334155',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.06)',
+    textDecoration: 'none',
+    position: 'relative',
+    transition: 'background-color 0.15s, border-color 0.15s, color 0.15s',
+  };
+
+  const handleMouseEnter = (e) => {
+    e.currentTarget.style.backgroundColor = '#f8fafc';
+    e.currentTarget.style.borderColor = '#cbd5e1';
+    e.currentTarget.style.color = '#0284c7';
+  };
+
+  const handleMouseLeave = (e) => {
+    e.currentTarget.style.backgroundColor = '#ffffff';
+    e.currentTarget.style.borderColor = '#e2e8f0';
+    e.currentTarget.style.color = '#334155';
+  };
+
   return (
     <aside
       aria-label="Kênh hỗ trợ nhanh"
       style={{
         position: 'fixed',
-        right: '18px',
+        right: '20px',
         bottom: '80px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
+        gap: '8px',
         zIndex: 999,
       }}
     >
@@ -22,41 +50,31 @@ export default function FloatingActions() {
       <Link
         to="/cart"
         title="Xem giỏ hàng"
-        style={{
-          width: '46px',
-          height: '46px',
-          borderRadius: '50%',
-          backgroundColor: '#0284c7',
-          color: '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)',
-          textDecoration: 'none',
-          position: 'relative',
-          transition: 'transform 0.2s, background-color 0.2s',
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+        style={buttonStyle}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        <ShoppingCart size={22} />
+        <ShoppingCart size={18} strokeWidth={1.75} />
         {totalItems > 0 && (
           <span
             style={{
               position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              backgroundColor: '#eab308',
-              color: '#713f12',
-              fontSize: '0.725rem',
-              fontWeight: 800,
+              top: '-5px',
+              right: '-5px',
+              backgroundColor: '#0284c7',
+              color: '#ffffff',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              fontVariantNumeric: 'tabular-nums',
               borderRadius: '9999px',
-              padding: '2px 6px',
-              border: '1.5px solid #ffffff',
-              lineHeight: 1,
+              minWidth: '18px',
+              height: '18px',
+              padding: '0 4px',
+              border: '2px solid #ffffff',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
+              lineHeight: 1,
             }}
           >
             {totalItems}
@@ -64,27 +82,15 @@ export default function FloatingActions() {
         )}
       </Link>
 
-      {/* 2. Hotline / Điện thoại */}
+      {/* 2. Hotline */}
       <a
         href="tel:0332127582"
-        title="Gọi hotline tư vấn: 0332127582"
-        style={{
-          width: '46px',
-          height: '46px',
-          borderRadius: '50%',
-          backgroundColor: '#0284c7',
-          color: '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)',
-          textDecoration: 'none',
-          transition: 'transform 0.2s',
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+        title="Hotline: 0332 127 582"
+        style={buttonStyle}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        <Phone size={22} />
+        <Phone size={18} strokeWidth={1.75} />
       </a>
 
       {/* 3. Zalo */}
@@ -92,54 +98,31 @@ export default function FloatingActions() {
         href="https://zalo.me/0332127582"
         target="_blank"
         rel="noopener noreferrer"
-        title="Chat Zalo hỗ trợ"
+        title="Tư vấn qua Zalo"
         style={{
-          width: '46px',
-          height: '46px',
-          borderRadius: '50%',
-          backgroundColor: '#0284c7',
-          color: '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)',
-          textDecoration: 'none',
-          fontWeight: 800,
-          fontSize: '0.8125rem',
-          letterSpacing: '-0.5px',
-          transition: 'transform 0.2s',
+          ...buttonStyle,
+          fontSize: '0.75rem',
+          fontWeight: 700,
+          letterSpacing: '-0.02em',
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         Zalo
       </a>
 
-      {/* 4. Facebook Messenger */}
+      {/* 4. Messenger */}
       <a
         href="https://m.me/aquacraft"
         target="_blank"
         rel="noopener noreferrer"
-        title="Chat Facebook Messenger"
-        style={{
-          width: '46px',
-          height: '46px',
-          borderRadius: '50%',
-          backgroundColor: '#2563eb',
-          color: '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
-          textDecoration: 'none',
-          transition: 'transform 0.2s',
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+        title="Hỗ trợ Facebook Messenger"
+        style={buttonStyle}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        <MessageCircle size={22} />
+        <MessageCircle size={18} strokeWidth={1.75} />
       </a>
     </aside>
   );
 }
-

@@ -35,12 +35,11 @@ export default function Logo({
       {showText && (
         <span
           style={{
-            fontFamily: "'Segoe UI', Roboto, sans-serif",
-            fontSize: isHorizontal ? '1.35rem' : '1.1rem',
-            fontWeight: 800,
-            letterSpacing: '0.5px',
+            fontFamily: "'Segoe UI', Roboto, -apple-system, sans-serif",
+            fontSize: isHorizontal ? '1.25rem' : '1.05rem',
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
             color: textColor || '#0284c7',
-            textTransform: 'uppercase',
             lineHeight: 1,
             display: 'block',
             textAlign: isHorizontal ? 'left' : 'center',

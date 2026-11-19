@@ -294,24 +294,24 @@ export default function CartPage() {
         <div
           style={{
             display: 'inline-block',
-            padding: '0.25rem 0.75rem',
-            backgroundColor: '#fef3c7',
+            padding: '4px 12px',
+            backgroundColor: '#fffbeb',
             color: '#b45309',
-            fontSize: '0.8125rem',
-            fontWeight: 700,
-            borderRadius: '999px',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            borderRadius: '6px',
             marginBottom: '0.75rem',
             border: '1px solid #fde68a',
           }}
         >
-          ⏳ ĐƠN HÀNG ĐÃ TẠO - CHỜ CHUYỂN KHOẢN
+          Đơn hàng đã tạo - Chờ chuyển khoản
         </div>
 
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem' }}>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#0f172a', marginBottom: '0.35rem' }}>
           Vui lòng thanh toán đơn hàng
         </h2>
-        <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          Mã đơn hàng của bạn: <strong>#{orderCode}</strong>
+        <p style={{ color: '#475569', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+          Mã đơn hàng của bạn: <strong style={{ fontVariantNumeric: 'tabular-nums' }}>#{orderCode}</strong>
         </p>
         <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.5, maxWidth: '520px', margin: '0 auto 1.5rem' }}>
           Vui lòng quét mã <strong>VietQR</strong> bên dưới hoặc chuyển khoản đúng số tiền <strong style={{ color: '#dc2626' }}>{formatCurrency(createdOrder.totalAmount)}</strong>. Sau khi chuyển tiền thành công, hãy bấm xác nhận bên dưới để shop chuẩn bị cá giao đi nhé!
@@ -557,16 +557,16 @@ export default function CartPage() {
       >
         <h1
           style={{
-            fontSize: '1.5rem',
-            fontWeight: 800,
+            fontSize: '1.25rem',
+            fontWeight: 600,
             color: '#0f172a',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
           }}
         >
-          <ShoppingBag color="#0284c7" />
-          <span>Giỏ Hàng Của Bạn ({totalItems} món)</span>
+          <ShoppingBag color="#0284c7" size={20} />
+          <span>Giỏ hàng ({totalItems} món)</span>
         </h1>
 
         <button
@@ -736,8 +736,8 @@ export default function CartPage() {
             padding: '1.5rem',
           }}
         >
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>
-            Tóm Tắt Đơn Hàng
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem' }}>
+            Tóm tắt đơn hàng
           </h3>
 
           <div
