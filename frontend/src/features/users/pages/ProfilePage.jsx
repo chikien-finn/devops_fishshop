@@ -24,8 +24,6 @@ import {
   Phone,
   Mail,
   Calendar,
-  Copy,
-  Info,
   ArrowLeft,
   QrCode,
   Star,
@@ -83,7 +81,6 @@ export default function ProfilePage({ defaultTab }) {
   const [targetUser, setTargetUser] = useState(null);
   const [targetLoading, setTargetLoading] = useState(false);
   const [targetError, setTargetError] = useState('');
-  const [copiedLink, setCopiedLink] = useState(false);
 
   const isOtherUser = Boolean(userId && authUser && String(userId) !== String(authUser._id || authUser.id));
   const user = isOtherUser ? targetUser : authUser;
@@ -98,6 +95,19 @@ export default function ProfilePage({ defaultTab }) {
   } = useCart() || {};
   const location = useLocation();
   const navigate = useNavigate();
+
+  // If visiting /profile directly while authenticated, update browser URL to include user id
+  useEffect(() => {
+    if (!userId && authUser?._id && location.pathname === '/profile') {
+      navigate(
+        {
+          pathname: `/profile/${authUser._id}`,
+          search: location.search,
+        },
+        { replace: true }
+      );
+    }
+  }, [userId, authUser?._id, location.pathname, location.search, navigate]);
 
   const getTabFromUrl = useCallback(() => {
     const params = new URLSearchParams(location.search);
@@ -124,7 +134,6 @@ export default function ProfilePage({ defaultTab }) {
     setFeedback(null);
     setActiveTab(newTab); // Immediately update UI
 
-    const targetPath = userId ? `/user/${userId}` : '/profile';
     const params = new URLSearchParams(location.search);
     if (newTab === 'info') {
       params.delete('tab');
@@ -134,7 +143,7 @@ export default function ProfilePage({ defaultTab }) {
     const searchStr = params.toString();
     navigate(
       {
-        pathname: targetPath,
+        pathname: location.pathname,
         search: searchStr ? `?${searchStr}` : '',
       },
       { replace: false }
@@ -825,84 +834,10 @@ export default function ProfilePage({ defaultTab }) {
                 </h2>
                 <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>
                   {isOtherUser
-                    ? 'Xem chi tiết thông tin hồ sơ và đường dẫn riêng biệt của tài khoản này.'
+                    ? 'Xem chi tiết thông tin hồ sơ và đơn hàng của tài khoản này.'
                     : 'Quản lý thông tin hồ sơ để bảo vệ tài khoản và nhận hàng chính xác.'}
                 </p>
               </div>
-
-              {/* Dedicated User Link Box */}
-              {user?._id && (
-                <div
-                  style={{
-                    padding: '1rem 1.25rem',
-                    marginBottom: '1.5rem',
-                    backgroundColor: '#f0f9ff',
-                    border: '1px solid #bae6fd',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Info size={16} /> Đường dẫn riêng cho tài khoản này
-                    </span>
-                    {copiedLink && (
-                      <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 700 }}>
-                        ✓ Đã sao chép liên kết!
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#475569' }}>
-                    {isOtherUser
-                      ? 'Đường dẫn cố định dùng để truy cập trực tiếp trang cá nhân & danh sách đơn hàng của khách hàng này.'
-                      : 'Đường dẫn tài khoản cá nhân riêng biệt của bạn trên hệ thống AquaCraft.'}
-                  </p>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <input
-                      type="text"
-                      readOnly
-                      value={`${window.location.origin}/user/${user._id}`}
-                      style={{
-                        flex: 1,
-                        padding: '0.5rem 0.75rem',
-                        fontSize: '0.85rem',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        color: '#0f172a',
-                        fontFamily: 'monospace',
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/user/${user._id}`);
-                        setCopiedLink(true);
-                        setTimeout(() => setCopiedLink(false), 2000);
-                      }}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: '#0284c7',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '0.825rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <Copy size={14} />
-                      <span>{copiedLink ? 'Đã chép' : 'Sao chép link'}</span>
-                    </button>
-                  </div>
-                </div>
-              )}
 
               <form onSubmit={handleUpdateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '600px' }}>
                 <div>
@@ -982,7 +917,7 @@ export default function ProfilePage({ defaultTab }) {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
-                    Địa chỉ giao hàng mặc định (Chọn qua danh mục)
+                    Địa chỉ giao hàng mặc định
                   </label>
                   {isOtherUser ? (
                     <input

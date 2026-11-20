@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MessageSquareText, CheckCircle2, ShieldCheck, Filter } from 'lucide-react';
+import { MessageSquareText, CheckCircle2, ShieldCheck, Filter, CornerDownRight } from 'lucide-react';
 import StarRating from './StarRating.jsx';
 import Pagination from '../../../components/common/Pagination.jsx';
 
@@ -355,6 +355,64 @@ export default function ReviewList({
                           >
                             {isExpanded ? 'Thu gọn ▲' : 'Xem tiếp ▼'}
                           </button>
+                        )}
+
+                        {/* Phản hồi từ Cửa hàng AquaCraft */}
+                        {review.reply?.comment && (
+                          <div
+                            style={{
+                              marginTop: '0.65rem',
+                              padding: '0.75rem 1rem',
+                              backgroundColor: '#f8fafc',
+                              borderLeft: '3px solid #0284c7',
+                              borderRadius: '0 8px 8px 0',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.25rem',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                <CornerDownRight size={13} color="#0284c7" />
+                                <strong style={{ fontSize: '0.8125rem', color: '#0284c7' }}>
+                                  AquaCraft Store
+                                </strong>
+                                <span
+                                  style={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: 700,
+                                    padding: '0.1rem 0.4rem',
+                                    backgroundColor: '#e0f2fe',
+                                    color: '#0369a1',
+                                    borderRadius: '999px',
+                                  }}
+                                >
+                                  Cửa hàng phản hồi
+                                </span>
+                              </div>
+                              {review.reply.createdAt && (
+                                <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                                  {new Date(review.reply.createdAt).toLocaleDateString('vi-VN', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                            <p
+                              style={{
+                                margin: '0.25rem 0 0 0',
+                                fontSize: '0.85rem',
+                                color: '#1e293b',
+                                lineHeight: 1.5,
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                              }}
+                            >
+                              {review.reply.comment}
+                            </p>
+                          </div>
                         )}
                       </>
                     );

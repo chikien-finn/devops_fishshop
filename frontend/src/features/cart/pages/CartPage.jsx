@@ -852,7 +852,7 @@ export default function CartPage() {
 
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.4rem' }}>
-                Địa chỉ giao hàng (Chọn theo danh mục hành chính) *
+                Địa chỉ giao hàng *
               </label>
               <AddressDropdownSelector
                 value={shippingAddress}

@@ -58,3 +58,21 @@ export const deleteReviewAdmin = async (req, res, next) => {
     next(error);
   }
 };
+
+export const replyReviewAdmin = async (req, res, next) => {
+  try {
+    const review = await reviewService.replyReviewAdmin(req.params.id, req.body.comment);
+    sendSuccess(res, review, 'Phản hồi đánh giá thành công');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteReplyReviewAdmin = async (req, res, next) => {
+  try {
+    const review = await reviewService.deleteReplyReviewAdmin(req.params.id);
+    sendSuccess(res, review, 'Xóa phản hồi thành công');
+  } catch (error) {
+    next(error);
+  }
+};

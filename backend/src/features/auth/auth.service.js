@@ -50,10 +50,26 @@ export const register = async (userData) => {
   return { user, token };
 };
 
-export const login = async (email, password) => {
-  const user = await User.findOne({ email });
+export const login = async (identifier, password) => {
+  const cleanId = String(identifier || '').trim().toLowerCase();
+  if (!cleanId) {
+    throw new ApiError(400, 'Vui lòng nhập tài khoản hoặc email');
+  }
+
+  let user = null;
+  if (cleanId === 'admin') {
+    user = (await User.findOne({ email: 'admin@aquacraft.com' })) || (await User.findOne({ role: 'admin' }));
+  } else if (!cleanId.includes('@')) {
+    user =
+      (await User.findOne({ email: `${cleanId}@gmail.com` })) ||
+      (await User.findOne({ email: new RegExp(`^${cleanId}@`, 'i') })) ||
+      (await User.findOne({ name: cleanId }));
+  } else {
+    user = await User.findOne({ email: cleanId });
+  }
+
   if (!user || !(await user.comparePassword(password))) {
-    throw new ApiError(401, 'Email hoặc mật khẩu không chính xác');
+    throw new ApiError(401, 'Tài khoản hoặc mật khẩu không chính xác');
   }
 
   const token = jwt.sign({ id: user._id, role: user.role }, ENV.JWT_SECRET, {

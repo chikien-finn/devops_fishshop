@@ -70,6 +70,22 @@ export const reviewApi = {
     const response = await api.delete(`/reviews/${reviewId}`);
     return response.data?.data;
   },
+
+  /**
+   * Admin gửi hoặc cập nhật phản hồi đánh giá
+   */
+  async replyReviewAdmin(reviewId, comment) {
+    const response = await api.post(`/reviews/${reviewId}/reply`, { comment });
+    return response.data?.data;
+  },
+
+  /**
+   * Admin xóa phản hồi đánh giá
+   */
+  async deleteReplyAdmin(reviewId) {
+    const response = await api.delete(`/reviews/${reviewId}/reply`);
+    return response.data?.data;
+  },
 };
 
 export default reviewApi;

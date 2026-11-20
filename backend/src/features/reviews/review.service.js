@@ -45,7 +45,7 @@ export const getReviewsByProduct = async (productId, filters = {}) => {
     const invertedSkip = Math.max(0, totalItems - skip - limit);
     const invertedLimit = Math.min(limit, totalItems - skip);
     items = await Review.find(query)
-      .select('user product rating comment createdAt')
+      .select('user product rating comment reply createdAt')
       .populate('user', 'name')
       .sort({ createdAt: 1, _id: 1 })
       .skip(invertedSkip)
@@ -54,7 +54,7 @@ export const getReviewsByProduct = async (productId, filters = {}) => {
     items = items.reverse();
   } else {
     items = await Review.find(query)
-      .select('user product rating comment createdAt')
+      .select('user product rating comment reply createdAt')
       .populate('user', 'name')
       .sort({ createdAt: -1, _id: -1 })
       .skip(skip)
@@ -237,7 +237,7 @@ export const getAllReviewsAdmin = async (filters = {}) => {
       items.reverse();
     } else {
       items = await Review.find(query)
-        .select('user product rating comment createdAt')
+        .select('user product rating comment reply createdAt')
         .populate('user', 'name email')
         .populate('product', 'name slug price images category categoryName')
         .sort({ createdAt: -1, _id: -1 })
@@ -272,5 +272,39 @@ export const deleteReviewAdmin = async (reviewId) => {
   if (!review) {
     throw new ApiError(404, 'Không tìm thấy đánh giá cần xóa');
   }
+  return review;
+};
+
+/**
+ * Admin phản hồi hoặc cập nhật phản hồi đánh giá
+ */
+export const replyReviewAdmin = async (reviewId, comment) => {
+  const cleanComment = String(comment || '').trim();
+  if (!cleanComment) {
+    throw new ApiError(400, 'Nội dung phản hồi không được để trống');
+  }
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    throw new ApiError(404, 'Không tìm thấy đánh giá');
+  }
+  review.reply = {
+    comment: cleanComment,
+    createdAt: review.reply?.createdAt || new Date(),
+    updatedAt: new Date(),
+  };
+  await review.save();
+  return review;
+};
+
+/**
+ * Admin xóa phản hồi đánh giá
+ */
+export const deleteReplyReviewAdmin = async (reviewId) => {
+  const review = await Review.findById(reviewId);
+  if (!review) {
+    throw new ApiError(404, 'Không tìm thấy đánh giá');
+  }
+  review.reply = undefined;
+  await review.save();
   return review;
 };

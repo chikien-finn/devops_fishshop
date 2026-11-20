@@ -6,6 +6,8 @@ import {
   createReview,
   getAllReviewsAdmin,
   deleteReviewAdmin,
+  replyReviewAdmin,
+  deleteReplyReviewAdmin,
 } from './review.controller.js';
 import { verifyToken, verifyAdmin } from '../../middlewares/auth.middleware.js';
 
@@ -17,6 +19,8 @@ router.get('/product/:productId', getProductReviews);
 // Admin Routes (Yêu cầu đăng nhập & quyền Admin)
 router.get('/admin', verifyToken, verifyAdmin, getAllReviewsAdmin);
 router.delete('/:id', verifyToken, verifyAdmin, deleteReviewAdmin);
+router.post('/:id/reply', verifyToken, verifyAdmin, replyReviewAdmin);
+router.delete('/:id/reply', verifyToken, verifyAdmin, deleteReplyReviewAdmin);
 
 // Protected (Yêu cầu đăng nhập người dùng)
 router.get('/product/:productId/mine', verifyToken, getMyProductReview);

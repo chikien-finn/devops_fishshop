@@ -75,7 +75,7 @@ export function CartProvider({ children }) {
         const savedCart = await cartService.syncCart(mergedCart);
         if (cancelled) return;
         setCart(savedCart);
-        localStorage.removeItem(STORAGE_KEY);
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedCart)); } catch {}
         setSyncError('');
       } catch (error) {
         if (!cancelled) setSyncError(error.response?.data?.message || 'Giỏ hàng chưa đồng bộ được với máy chủ.');
@@ -93,8 +93,12 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     if (!ready) return undefined;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+    } catch {
+      /* Storage may be unavailable. */
+    }
     if (!isAuthenticated) {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cart)); } catch { /* Storage may be unavailable. */ }
       return undefined;
     }
     if (!serverSyncEnabled) return undefined;

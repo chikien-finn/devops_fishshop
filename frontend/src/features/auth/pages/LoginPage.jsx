@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, LogIn, AlertCircle } from 'lucide-react';
+import { LogIn, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth.jsx';
 
 export default function LoginPage() {
@@ -14,25 +14,36 @@ export default function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-    const cleanEmail = email.trim();
-    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      setError('Vui lòng nhập địa chỉ email hợp lệ.');
+    const cleanInput = email.trim();
+    if (!cleanInput) {
+      setError('Vui lòng nhập tài khoản hoặc email.');
       return;
     }
     if (!password) {
       setError('Vui lòng nhập mật khẩu.');
       return;
     }
+
+    // Tự động nhận diện:
+    // admin -> admin@aquacraft.com
+    // kien hoặc tên bất kỳ không có @ -> kien@gmail.com
+    let submitIdentifier = cleanInput;
+    if (cleanInput.toLowerCase() === 'admin') {
+      submitIdentifier = 'admin@aquacraft.com';
+    } else if (!cleanInput.includes('@')) {
+      submitIdentifier = `${cleanInput}@gmail.com`;
+    }
+
     setLoading(true);
     try {
-      const data = await login(cleanEmail, password);
+      const data = await login(submitIdentifier, password);
       if (data?.user?.role === 'admin') {
         navigate('/admin');
       } else {
         navigate('/');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Email hoặc mật khẩu không chính xác');
+      setError(err.response?.data?.message || 'Tài khoản hoặc mật khẩu không chính xác');
     } finally {
       setLoading(false);
     }
@@ -50,31 +61,16 @@ export default function LoginPage() {
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.5rem' }}>
-        <div
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '8px',
-            backgroundColor: '#eff6ff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid #bfdbfe',
-          }}
-        >
-          <LogIn color="#0284c7" size={20} />
-        </div>
-        <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-            Đăng nhập hệ thống
-          </h2>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem', marginBottom: '1.5rem' }}>
+        <img
+          src="/logo.png"
+          alt="AquaCraft"
+          style={{ height: '38px', width: 'auto', objectFit: 'contain', display: 'block' }}
+        />
+        <h2 style={{ fontSize: '1.375rem', fontWeight: 800, color: '#0284c7', margin: 0, letterSpacing: '-0.01em' }}>
+          Đăng nhập
+        </h2>
       </div>
-
-      <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
-        Đăng nhập vào tài khoản AquaCraft để mua sắm và quản lý.
-      </p>
 
       {error && (
         <div
@@ -99,14 +95,14 @@ export default function LoginPage() {
       <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div>
           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-            Email
+            Tài khoản hoặc Email
           </label>
           <input
-            type="email"
+            type="text"
             maxLength={100}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@aquacraft.com"
+            placeholder="Nhập tài khoản hoặc email..."
             required
             style={{
               width: '100%',
@@ -174,7 +170,7 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.875rem', color: '#64748b' }}>
           Chưa có tài khoản?{' '}
           <Link to="/register" style={{ color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}>
-            Đăng ký tài khoản mới
+            Đăng ký
           </Link>
         </div>
       </form>

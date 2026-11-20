@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { UserPlus, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth.jsx';
 
 export default function RegisterPage() {
@@ -95,31 +95,16 @@ export default function RegisterPage() {
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.5rem' }}>
-        <div
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '8px',
-            backgroundColor: '#eff6ff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid #bfdbfe',
-          }}
-        >
-          <UserPlus color="#0284c7" size={20} />
-        </div>
-        <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-            Đăng ký tài khoản mới
-          </h2>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem', marginBottom: '1.5rem' }}>
+        <img
+          src="/logo.png"
+          alt="AquaCraft"
+          style={{ height: '38px', width: 'auto', objectFit: 'contain', display: 'block' }}
+        />
+        <h2 style={{ fontSize: '1.375rem', fontWeight: 800, color: '#0284c7', margin: 0, letterSpacing: '-0.01em' }}>
+          Đăng ký
+        </h2>
       </div>
-
-      <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.25rem' }}>
-        Tạo tài khoản AquaCraft để mua cá cảnh, thủy sinh và quản lý đơn hàng.
-      </p>
 
       {error && (
         <div
@@ -265,29 +250,6 @@ export default function RegisterPage() {
           />
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#334155', marginBottom: '0.35rem' }}>
-            Địa chỉ nhận hàng mặc định
-          </label>
-          <input
-            type="text"
-            name="address"
-            maxLength={200}
-            placeholder="Số nhà, đường, phường/xã, quận/huyện... (tối đa 200 ký tự)"
-            value={formData.address}
-            onChange={handleChange}
-            style={{
-              width: '100%',
-              padding: '0.5rem 0.75rem',
-              borderRadius: '4px',
-              border: '1px solid #cbd5e1',
-              fontSize: '0.875rem',
-              outline: 'none',
-              backgroundColor: '#ffffff',
-            }}
-          />
-        </div>
-
         <button
           type="submit"
           disabled={loading}
@@ -308,13 +270,13 @@ export default function RegisterPage() {
           }}
         >
           <UserPlus size={16} />
-          {loading ? 'Đang tạo tài khoản...' : 'Hoàn tất Đăng ký'}
+          {loading ? 'Đang tạo tài khoản...' : 'Đăng ký'}
         </button>
 
         <div style={{ textAlign: 'center', marginTop: '0.75rem', fontSize: '0.875rem', color: '#64748b' }}>
           Đã có tài khoản?{' '}
           <Link to="/login" style={{ color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}>
-            Đăng nhập ngay
+            Đăng nhập
           </Link>
         </div>
       </form>

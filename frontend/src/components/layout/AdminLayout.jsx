@@ -9,6 +9,8 @@ import {
   LogOut,
   Layers,
   MessageSquare,
+  Ticket,
+  BadgePercent,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/hooks/useAuth.jsx';
 
@@ -31,8 +33,10 @@ export default function AdminLayout() {
 
   const getPageTitle = () => {
     if (location.pathname === '/admin') return 'Bảng điều khiển tổng quan (Dashboard)';
+    if (location.pathname.startsWith('/admin/orders')) return 'Duyệt & Quản lý đơn hàng';
+    if (location.pathname.startsWith('/admin/discounts')) return 'Quản lý Giảm Giá & Flash Sale Cá';
     if (location.pathname.startsWith('/admin/products')) return 'Quản lý cá cảnh & thủy sinh';
-    if (location.pathname.startsWith('/admin/orders')) return 'Quản lý đơn đặt hàng';
+    if (location.pathname.startsWith('/admin/coupons') || location.pathname.startsWith('/admin/vouchers')) return 'Quản lý mã giảm giá (Voucher)';
     if (location.pathname.startsWith('/admin/users')) return 'Quản lý khách hàng & người dùng';
     if (location.pathname.startsWith('/admin/reviews')) return 'Quản lý đánh giá & bình luận';
     return 'Quản trị hệ thống';
@@ -125,14 +129,24 @@ export default function AdminLayout() {
             <span>Tổng quan (Dashboard)</span>
           </NavLink>
 
+          <NavLink to="/admin/orders" style={navItemStyle}>
+            <ShoppingCart size={18} />
+            <span>Duyệt đơn hàng</span>
+          </NavLink>
+
+          <NavLink to="/admin/coupons" style={navItemStyle}>
+            <Ticket size={18} />
+            <span>Mã giảm giá (Voucher)</span>
+          </NavLink>
+
           <NavLink to="/admin/products" style={navItemStyle}>
             <Fish size={18} />
             <span>Quản lý Cá &amp; Thủy sinh</span>
           </NavLink>
 
-          <NavLink to="/admin/orders" style={navItemStyle}>
-            <ShoppingCart size={18} />
-            <span>Đơn đặt hàng</span>
+          <NavLink to="/admin/discounts" style={navItemStyle}>
+            <BadgePercent size={18} />
+            <span>Giảm giá cá (-17%...)</span>
           </NavLink>
 
           <NavLink to="/admin/users" style={navItemStyle}>

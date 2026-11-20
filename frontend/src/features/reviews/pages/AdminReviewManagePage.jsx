@@ -12,6 +12,11 @@ import {
   CheckCircle,
   ThumbsUp,
   AlertTriangle,
+  MessageCircle,
+  Send,
+  Edit2,
+  X,
+  CornerDownRight,
 } from 'lucide-react';
 import reviewApi from '../services/reviewApi.js';
 import StarRating from '../components/StarRating.jsx';
@@ -41,6 +46,60 @@ export default function AdminReviewManagePage() {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, review: null });
   const [toast, setToast] = useState({ type: '', message: '' });
   const [expandedReviews, setExpandedReviews] = useState({});
+
+  // State cho phản hồi đánh giá
+  const [replyingId, setReplyingId] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
+
+  const handleOpenReply = (review) => {
+    setReplyingId(review._id);
+    setReplyText(review.reply?.comment || '');
+  };
+
+  const handleCancelReply = () => {
+    setReplyingId(null);
+    setReplyText('');
+  };
+
+  const handleSaveReply = async (reviewId) => {
+    const trimmed = replyText.trim();
+    if (!trimmed) {
+      showToast('error', 'Vui lòng nhập nội dung phản hồi');
+      return;
+    }
+    setSubmittingReply(true);
+    try {
+      const res = await reviewApi.replyReviewAdmin(reviewId, trimmed);
+      setReviews((prev) =>
+        prev.map((r) =>
+          r._id === reviewId
+            ? { ...r, reply: res.reply || { comment: trimmed, createdAt: new Date() } }
+            : r
+        )
+      );
+      showToast('success', 'Đã lưu phản hồi của cửa hàng thành công');
+      setReplyingId(null);
+      setReplyText('');
+    } catch (err) {
+      showToast('error', err.response?.data?.message || 'Không thể lưu phản hồi');
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  const handleDeleteReply = async (reviewId) => {
+    if (!window.confirm('Bạn có chắc muốn xóa phản hồi này của cửa hàng không?')) return;
+    try {
+      await reviewApi.deleteReplyAdmin(reviewId);
+      setReviews((prev) =>
+        prev.map((r) => (r._id === reviewId ? { ...r, reply: null } : r))
+      );
+      showToast('success', 'Đã xóa phản hồi thành công');
+    } catch (err) {
+      showToast('error', err.response?.data?.message || 'Không thể xóa phản hồi');
+    }
+  };
 
   const toggleExpand = (id) => {
     setExpandedReviews((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -487,43 +546,164 @@ export default function AdminReviewManagePage() {
                         </div>
                       </td>
 
-                      {/* Nội dung nhận xét */}
-                      <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top', maxWidth: '300px' }}>
+                      {/* Nội dung nhận xét & Phản hồi của Cửa hàng */}
+                      <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top', minWidth: '280px', maxWidth: '380px' }}>
                         {(() => {
                           const comment = rev.comment;
-                          if (!comment) {
-                            return (
-                              <p style={{ margin: 0, fontSize: '0.875rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                                Khách hàng chỉ chấm sao không để lại lời bình.
-                              </p>
-                            );
-                          }
-                          const isLong = comment.length > 100;
+                          const hasComment = Boolean(comment);
+                          const isLong = hasComment && comment.length > 100;
                           const isExpanded = Boolean(expandedReviews[rev._id]);
+                          const isReplying = replyingId === rev._id;
+
                           return (
-                            <div>
-                              <p style={{ margin: 0, fontSize: '0.875rem', color: '#334155', lineHeight: 1.45, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                                {isLong && !isExpanded ? `${comment.slice(0, 100)}...` : comment}
-                              </p>
-                              {isLong && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleExpand(rev._id)}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                              {!hasComment ? (
+                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                  Khách hàng chỉ chấm sao không để lại lời bình.
+                                </p>
+                              ) : (
+                                <div>
+                                  <p style={{ margin: 0, fontSize: '0.875rem', color: '#334155', lineHeight: 1.45, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                                    {isLong && !isExpanded ? `${comment.slice(0, 100)}...` : comment}
+                                  </p>
+                                  {isLong && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleExpand(rev._id)}
+                                      style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: isExpanded ? '#64748b' : '#0284c7',
+                                        fontWeight: 600,
+                                        fontSize: '0.75rem',
+                                        cursor: 'pointer',
+                                        padding: '2px 0 0 0',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '2px',
+                                      }}
+                                    >
+                                      {isExpanded ? 'Thu gọn ▲' : 'Xem tiếp ▼'}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Hiển thị phản hồi đã có của Shop */}
+                              {rev.reply?.comment && !isReplying && (
+                                <div
                                   style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: isExpanded ? '#64748b' : '#0284c7',
-                                    fontWeight: 600,
-                                    fontSize: '0.75rem',
-                                    cursor: 'pointer',
-                                    padding: '2px 0 0 0',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '2px',
+                                    marginTop: '0.35rem',
+                                    padding: '0.6rem 0.8rem',
+                                    backgroundColor: '#f0f9ff',
+                                    border: '1px solid #bae6fd',
+                                    borderRadius: '6px',
+                                    fontSize: '0.8125rem',
                                   }}
                                 >
-                                  {isExpanded ? 'Thu gọn ▲' : 'Xem tiếp ▼'}
-                                </button>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.25rem' }}>
+                                    <span style={{ fontWeight: 700, color: '#0284c7', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                      <CornerDownRight size={13} />
+                                      <span>AquaCraft Store</span>
+                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                      {rev.reply.createdAt && (
+                                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                                          {new Date(rev.reply.createdAt).toLocaleDateString('vi-VN')}
+                                        </span>
+                                      )}
+                                      <button
+                                        onClick={() => handleOpenReply(rev)}
+                                        title="Chỉnh sửa phản hồi"
+                                        style={{ background: 'none', border: 'none', padding: 0, color: '#0284c7', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600 }}
+                                      >
+                                        Sửa
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteReply(rev._id)}
+                                        title="Xóa phản hồi"
+                                        style={{ background: 'none', border: 'none', padding: 0, color: '#dc2626', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600 }}
+                                      >
+                                        Xóa
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <p style={{ margin: 0, color: '#0f172a', lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                    {rev.reply.comment}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Khung soạn thảo phản hồi */}
+                              {isReplying && (
+                                <div
+                                  style={{
+                                    marginTop: '0.35rem',
+                                    padding: '0.65rem',
+                                    backgroundColor: '#f8fafc',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '6px',
+                                  }}
+                                >
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0284c7', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <CornerDownRight size={13} />
+                                    <span>Phản hồi của AquaCraft Store:</span>
+                                  </div>
+                                  <textarea
+                                    autoFocus
+                                    rows={3}
+                                    placeholder="Nhập nội dung phản hồi gửi khách hàng (VD: Cảm ơn bạn đã tin tưởng ủng hộ shop!)..."
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                    style={{
+                                      width: '100%',
+                                      padding: '0.5rem',
+                                      borderRadius: '4px',
+                                      border: '1px solid #94a3b8',
+                                      fontSize: '0.8125rem',
+                                      boxSizing: 'border-box',
+                                      resize: 'vertical',
+                                      outline: 'none',
+                                    }}
+                                  />
+                                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.4rem', marginTop: '0.35rem' }}>
+                                    <button
+                                      onClick={handleCancelReply}
+                                      style={{
+                                        padding: '0.3rem 0.6rem',
+                                        borderRadius: '4px',
+                                        border: '1px solid #cbd5e1',
+                                        backgroundColor: '#ffffff',
+                                        color: '#64748b',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      Hủy
+                                    </button>
+                                    <button
+                                      onClick={() => handleSaveReply(rev._id)}
+                                      disabled={submittingReply}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                        padding: '0.3rem 0.75rem',
+                                        borderRadius: '4px',
+                                        border: 'none',
+                                        backgroundColor: '#0284c7',
+                                        color: '#ffffff',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        cursor: submittingReply ? 'not-allowed' : 'pointer',
+                                      }}
+                                    >
+                                      <Send size={12} />
+                                      <span>{submittingReply ? 'Đang gửi…' : 'Gửi phản hồi'}</span>
+                                    </button>
+                                  </div>
+                                </div>
                               )}
                             </div>
                           );
@@ -541,26 +721,50 @@ export default function AdminReviewManagePage() {
 
                       {/* Thao tác */}
                       <td style={{ padding: '1rem 1.25rem', verticalAlign: 'top', textAlign: 'center' }}>
-                        <button
-                          onClick={() => handleDeleteClick(rev)}
-                          disabled={deletingId === rev._id}
-                          title="Xóa đánh giá này"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '4px',
-                            backgroundColor: '#fef2f2',
-                            color: '#dc2626',
-                            border: '1px solid #fee2e2',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <button
+                            onClick={() => handleOpenReply(rev)}
+                            title={rev.reply?.comment ? 'Chỉnh sửa phản hồi của cửa hàng' : 'Viết phản hồi cho khách hàng'}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '0.38rem 0.75rem',
+                              borderRadius: '6px',
+                              backgroundColor: rev.reply?.comment ? '#e0f2fe' : '#0284c7',
+                              color: rev.reply?.comment ? '#0369a1' : '#ffffff',
+                              border: rev.reply?.comment ? '1px solid #bae6fd' : 'none',
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              boxShadow: rev.reply?.comment ? 'none' : '0 1px 3px rgba(2, 132, 199, 0.25)',
+                              transition: 'all 0.15s ease',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <span>{rev.reply?.comment ? 'Sửa phản hồi' : 'Phản hồi'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteClick(rev)}
+                            disabled={deletingId === rev._id}
+                            title="Xóa đánh giá này"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '0.38rem 0.5rem',
+                              borderRadius: '6px',
+                              backgroundColor: '#fef2f2',
+                              color: '#dc2626',
+                              border: '1px solid #fee2e2',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

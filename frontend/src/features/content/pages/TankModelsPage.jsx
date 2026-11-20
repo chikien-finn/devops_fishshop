@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Layers,
   Droplets,
   Sparkles,
-  ArrowRight,
   Search,
   Phone,
   MessageCircle,
@@ -16,12 +15,16 @@ import {
   Flame,
   Wrench,
   Ruler,
+  ShoppingCart,
+  Check,
 } from 'lucide-react';
+import { useCart } from '../../cart/hooks/useCart.jsx';
+import { formatCurrency } from '../../../utils/formatters.js';
 
 const CATEGORIES = [
-  { id: 'all', label: 'Tất Cả Mẫu Hồ' },
+  { id: 'all', label: 'Tất Cả Hồ Có Sẵn' },
   { id: 'thuysinh', label: 'Thủy Sinh Tự Nhiên' },
-  { id: 'biotope', label: 'Hồ Biotop Tự Nhiên' },
+  { id: 'biotope', label: 'Hồ Biotop Sông Suối' },
   { id: 'marine', label: 'Cá Biển San Hô' },
   { id: 'monster', label: 'Cá Rồng & Koi' },
   { id: 'mini', label: 'Bể Để Bàn Mini' },
@@ -30,18 +33,21 @@ const CATEGORIES = [
 const TANK_MODELS = [
   {
     id: 'iwagumi',
-    title: 'Hồ Thủy Sinh Iwagumi Tối Giản',
+    _id: '6affba6ed0890c9cd119cdef',
+    slug: 'ho-thuy-sinh-iwagumi-toi-gian',
+    title: 'Hồ Thủy Sinh Iwagumi Tối Giản (Trọn Gói 60cm)',
     category: 'thuysinh',
     categoryLabel: 'Thủy Sinh Tự Nhiên',
     badge: 'Bán Chạy Nhất',
     badgeColor: '#0284c7',
     size: '60x40x40 cm (Kính siêu trong 8mm)',
-    image: 'https://images.unsplash.com/photo-1520302630591-fd1c66edc19d?w=800&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80',
     style: 'Nhật Bản - Đá Seiryu & Thảm Trân Châu Ngọc Trai',
     water: 'Nước ngọt (pH 6.2 - 6.8, TDS 120-160)',
     fishSuggest: 'Cá Neon Vua, Tép Red Cherry, Cá Chuột Panda, Ốc Nerita',
-    fishLink: '/products?search=Neon',
-    priceEstimate: '3.500.000đ - 5.800.000đ',
+    price: 3500000,
+    oldPrice: 4200000,
+    stock: 10,
     desc: 'Bố cục đá tự nhiên Iwagumi kết hợp thảm trân châu ngọc trai xanh mướt, lọc thùng êm ái, rất hợp đặt phòng khách hoặc bàn làm việc sang trọng.',
     equipment: [
       'Bể kính siêu trong 8 ly mài vi tính, dán dấu keo thẩm mỹ',
@@ -55,18 +61,21 @@ const TANK_MODELS = [
   },
   {
     id: 'nature-bonsai',
-    title: 'Hồ Thủy Sinh Rừng Rậm Lũa Bonsai',
+    _id: '6affba6ed0890c9cd119cdf2',
+    slug: 'ho-thuy-sinh-rung-ram-lua-bonsai',
+    title: 'Hồ Thủy Sinh Rừng Rậm Lũa Bonsai (Trọn Gói 90cm)',
     category: 'thuysinh',
     categoryLabel: 'Thủy Sinh Tự Nhiên',
     badge: 'Được Yêu Thích',
     badgeColor: '#16a34a',
     size: '90x45x45 cm (Kính siêu trong 10mm)',
-    image: 'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=800&auto=format&fit=crop&q=80',
+    image: '/banner_farm.jpg',
     style: 'Nature Aquarium - Cổ Thụ Bonsai & Rêu Weeping',
     water: 'Nước ngọt mát (24 - 27°C, pH 6.5 - 7.0)',
     fishSuggest: 'Cá Sóc Đầu Đỏ, Cá Tam Giác, Cá Phượng Hoàng Lam, Tép Yamato',
-    fishLink: '/products?subCategory=ca-phuong-hoang',
-    priceEstimate: '7.500.000đ - 12.000.000đ',
+    price: 7500000,
+    oldPrice: 8900000,
+    stock: 10,
     desc: 'Tuyệt phẩm bố cục cây cổ thụ bonsai tán rêu xanh mướt giữa dòng suối sỏi trắng tự nhiên, tạo cảm giác thư thái và mát mắt cho cả căn phòng.',
     equipment: [
       'Bể kính siêu trong 10 ly đúc giấu keo góc vuông 90 độ',
@@ -80,18 +89,21 @@ const TANK_MODELS = [
   },
   {
     id: 'dutch-style',
-    title: 'Hồ Thủy Sinh Hà Lan (Dutch Style) Đa Sắc',
+    _id: '6affba6ed0890c9cd119cdf6',
+    slug: 'ho-thuy-sinh-ha-lan-dutch-style',
+    title: 'Hồ Thủy Sinh Hà Lan (Dutch Style) Đa Sắc (120cm)',
     category: 'thuysinh',
     categoryLabel: 'Thủy Sinh Tự Nhiên',
     badge: 'Đẳng Cấp Nghệ Thuật',
     badgeColor: '#9333ea',
     size: '120x50x50 cm (Kính siêu trong 12mm)',
-    image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80',
     style: 'Hà Lan (Dutch) - Luống Cây Cắt Cắm Rực Rỡ Đỏ Xanh',
     water: 'Nước ngọt giàu dinh dưỡng (pH 6.2 - 6.6, Chiller 24°C)',
     fishSuggest: 'Cá Cầu Vồng Thạch Mỹ Nhân, Cá Trâm, Cá Neon Đen, Tép Amano',
-    fishLink: '/products?search=Cầu+Vồng',
-    priceEstimate: '14.000.000đ - 22.000.000đ',
+    price: 14000000,
+    oldPrice: 16500000,
+    stock: 8,
     desc: 'Khu vườn dưới nước rực rỡ sắc màu với các luống cây thủy sinh đỏ, cam, xanh đan xen nghệ thuật, phối hợp hệ thống làm mát Chiller chuyên nghiệp.',
     equipment: [
       'Bể kính siêu trong 12 ly chịu áp lực cao, bo góc cạnh CNC thẩm mỹ',
@@ -105,18 +117,21 @@ const TANK_MODELS = [
   },
   {
     id: 'paludarium-waterfall',
-    title: 'Bể Bán Cạn Paludarium Thác Nước Rêu Rừng',
+    _id: '6affba6ed0890c9cd119cdf9',
+    slug: 'be-ban-can-paludarium-thac-nuoc',
+    title: 'Bể Bán Cạn Paludarium Thác Nước Rêu Rừng (80cm)',
     category: 'thuysinh',
     categoryLabel: 'Thủy Sinh Tự Nhiên',
     badge: 'Mới Lạ Độc Đáo',
     badgeColor: '#0d9488',
     size: '80x45x70 cm (Bể kính vát nghệ thuật)',
-    image: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&auto=format&fit=crop&q=80',
+    image: '/banner_full.jpg',
     style: 'Bán cạn Nhiệt Đới - Thác nước, Sương mù & Rêu ẩm',
     water: 'Phần nước ngọt tuần hoàn (pH 6.5 - 7.0)',
     fishSuggest: 'Cá Cánh Buồm Dạ Quang, Cua Ma Cà Rồng, Cá Chuột Pygmy, Ếch Phi Tiêu',
-    fishLink: '/products?category=fish',
-    priceEstimate: '6.800.000đ - 11.500.000đ',
+    price: 6800000,
+    oldPrice: 7900000,
+    stock: 10,
     desc: 'Mô phỏng vách núi rừng nhiệt đới với thác nước róc rách, sương khói mờ ảo và thảm thực vật dương xỉ, phong lan mini và rêu bán cạn tự nhiên.',
     equipment: [
       'Bể kính vát nghệ thuật mặt tiền thấp ngắm trọn không gian',
@@ -130,18 +145,21 @@ const TANK_MODELS = [
   },
   {
     id: 'nano-cube',
-    title: 'Hồ Nano Cube Để Bàn Làm Việc Siêu Tinh Tế',
+    _id: '6affba6fd0890c9cd119cdfc',
+    slug: 'ho-nano-cube-de-ban-lam-viec',
+    title: 'Hồ Nano Cube Để Bàn Làm Việc Siêu Tinh Tế (30cm)',
     category: 'mini',
     categoryLabel: 'Bể Để Bàn Mini',
     badge: 'Nhỏ Gọn Tiện Lợi',
     badgeColor: '#f59e0b',
     size: '30x30x30 cm (Kính đúc bo góc)',
-    image: 'https://images.unsplash.com/photo-1497671954146-59a89ff626ff?w=800&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop&q=80',
     style: 'Tối giản Hiện đại - Đá Tự Nhiên & Cây Dễ Chăm',
     water: 'Nước ngọt (pH 6.5 - 7.2)',
     fishSuggest: 'Tép Vàng Đài Loan, Cá Bảy Màu Guppy thuần chủng, Cá Trâm Boraras',
-    fishLink: '/products?subCategory=tep',
-    priceEstimate: '1.200.000đ - 2.200.000đ',
+    price: 1200000,
+    oldPrice: 1500000,
+    stock: 15,
     desc: 'Kích thước nhỏ gọn lý tưởng cho bàn làm việc công sở, quầy lễ tân hoặc kệ sách. Cây phát triển chậm, dễ chăm sóc mà không cần bình CO2 phức tạp.',
     equipment: [
       'Bể kính đúc bo góc siêu trong 5 ly chống xước nhẹ',
@@ -155,9 +173,11 @@ const TANK_MODELS = [
   },
   {
     id: 'biotope-amazon',
-    title: 'Hồ Biotop Sông Amazon Nước Đen (Cá Dĩa & Thần Tiên)',
+    _id: '6affba6fd0890c9cd119cdff',
+    slug: 'ho-biotop-song-amazon-nuoc-den',
+    title: 'Hồ Biotop Sông Amazon Nước Đen Nuôi Cá Dĩa (120cm)',
     category: 'biotope',
-    categoryLabel: 'Hồ Biotop Tự Nhiên',
+    categoryLabel: 'Hồ Biotop Sông Suối',
     badge: 'Chuẩn Tự Nhiên',
     badgeColor: '#ea580c',
     size: '120x50x50 cm (Kính siêu trong 12mm)',
@@ -165,8 +185,9 @@ const TANK_MODELS = [
     style: 'Biotop Rio Negro - Lũa Rừng, Cát Vàng & Lá Bàng Rừng',
     water: 'Nước ngọt ấm (28 - 30°C, pH 5.8 - 6.5)',
     fishSuggest: 'Cá Dĩa Đỏ Heckel, Cá Thần Tiên Manacapuru, Cá Chuột Sterbai',
-    fishLink: '/products?subCategory=ca-dia',
-    priceEstimate: '8.500.000đ - 15.000.000đ',
+    price: 8500000,
+    oldPrice: 9800000,
+    stock: 8,
     desc: 'Mô phỏng nguyên bản lòng sông Rio Negro xứ Amazon. Nước ngả màu trà tự nhiên giàu tannin giúp cá Dĩa và Thần Tiên căng màu rực rỡ, đề kháng cực cao.',
     equipment: [
       'Bể kính siêu trong 12 ly dán keo đen giấu thẩm mỹ chịu lực',
@@ -180,18 +201,21 @@ const TANK_MODELS = [
   },
   {
     id: 'biotope-stream',
-    title: 'Hồ Biotop Khe Suối Đá Cuội Đông Dương',
+    _id: '6affba6fd0890c9cd119ce03',
+    slug: 'ho-biotop-khe-suoi-da-cuoi-dong-duong',
+    title: 'Hồ Biotop Khe Suối Đá Cuội Đông Dương (100cm)',
     category: 'biotope',
-    categoryLabel: 'Hồ Biotop Tự Nhiên',
+    categoryLabel: 'Hồ Biotop Sông Suối',
     badge: 'Suối Tự Nhiên',
     badgeColor: '#0284c7',
     size: '100x40x40 cm (Thiết kế luồng chảy mạnh)',
-    image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1584467541268-b040f83be3fd?w=800&auto=format&fit=crop&q=80',
     style: 'Khe Suối Thượng Nguồn - Cuội Sông & Luồng Chảy Năng Động',
     water: 'Nước ngọt mát giàu Oxy (pH 6.8 - 7.5, DO cao)',
     fishSuggest: 'Cá Tỳ Bà Bướm Hút Kính, Cá Kìm Lục Bảo, Cá Lòng Tong Suối, Cá Heo Nước Ngọt',
-    fishLink: '/products?subCategory=ca-chuot',
-    priceEstimate: '5.500.000đ - 9.000.000đ',
+    price: 5500000,
+    oldPrice: 6500000,
+    stock: 10,
     desc: 'Tái hiện sinh cảnh suối nguồn trong vắt với luồng nước tuần hoàn mát rượi, cá thích bơi ngược dòng và bám vào các phiến cuội nhẵn mịn.',
     equipment: [
       'Bể kính 10 ly siêu trong mài bóng',
@@ -205,9 +229,11 @@ const TANK_MODELS = [
   },
   {
     id: 'biotope-malawi',
-    title: 'Hồ Biotop Châu Phi - Rạn Đá Hồ Malawi (Cá Ali)',
+    _id: '6affba70d0890c9cd119ce06',
+    slug: 'ho-biotop-chau-phi-ran-da-malawi',
+    title: 'Hồ Biotop Châu Phi - Rạn Đá Hồ Malawi Nuôi Cá Ali (120cm)',
     category: 'biotope',
-    categoryLabel: 'Hồ Biotop Tự Nhiên',
+    categoryLabel: 'Hồ Biotop Sông Suối',
     badge: 'Rực Rỡ Sắc Màu',
     badgeColor: '#3b82f6',
     size: '120x50x60 cm (Kính 12mm cường lực đáy)',
@@ -215,8 +241,9 @@ const TANK_MODELS = [
     style: 'Rạn Đá Hang Hốc Thủy Vực Châu Phi Kiềm Cao',
     water: 'Nước ngọt kiềm cứng (pH 7.8 - 8.6, gH cao)',
     fishSuggest: 'Cá Ali Thái Xanh Hoàng Gia, Ali Vàng Nắng, Ali Sao, Ali Mặt Ngựa',
-    fishLink: '/products?search=Ali',
-    priceEstimate: '9.000.000đ - 16.500.000đ',
+    price: 9000000,
+    oldPrice: 10500000,
+    stock: 8,
     desc: 'Được mệnh danh là "rạn san hô nước ngọt" nhờ màu sắc rực rỡ từ đàn cá Ali Thái bơi lội qua các khe hang đá vôi kỳ vĩ.',
     equipment: [
       'Bể kính 12 ly đáy kép cường lực chống nứt khi xếp đá nặng',
@@ -230,7 +257,9 @@ const TANK_MODELS = [
   },
   {
     id: 'marine-reef-master',
-    title: 'Hồ Cá Biển San Hô Công Nghệ Sump Đáy',
+    _id: '6affba70d0890c9cd119ce09',
+    slug: 'ho-ca-bien-san-ho-sump-day',
+    title: 'Hồ Cá Biển San Hô Công Nghệ Sump Đáy (90cm)',
     category: 'marine',
     categoryLabel: 'Cá Biển San Hô',
     badge: 'Đẳng Cấp Đại Dương',
@@ -240,8 +269,9 @@ const TANK_MODELS = [
     style: 'Nước mặn Reef - Đá Sống Tự Nhiên & San Hô Mềm Rực Rỡ',
     water: 'Nước mặn (Độ mặn 1.023 - 1.025, pH 8.1 - 8.4, Nhiệt độ 25°C)',
     fishSuggest: 'Cá Hề Nemo Ocellaris, Cá Tang Xanh Dory, Tôm Bác Sĩ, Hải Quỳ Bánh Bao',
-    fishLink: '/products?subCategory=ca-bien',
-    priceEstimate: '15.000.000đ - 26.000.000đ',
+    price: 15000000,
+    oldPrice: 17500000,
+    stock: 6,
     desc: 'Mang đại dương thu nhỏ vào ngôi nhà của bạn với san hô mềm chuyển động theo làn sóng và cặp cá hề Nemo bơi lội trong hải quỳ phát quang.',
     equipment: [
       'Bể kính siêu trong 10 ly mài bóng công nghệ cao kèm hộp Overflow chống ồn',
@@ -256,7 +286,9 @@ const TANK_MODELS = [
   },
   {
     id: 'nano-marine',
-    title: 'Hồ Nano Marine Nước Mặn All-In-One Để Bàn',
+    _id: '6affba70d0890c9cd119ce0b',
+    slug: 'ho-nano-marine-nuoc-man-de-ban',
+    title: 'Hồ Nano Marine Nước Mặn All-In-One Để Bàn (40cm)',
     category: 'marine',
     categoryLabel: 'Cá Biển San Hô',
     badge: 'Mini Nước Mặn',
@@ -266,8 +298,9 @@ const TANK_MODELS = [
     style: 'Nano Reef - All-In-One Gọn Gàng & Hiện Đại',
     water: 'Nước mặn biển (Độ mặn 1.024, Nhiệt độ 25-27°C)',
     fishSuggest: 'Cặp Cá Hề Nemo Đen Picasso, Tép Bác Sĩ Biển, Cua Nhện Biển',
-    fishLink: '/products?subCategory=ca-bien',
-    priceEstimate: '4.500.000đ - 7.500.000đ',
+    price: 4500000,
+    oldPrice: 5200000,
+    stock: 12,
     desc: 'Giải pháp hồ cá biển mini thông minh với hệ lọc tích hợp sẵn phía sau, không tốn diện tích, cực kỳ thích hợp cho các bạn trẻ mới tiếp cận cá biển.',
     equipment: [
       'Bể kính đúc siêu trong tích hợp buồng lọc vách All-In-One thẩm mỹ',
@@ -281,18 +314,21 @@ const TANK_MODELS = [
   },
   {
     id: 'dragon-tank',
-    title: 'Hồ Cá Rồng Huyết Long / Kim Long Hút Tài Lộc',
+    _id: '6affba70d0890c9cd119ce0d',
+    slug: 'ho-ca-rong-huyet-long-kim-long',
+    title: 'Hồ Cá Rồng Huyết Long / Kim Long Phong Thủy (180cm)',
     category: 'monster',
     categoryLabel: 'Cá Rồng & Koi',
     badge: 'Phong Thủy Đẳng Cấp',
     badgeColor: '#dc2626',
     size: '180x68x81 cm (Kính cường lực 15mm mài xiết bóng)',
-    image: 'https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=800&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1516683037151-9a17603a8dc7?w=800&auto=format&fit=crop&q=80',
     style: 'Bể Thủy Quái Phong Thủy - Tranh 3D Đáy Rỗng Dễ Dọn Vệ Sinh',
     water: 'Nước ngọt ấm (pH 6.8 - 7.4, 29 - 31°C)',
     fishSuggest: 'Cá Rồng Huyết Long VIP, Cá Rồng Kim Long Bối, Cá Sam Motoro, Cá Hổ Indo',
-    fishLink: '/products?subCategory=ca-rong',
-    priceEstimate: '25.000.000đ - 45.000.000đ',
+    price: 25000000,
+    oldPrice: 28000000,
+    stock: 5,
     desc: 'Hồ kính đại cỡ chuẩn phong thủy đón tài lộc cho phòng khách biệt thự và văn phòng lãnh đạo. Hệ lọc tràn dưới Sump 5 ngăn xử lý lượng thức ăn lớn của cá săn mồi.',
     equipment: [
       'Bể kính cường lực 15 ly chịu lực cao mài xiết bóng viền chống trầy',
@@ -306,7 +342,9 @@ const TANK_MODELS = [
   },
   {
     id: 'goldfish-tank',
-    title: 'Hồ Bể Kính Nuôi Cá Vàng Ranchu & Oranda Thủy Tộc',
+    _id: '6affba71d0890c9cd119ce0f',
+    slug: 'ho-kinh-ca-vang-ranchu-oranda',
+    title: 'Hồ Bể Kính Nuôi Cá Vàng Ranchu & Oranda Thủy Tộc (80cm)',
     category: 'monster',
     categoryLabel: 'Cá Rồng & Koi',
     badge: 'Dễ Thương & May Mắn',
@@ -316,8 +354,9 @@ const TANK_MODELS = [
     style: 'Cá Vàng Thư Giãn - Cát Thạch Anh Trắng Tinh & Đá Cuội',
     water: 'Nước ngọt mát (pH 7.2 - 7.8, Nước giàu vi sinh & oxy)',
     fishSuggest: 'Cá Vàng Ranchu Bò Sữa, Cá Vàng Oranda Đầu Lân Khủng, Cá Vàng Ryukin',
-    fishLink: '/products?subCategory=ca-vang',
-    priceEstimate: '3.800.000đ - 6.500.000đ',
+    price: 3800000,
+    oldPrice: 4500000,
+    stock: 10,
     desc: 'Không gian sống bồng bềnh cho những chú cá vàng Ranchu tròn xoe ngộ nghĩnh. Hệ thống lọc oxy tạo dòng chảy êm nhẹ giúp cá bơi lội thảnh thơi mà không bị mệt vây.',
     equipment: [
       'Bể kính đúc siêu trong bo góc mặt tiền ngắm cá đa góc nhìn',
@@ -331,7 +370,9 @@ const TANK_MODELS = [
   },
   {
     id: 'koi-mini-danang',
-    title: 'Hồ Kính Kết Hợp Lọc Tràn Koi Đà Nẵng Ban Công / Sân Vườn',
+    _id: '6affba71d0890c9cd119ce11',
+    slug: 'ho-kinh-loc-tran-koi-da-nang',
+    title: 'Hồ Kính Kết Hợp Lọc Tràn Koi Ban Công & Sân Vườn (160cm)',
     category: 'monster',
     categoryLabel: 'Cá Rồng & Koi',
     badge: 'Biệt Thự & Ban Công',
@@ -341,8 +382,9 @@ const TANK_MODELS = [
     style: 'Ngoài trời / Ban công chống thấm - Ngắm cá mặt bên sang trọng',
     water: 'Nước ngọt giàu oxy (pH 7.0 - 7.5, Oxy dồi dào)',
     fishSuggest: 'Cá Koi Kohaku Nhật Bản, Cá Koi Showa Tam Hoa, Cá Koi Bướm Vây Dài',
-    fishLink: '/products?subCategory=ca-koi',
-    priceEstimate: '16.000.000đ - 28.000.000đ',
+    price: 16000000,
+    oldPrice: 19000000,
+    stock: 5,
     desc: 'Giải pháp ngắm cá Koi tuyệt đẹp từ góc nhìn ngang thay vì chỉ nhìn từ trên xuống như hồ xi măng truyền thống, tối ưu cho ban công nhà phố và biệt thự sân vườn.',
     equipment: [
       'Kính cường lực 15 ly mặt tiền gia cố khung thép không gỉ Inox 304',
@@ -356,18 +398,21 @@ const TANK_MODELS = [
   },
   {
     id: 'dragon-stone-moss',
-    title: 'Hồ Thủy Sinh Bố Cục Rêu & Lũa Rồng (Dragon Wood)',
+    _id: '6affba71d0890c9cd119ce13',
+    slug: 'ho-thuy-sinh-reu-va-lua-rong',
+    title: 'Hồ Thủy Sinh Bố Cục Rêu & Lũa Rồng (Dragon Wood 60cm)',
     category: 'thuysinh',
     categoryLabel: 'Thủy Sinh Tự Nhiên',
     badge: 'Bình Dân & Dễ Chơi',
     badgeColor: '#059669',
     size: '60x30x36 cm (Bể chuẩn ADA tỷ lệ vàng)',
-    image: 'https://images.unsplash.com/photo-1516684732162-798a0062be99?w=800&auto=format&fit=crop&q=80',
+    image: '/banner_fish.jpg',
     style: 'Bố cục Vách Đá & Lũa Gai bọc Rêu Fissidens',
     water: 'Nước ngọt (pH 6.5 - 7.0, 25-28°C)',
     fishSuggest: 'Cá Tam Giác Chuột, Tép Su Đỏ, Cá Bảy Màu Rồng Xanh, Ốc Ăn Ốc Helio',
-    fishLink: '/products?category=fish',
-    priceEstimate: '2.900.000đ - 4.500.000đ',
+    price: 2900000,
+    oldPrice: 3500000,
+    stock: 12,
     desc: 'Dòng hồ thủy sinh quốc dân cho người mới bắt đầu. Sự kết hợp giữa đá Da Voi góc cạnh và lũa bọc rêu Fissidens xanh mát, ít tốn công chăm bón.',
     equipment: [
       'Bể kính đúc siêu trong 6 ly mài vát vi tính',
@@ -381,7 +426,9 @@ const TANK_MODELS = [
   },
   {
     id: 'shrimp-nano-paradise',
-    title: 'Hồ Nano Nuôi Tép Cảnh Thủy Sinh Mini',
+    _id: '6affba71d0890c9cd119ce15',
+    slug: 'ho-nano-nuoi-tep-canh-thuy-sinh',
+    title: 'Hồ Nano Nuôi Tép Cảnh Thủy Sinh Mini (45cm)',
     category: 'mini',
     categoryLabel: 'Bể Để Bàn Mini',
     badge: 'Chuyên Dòng Tép',
@@ -391,8 +438,9 @@ const TANK_MODELS = [
     style: 'Thiên Đường Tép Cảnh - Thảm Rêu & Ống Trú Ẩn Gốm Sứ',
     water: 'Nước ngọt mát (pH 6.0 - 6.5, TDS 100 - 130, gH 4-5)',
     fishSuggest: 'Tép Màu Pure Red Line, Tép Blue Dream, Tép Ong Đen, Cá Trâm Bơi Đàn',
-    fishLink: '/products?subCategory=tep',
-    priceEstimate: '2.400.000đ - 3.800.000đ',
+    price: 2400000,
+    oldPrice: 2900000,
+    stock: 15,
     desc: 'Hồ nuôi tép cảnh chuyên sâu được kiểm soát TDS và khoáng chất tối ưu giúp tép lột vỏ dễ dàng, sinh sản nhanh và ôm trứng liên tục.',
     equipment: [
       'Bể kính siêu trong 6 ly chuẩn tỷ lệ nuôi tép sinh sản',
@@ -407,9 +455,49 @@ const TANK_MODELS = [
 ];
 
 export default function TankModelsPage() {
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
+
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeModalModel, setActiveModalModel] = useState(null);
+  const [addedItemMap, setAddedItemMap] = useState({});
+  const [toastMessage, setToastMessage] = useState('');
+
+  const handleAddToCart = (model, e) => {
+    if (e) e.stopPropagation();
+
+    addToCart(
+      {
+        _id: model._id,
+        id: model._id,
+        name: model.title,
+        slug: model.slug,
+        price: model.price,
+        stock: model.stock || 10,
+        images: [model.image],
+        category: 'tank',
+      },
+      1
+    );
+
+    setAddedItemMap((prev) => ({ ...prev, [model.id]: true }));
+    setToastMessage(`Đã thêm "${model.title}" vào giỏ hàng!`);
+
+    setTimeout(() => {
+      setAddedItemMap((prev) => ({ ...prev, [model.id]: false }));
+    }, 2000);
+
+    setTimeout(() => {
+      setToastMessage('');
+    }, 3500);
+  };
+
+  const handleBuyNow = (model) => {
+    handleAddToCart(model);
+    setActiveModalModel(null);
+    navigate('/cart');
+  };
 
   const filteredModels = useMemo(() => {
     return TANK_MODELS.filter((model) => {
@@ -428,6 +516,45 @@ export default function TankModelsPage() {
 
   return (
     <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '0 0.5rem' }}>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+            backgroundColor: '#0f172a',
+            color: '#ffffff',
+            padding: '0.85rem 1.25rem',
+            borderRadius: '10px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            border: '1px solid #38bdf8',
+          }}
+        >
+          <CheckCircle2 size={18} color="#38bdf8" />
+          <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{toastMessage}</span>
+          <Link
+            to="/cart"
+            style={{
+              marginLeft: '0.5rem',
+              backgroundColor: '#0284c7',
+              color: '#ffffff',
+              padding: '0.25rem 0.6rem',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+            }}
+          >
+            Xem giỏ hàng
+          </Link>
+        </div>
+      )}
+
       {/* 1. Header Banner */}
       <div
         style={{
@@ -446,20 +573,20 @@ export default function TankModelsPage() {
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.25rem 0.75rem', backgroundColor: '#e0f2fe', color: '#0369a1', fontSize: '0.8rem', fontWeight: 700, borderRadius: '9999px', marginBottom: '0.6rem' }}>
               <Sparkles size={14} />
-              <span>DỊCH VỤ THIẾT KẾ & THI CÔNG TRỌN GÓI AQUACRAFT</span>
+              <span>HỒ CÁ SETUP CÓ SẴN · TRỌN GÓI VỀ CHỈ VIỆC CẮM ĐIỆN VÀ THẢ CÁ</span>
             </div>
             <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.5rem', lineHeight: 1.3 }}>
-              Bộ Sưu Tập Mẫu Hồ Cá Thủy Sinh & Hồ Biotop AquaCraft
+              Mẫu Hồ Cá Có Sẵn - Trọn Gói AquaCraft
             </h1>
             <p style={{ color: '#475569', fontSize: '0.98rem', margin: 0, maxWidth: '820px', lineHeight: 1.6 }}>
-              Tham khảo các mẫu hồ cá cảnh nước ngọt, hồ Biotop sông suối tự nhiên, hồ cá biển san hô và hồ kính cá Koi được thiết kế, thi công trọn gói theo yêu cầu tại Đà Nẵng & toàn quốc.
+              Tuyển chọn các bộ hồ cá thủy sinh, hồ biotop sông suối, hồ cá biển san hô và hồ kính cá Koi đã được setup hoàn thiện sẵn đầy đủ kính siêu trong, lọc thùng, đèn WRGB và layout tự nhiên. Bạn chỉ cần thêm vào giỏ hàng và đặt mua trực tiếp!
             </p>
           </div>
 
-          {/* Quick contact box */}
+          {/* Quick contact & Cart buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <a
-              href="tel:0332127582"
+            <Link
+              to="/cart"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -483,9 +610,9 @@ export default function TankModelsPage() {
                 e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
-              <Phone size={17} />
-              <span>Hotline: 0332127582</span>
-            </a>
+              <ShoppingCart size={17} />
+              <span>Xem Giỏ Hàng</span>
+            </Link>
 
             <a
               href="https://zalo.me/0332127582"
@@ -513,7 +640,7 @@ export default function TankModelsPage() {
               }}
             >
               <MessageCircle size={17} />
-              <span>Chat Zalo Tư Vấn</span>
+              <span>Tư Vấn Zalo</span>
             </a>
           </div>
         </div>
@@ -530,11 +657,11 @@ export default function TankModelsPage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#334155' }}>
             <Droplets size={16} color="#0284c7" />
-            <span>Cam kết nước trong vắt sau 72h hoàn thiện</span>
+            <span>Setup sẵn vi sinh, nước trong vắt cắm điện là ngắm</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#334155' }}>
             <Wrench size={16} color="#eab308" />
-            <span>Khảo sát không gian và dựng 3D tận nhà</span>
+            <span>Giao hàng an toàn và hướng dẫn lắp đặt tận nhà</span>
           </div>
         </div>
       </div>
@@ -617,7 +744,7 @@ export default function TankModelsPage() {
             />
             <input
               type="text"
-              placeholder="Tìm theo phong cách, kích thước, cá nuôi..."
+              placeholder="Tìm theo loại hồ, kích thước, cá nuôi..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -657,7 +784,7 @@ export default function TankModelsPage() {
         {/* Filter status */}
         <div style={{ fontSize: '0.875rem', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>
-            Đang hiển thị <strong>{filteredModels.length}</strong> mẫu hồ hồ cá cảnh
+            Đang hiển thị <strong>{filteredModels.length}</strong> mẫu hồ có sẵn
             {searchTerm && ` phù hợp với từ khóa "${searchTerm}"`}
           </span>
           {(selectedCategory !== 'all' || searchTerm) && (
@@ -689,266 +816,286 @@ export default function TankModelsPage() {
           gap: '1.5rem',
         }}
       >
-        {filteredModels.map((model) => (
-          <div
-            key={model.id}
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
-              transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 12px 24px -6px rgba(0,0,0,0.1)';
-              e.currentTarget.style.borderColor = '#bae6fd';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.03)';
-              e.currentTarget.style.borderColor = '#e2e8f0';
-            }}
-          >
-            {/* Image container */}
-            <div
-              style={{
-                position: 'relative',
-                width: '100%',
-                height: '220px',
-                overflow: 'hidden',
-                backgroundColor: '#f1f5f9',
-                cursor: 'pointer',
-              }}
-              onClick={() => setActiveModalModel(model)}
-            >
-              <img
-                src={model.image}
-                alt={model.title}
-                loading="lazy"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = '/banner_farm.jpg';
-                }}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  display: 'block',
-                  transition: 'transform 0.3s ease',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-              />
+        {filteredModels.map((model) => {
+          const isAdded = !!addedItemMap[model.id];
 
-              {/* Badges on image */}
+          return (
+            <div
+              key={model.id}
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+                transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 12px 24px -6px rgba(0,0,0,0.1)';
+                e.currentTarget.style.borderColor = '#bae6fd';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.03)';
+                e.currentTarget.style.borderColor = '#e2e8f0';
+              }}
+            >
+              {/* Image container */}
               <div
                 style={{
-                  position: 'absolute',
-                  top: '12px',
-                  left: '12px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
-                }}
-              >
-                <span
-                  style={{
-                    backgroundColor: model.badgeColor || '#0284c7',
-                    color: '#ffffff',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    padding: '3px 9px',
-                    borderRadius: '6px',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <Flame size={12} />
-                  <span>{model.badge}</span>
-                </span>
-
-                <span
-                  style={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-                    color: '#f8fafc',
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    backdropFilter: 'blur(4px)',
-                  }}
-                >
-                  {model.categoryLabel}
-                </span>
-              </div>
-
-              {/* View detail button on image hover */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveModalModel(model);
-                }}
-                style={{
-                  position: 'absolute',
-                  bottom: '12px',
-                  right: '12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  color: '#0f172a',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '6px 10px',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
+                  position: 'relative',
+                  width: '100%',
+                  height: '220px',
+                  overflow: 'hidden',
+                  backgroundColor: '#f1f5f9',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
                 }}
+                onClick={() => setActiveModalModel(model)}
               >
-                <Eye size={13} color="#0284c7" />
-                <span>Xem chi tiết</span>
-              </button>
-            </div>
-
-            {/* Card Content */}
-            <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between', gap: '1rem' }}>
-              <div>
-                {/* Size pill */}
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.2rem 0.6rem', backgroundColor: '#eff6ff', color: '#0284c7', fontSize: '0.75rem', fontWeight: 700, borderRadius: '9999px', marginBottom: '0.6rem' }}>
-                  <Ruler size={13} />
-                  <span>{model.size}</span>
-                </div>
-
-                {/* Title */}
-                <h2
-                  style={{
-                    fontSize: '1.18rem',
-                    fontWeight: 800,
-                    color: '#0f172a',
-                    margin: '0 0 0.5rem',
-                    lineHeight: 1.4,
-                    cursor: 'pointer',
+                <img
+                  src={model.image}
+                  alt={model.title}
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/banner_farm.jpg';
                   }}
-                  onClick={() => setActiveModalModel(model)}
-                >
-                  {model.title}
-                </h2>
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block',
+                    transition: 'transform 0.3s ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                />
 
-                {/* Short desc */}
-                <p style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.55, margin: '0 0 0.85rem' }}>
-                  {model.desc}
-                </p>
-
-                {/* Specs Box */}
+                {/* Badges on image */}
                 <div
                   style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.45rem',
-                    fontSize: '0.84rem',
-                    color: '#334155',
-                    backgroundColor: '#f8fafc',
-                    padding: '0.85rem',
-                    borderRadius: '8px',
-                    border: '1px solid #f1f5f9',
+                    gap: '6px',
                   }}
                 >
-                  <div>
-                    <strong style={{ color: '#0f172a' }}>Phong cách:</strong> {model.style}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Droplets size={14} color="#0284c7" />
-                    <span><strong style={{ color: '#0f172a' }}>Thông số:</strong> {model.water}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.35rem' }}>
-                    <Fish size={14} color="#0284c7" style={{ marginTop: '2px', flexShrink: 0 }} />
-                    <span><strong style={{ color: '#0f172a' }}>Gợi ý cá:</strong> {model.fishSuggest}</span>
-                  </div>
-                </div>
-              </div>
+                  <span
+                    style={{
+                      backgroundColor: model.badgeColor || '#0284c7',
+                      color: '#ffffff',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      padding: '3px 9px',
+                      borderRadius: '6px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Flame size={12} />
+                    <span>{model.badge}</span>
+                  </span>
 
-              {/* Price & Action footer */}
-              <div
-                style={{
-                  borderTop: '1px solid #f1f5f9',
-                  paddingTop: '0.85rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>DỰ TOÁN TRỌN GÓI</div>
-                  <span style={{ fontWeight: 800, color: '#dc2626', fontSize: '1.05rem' }}>
-                    {model.priceEstimate}
+                  <span
+                    style={{
+                      backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                      color: '#f8fafc',
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      backdropFilter: 'blur(4px)',
+                    }}
+                  >
+                    {model.categoryLabel}
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <button
-                    onClick={() => setActiveModalModel(model)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.3rem',
-                      backgroundColor: '#f1f5f9',
-                      color: '#0f172a',
-                      border: 'none',
-                      borderRadius: '6px',
-                      padding: '0.45rem 0.75rem',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'background-color 0.15s',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e2e8f0')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
-                  >
-                    <Layers size={13} color="#0284c7" />
-                    <span>Thiết bị</span>
-                  </button>
+                {/* View detail button on image */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveModalModel(model);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    bottom: '12px',
+                    right: '12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    color: '#0f172a',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                  }}
+                >
+                  <Eye size={13} color="#0284c7" />
+                  <span>Xem chi tiết</span>
+                </button>
+              </div>
 
-                  <Link
-                    to={model.fishLink || '/products?category=fish'}
+              {/* Card Content */}
+              <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between', gap: '1rem' }}>
+                <div>
+                  {/* Size pill */}
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.2rem 0.6rem', backgroundColor: '#eff6ff', color: '#0284c7', fontSize: '0.75rem', fontWeight: 700, borderRadius: '9999px', marginBottom: '0.6rem' }}>
+                    <Ruler size={13} />
+                    <span>{model.size}</span>
+                  </div>
+
+                  {/* Title */}
+                  <h2
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.3rem',
-                      backgroundColor: '#e0f2fe',
-                      color: '#0284c7',
-                      borderRadius: '6px',
-                      padding: '0.45rem 0.75rem',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      textDecoration: 'none',
-                      transition: 'background-color 0.15s, color 0.15s',
+                      fontSize: '1.18rem',
+                      fontWeight: 800,
+                      color: '#0f172a',
+                      margin: '0 0 0.5rem',
+                      lineHeight: 1.4,
+                      cursor: 'pointer',
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#0284c7';
-                      e.currentTarget.style.color = '#ffffff';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#e0f2fe';
-                      e.currentTarget.style.color = '#0284c7';
+                    onClick={() => setActiveModalModel(model)}
+                  >
+                    {model.title}
+                  </h2>
+
+                  {/* Short desc */}
+                  <p style={{ fontSize: '0.875rem', color: '#475569', lineHeight: 1.55, margin: '0 0 0.85rem' }}>
+                    {model.desc}
+                  </p>
+
+                  {/* Specs Box */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.45rem',
+                      fontSize: '0.84rem',
+                      color: '#334155',
+                      backgroundColor: '#f8fafc',
+                      padding: '0.85rem',
+                      borderRadius: '8px',
+                      border: '1px solid #f1f5f9',
                     }}
                   >
-                    <span>Chọn cá</span>
-                    <ArrowRight size={13} />
-                  </Link>
+                    <div>
+                      <strong style={{ color: '#0f172a' }}>Phong cách:</strong> {model.style}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Droplets size={14} color="#0284c7" />
+                      <span><strong style={{ color: '#0f172a' }}>Thông số:</strong> {model.water}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.35rem' }}>
+                      <Fish size={14} color="#0284c7" style={{ marginTop: '2px', flexShrink: 0 }} />
+                      <span><strong style={{ color: '#0f172a' }}>Gợi ý cá:</strong> {model.fishSuggest}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Price & Action footer */}
+                <div
+                  style={{
+                    borderTop: '1px solid #f1f5f9',
+                    paddingTop: '0.85rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>GIÁ BÁN TRỌN GÓI</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
+                      <span style={{ fontWeight: 800, color: '#dc2626', fontSize: '1.2rem' }}>
+                        {formatCurrency(model.price)}
+                      </span>
+                      {model.oldPrice && (
+                        <span style={{ fontSize: '0.8rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                          {formatCurrency(model.oldPrice)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => setActiveModalModel(model)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        backgroundColor: '#f1f5f9',
+                        color: '#0f172a',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '0.5rem 0.75rem',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'background-color 0.15s',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e2e8f0')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+                    >
+                      <Layers size={13} color="#0284c7" />
+                      <span>Thiết bị</span>
+                    </button>
+
+                    <button
+                      onClick={(e) => handleAddToCart(model, e)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        backgroundColor: isAdded ? '#16a34a' : '#0284c7',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '0.5rem 0.85rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        boxShadow: isAdded ? '0 2px 8px rgba(22, 163, 74, 0.3)' : '0 2px 8px rgba(2, 132, 199, 0.25)',
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isAdded) e.currentTarget.style.backgroundColor = '#0369a1';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isAdded) e.currentTarget.style.backgroundColor = '#0284c7';
+                      }}
+                    >
+                      {isAdded ? (
+                        <>
+                          <Check size={14} />
+                          <span>Đã thêm</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart size={14} />
+                          <span>Thêm vào giỏ</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {filteredModels.length === 0 && (
@@ -1207,9 +1354,16 @@ export default function TankModelsPage() {
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>DỰ TOÁN CHI PHÍ</div>
-                  <div style={{ fontWeight: 800, color: '#dc2626', fontSize: '1.1rem', marginTop: '2px' }}>
-                    {activeModalModel.priceEstimate}
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>GIÁ BÁN TRỌN GÓI</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginTop: '2px' }}>
+                    <span style={{ fontWeight: 800, color: '#dc2626', fontSize: '1.25rem' }}>
+                      {formatCurrency(activeModalModel.price)}
+                    </span>
+                    {activeModalModel.oldPrice && (
+                      <span style={{ fontSize: '0.85rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                        {formatCurrency(activeModalModel.oldPrice)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1231,7 +1385,7 @@ export default function TankModelsPage() {
               {/* Description */}
               <div>
                 <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>
-                  Giới thiệu ý tưởng thiết kế
+                  Giới thiệu mẫu hồ
                 </h4>
                 <p style={{ color: '#475569', lineHeight: 1.65, margin: 0, fontSize: '0.95rem' }}>
                   {activeModalModel.desc}
@@ -1306,20 +1460,20 @@ export default function TankModelsPage() {
                   <a
                     href="tel:0332127582"
                     style={{
-                      backgroundColor: '#0284c7',
-                      color: '#ffffff',
-                      padding: '0.75rem 1.25rem',
+                      backgroundColor: '#f1f5f9',
+                      color: '#0f172a',
+                      padding: '0.75rem 1.15rem',
                       borderRadius: '8px',
                       fontWeight: 700,
-                      fontSize: '0.9rem',
+                      fontSize: '0.88rem',
                       textDecoration: 'none',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.4rem',
                     }}
                   >
-                    <Phone size={16} />
-                    <span>Gọi 0332127582</span>
+                    <Phone size={16} color="#0284c7" />
+                    <span>Hotline: 0332127582</span>
                   </a>
 
                   <a
@@ -1330,10 +1484,10 @@ export default function TankModelsPage() {
                       backgroundColor: '#ffffff',
                       color: '#0284c7',
                       border: '1.5px solid #0284c7',
-                      padding: '0.75rem 1.25rem',
+                      padding: '0.75rem 1.15rem',
                       borderRadius: '8px',
                       fontWeight: 700,
-                      fontSize: '0.9rem',
+                      fontSize: '0.88rem',
                       textDecoration: 'none',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1341,29 +1495,52 @@ export default function TankModelsPage() {
                     }}
                   >
                     <MessageCircle size={16} />
-                    <span>Chat Zalo Báo Giá</span>
+                    <span>Chat Zalo</span>
                   </a>
                 </div>
 
-                <Link
-                  to={activeModalModel.fishLink || '/products?category=fish'}
-                  onClick={() => setActiveModalModel(null)}
-                  style={{
-                    backgroundColor: '#0f172a',
-                    color: '#ffffff',
-                    padding: '0.75rem 1.25rem',
-                    borderRadius: '8px',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                  }}
-                >
-                  <span>Khám phá cá cho hồ này</span>
-                  <ArrowRight size={16} />
-                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <button
+                    onClick={() => handleAddToCart(activeModalModel)}
+                    style={{
+                      backgroundColor: addedItemMap[activeModalModel.id] ? '#16a34a' : '#f0f9ff',
+                      color: addedItemMap[activeModalModel.id] ? '#ffffff' : '#0284c7',
+                      border: '1.5px solid #0284c7',
+                      padding: '0.75rem 1.25rem',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {addedItemMap[activeModalModel.id] ? <Check size={16} /> : <ShoppingCart size={16} />}
+                    <span>{addedItemMap[activeModalModel.id] ? 'Đã thêm vào giỏ' : 'Thêm vào giỏ'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleBuyNow(activeModalModel)}
+                    style={{
+                      backgroundColor: '#0284c7',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '0.75rem 1.35rem',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)',
+                    }}
+                  >
+                    <span>Đặt Mua Ngay</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

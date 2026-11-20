@@ -24,6 +24,22 @@ const reviewSchema = new mongoose.Schema(
       default: '',
       maxlength: [1000, 'Nội dung nhận xét tối đa 1000 ký tự'],
     },
+    reply: {
+      comment: {
+        type: String,
+        trim: true,
+        default: '',
+        maxlength: [1000, 'Nội dung phản hồi tối đa 1000 ký tự'],
+      },
+      createdAt: {
+        type: Date,
+        default: null,
+      },
+      updatedAt: {
+        type: Date,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,

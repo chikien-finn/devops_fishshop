@@ -449,7 +449,7 @@ export default function MainLayout() {
             {isAuthenticated ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Link
-                  to="/profile"
+                  to={user?._id ? `/profile/${user._id}` : '/profile'}
                   style={{
                     width: '34px',
                     height: '34px',
@@ -468,7 +468,7 @@ export default function MainLayout() {
                 </Link>
                 <div style={{ lineHeight: 1.3 }}>
                   <Link
-                    to="/profile"
+                    to={user?._id ? `/profile/${user._id}` : '/profile'}
                     style={{
                       fontSize: '0.8125rem',
                       fontWeight: 600,

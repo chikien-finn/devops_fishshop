@@ -28,3 +28,7 @@ export const createCoupon = async (req, res, next) => {
 export const updateCoupon = async (req, res, next) => {
   try { sendSuccess(res, await couponService.updateCoupon(req.params.id, req.body), 'Cập nhật mã giảm giá thành công'); } catch (error) { next(error); }
 };
+
+export const deleteCoupon = async (req, res, next) => {
+  try { sendSuccess(res, await couponService.deleteCoupon(req.params.id), 'Xóa mã giảm giá thành công'); } catch (error) { next(error); }
+};

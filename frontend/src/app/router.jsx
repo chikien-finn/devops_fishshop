@@ -20,6 +20,8 @@ import TankModelsPage from '../features/content/pages/TankModelsPage.jsx';
 import KnowledgePage from '../features/content/pages/KnowledgePage.jsx';
 import AboutPage from '../features/content/pages/AboutPage.jsx';
 import PromotionsPage from '../features/promotions/pages/PromotionsPage.jsx';
+import AdminCouponsPage from '../features/promotions/pages/AdminCouponsPage.jsx';
+import AdminDiscountsPage from '../features/products/pages/AdminDiscountsPage.jsx';
 
 function CollectionRouteRedirect() {
   const { slug } = useParams();
@@ -155,8 +157,20 @@ export const router = createBrowserRouter([
         element: <AdminProductsPage />,
       },
       {
+        path: 'discounts',
+        element: <AdminDiscountsPage />,
+      },
+      {
         path: 'orders',
         element: <AdminOrdersPage />,
+      },
+      {
+        path: 'coupons',
+        element: <AdminCouponsPage />,
+      },
+      {
+        path: 'vouchers',
+        element: <AdminCouponsPage />,
       },
       {
         path: 'users',

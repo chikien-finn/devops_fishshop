@@ -782,12 +782,14 @@ export const parseAddressString = (addressStr = '') => {
             }
           }
 
-          let matchedStreet = district.streets?.[0] || 'Tuyến đường trung tâm';
-          if (Array.isArray(district.streets)) {
-            for (const street of district.streets) {
-              if (addressStr.toLowerCase().includes(street.toLowerCase())) {
-                matchedStreet = street;
-                break;
+          // Trích xuất địa chỉ nhà (số nhà, tên đường) nằm ở đầu chuỗi trước tên phường
+          let houseAddress = '';
+          if (matchedWard) {
+            const wardIdx = addressStr.toLowerCase().indexOf(matchedWard.toLowerCase());
+            if (wardIdx > 0) {
+              const prefix = addressStr.slice(0, wardIdx).trim().replace(/,\s*$/, '');
+              if (!prefix.toLowerCase().includes('tuyến đường trung tâm')) {
+                houseAddress = prefix;
               }
             }
           }
@@ -796,7 +798,8 @@ export const parseAddressString = (addressStr = '') => {
             provinceId: province.id,
             districtId: district.id,
             wardName: matchedWard,
-            streetName: matchedStreet,
+            houseAddress: houseAddress,
+            streetName: houseAddress,
             region: province.region,
           };
         }
@@ -805,7 +808,8 @@ export const parseAddressString = (addressStr = '') => {
         provinceId: province.id,
         districtId: province.districts[0]?.id,
         wardName: province.districts[0]?.wards[0],
-        streetName: province.districts[0]?.streets?.[0] || 'Tuyến đường trung tâm',
+        houseAddress: '',
+        streetName: '',
         region: province.region,
       };
     }

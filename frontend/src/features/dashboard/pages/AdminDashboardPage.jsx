@@ -234,25 +234,6 @@ export default function AdminDashboardPage() {
             <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
             <span>{refreshing ? 'Đang cập nhật…' : 'Làm mới'}</span>
           </button>
-
-          <Link
-            to="/admin/orders"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.375rem',
-              padding: '0.5rem 1rem',
-              backgroundColor: '#0284c7',
-              color: '#ffffff',
-              borderRadius: '6px',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-            }}
-          >
-            <ShoppingBag size={16} />
-            <span>Duyệt đơn hàng</span>
-          </Link>
         </div>
       </div>
 
