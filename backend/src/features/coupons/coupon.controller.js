@@ -17,6 +17,10 @@ export const listCoupons = async (req, res, next) => {
   try { sendSuccess(res, await couponService.listCoupons()); } catch (error) { next(error); }
 };
 
+export const getActiveCoupons = async (req, res, next) => {
+  try { sendSuccess(res, await couponService.listActiveCoupons()); } catch (error) { next(error); }
+};
+
 export const createCoupon = async (req, res, next) => {
   try { sendSuccess(res, await couponService.createCoupon(req.body), 'Tạo mã giảm giá thành công', 201); } catch (error) { next(error); }
 };

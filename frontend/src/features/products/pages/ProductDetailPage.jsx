@@ -366,7 +366,7 @@ export default function ProductDetailPage() {
               )}
 
               <img
-                src={activeImage || product.image}
+                src={activeImage || product.image || '/fish_neon.jpg'}
                 alt={product.name}
                 style={{
                   width: '100%',
@@ -374,6 +374,10 @@ export default function ProductDetailPage() {
                   objectFit: 'cover',
                   display: 'block',
                   transition: 'transform 0.3s ease',
+                }}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/fish_neon.jpg';
                 }}
               />
             </div>
@@ -410,6 +414,10 @@ export default function ProductDetailPage() {
                       src={imgUrl}
                       alt={`${product.name} - ${idx + 1}`}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/fish_neon.jpg';
+                      }}
                     />
                   </button>
                 ))}
@@ -1033,9 +1041,13 @@ export default function ProductDetailPage() {
                     )}
 
                     <img
-                      src={p.image}
+                      src={p.image || '/fish_neon.jpg'}
                       alt={p.name}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/fish_neon.jpg';
+                      }}
                     />
                   </Link>
 

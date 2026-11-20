@@ -509,7 +509,14 @@ export default function MyOrdersPage() {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
                       {itemImg ? (
-                        <img src={itemImg} alt={item.name} style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '4px' }} />
+                        <img
+                          src={itemImg}
+                          alt={item.name}
+                          style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '4px' }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
                       ) : (
                         <div style={{ width: '42px', height: '42px', backgroundColor: '#f1f5f9', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Package size={20} color="#94a3b8" />

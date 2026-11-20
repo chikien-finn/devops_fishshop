@@ -372,6 +372,10 @@ export default function ProductListPage() {
                     alt={item.name}
                     loading="lazy"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/fish_neon.jpg';
+                    }}
                   />
                 ) : (
                   <div

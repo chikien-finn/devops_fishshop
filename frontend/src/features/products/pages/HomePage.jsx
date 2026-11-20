@@ -408,7 +408,7 @@ export default function HomePage() {
               style={{ display: 'block', width: '100%', height: '100%' }}
             >
               <img
-                src={p.image}
+                src={p.image || '/fish_neon.jpg'}
                 alt={p.name}
                 loading="lazy"
                 style={{
@@ -416,6 +416,10 @@ export default function HomePage() {
                   height: '100%',
                   objectFit: 'cover',
                   display: 'block',
+                }}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/fish_neon.jpg';
                 }}
               />
             </Link>
@@ -860,13 +864,17 @@ export default function HomePage() {
                   }}
                 >
                   <img
-                    src={fish.image}
+                    src={fish.image || '/fish_neon.jpg'}
                     alt={fish.name}
                     style={{
                       width: '100%',
                       height: '100%',
                       objectFit: 'cover',
                       display: 'block',
+                    }}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/fish_neon.jpg';
                     }}
                   />
                 </div>
@@ -1224,9 +1232,13 @@ export default function HomePage() {
             <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
               <div style={{ width: '200px', height: '200px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, border: '1px solid #e2e8f0' }}>
                 <img
-                  src={quickViewProduct.image}
+                  src={quickViewProduct.image || '/fish_neon.jpg'}
                   alt={quickViewProduct.name}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/fish_neon.jpg';
+                  }}
                 />
               </div>
 

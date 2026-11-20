@@ -673,15 +673,15 @@ export default function MainLayout() {
           </div>
 
           <Link
-            to="/products?sale=true"
+            to="/promotions"
             style={{
               textDecoration: 'none',
-              color: isActive('/products?sale=true') ? '#0284c7' : '#334155',
+              color: isActive('/promotions') ? '#0284c7' : '#334155',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
               paddingBottom: '4px',
-              borderBottom: '2px solid transparent',
+              borderBottom: isActive('/promotions') ? '2px solid #0284c7' : '2px solid transparent',
               transition: 'color 0.15s',
             }}
           >

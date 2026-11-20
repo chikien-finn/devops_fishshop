@@ -65,7 +65,7 @@ const TANK_MODELS = [
     style: 'Nature Aquarium - Cổ Thụ Bonsai & Rêu Weeping',
     water: 'Nước ngọt mát (24 - 27°C, pH 6.5 - 7.0)',
     fishSuggest: 'Cá Sóc Đầu Đỏ, Cá Tam Giác, Cá Phượng Hoàng Lam, Tép Yamato',
-    fishLink: '/ca-phuong-hoang',
+    fishLink: '/products?subCategory=ca-phuong-hoang',
     priceEstimate: '7.500.000đ - 12.000.000đ',
     desc: 'Tuyệt phẩm bố cục cây cổ thụ bonsai tán rêu xanh mướt giữa dòng suối sỏi trắng tự nhiên, tạo cảm giác thư thái và mát mắt cho cả căn phòng.',
     equipment: [
@@ -140,7 +140,7 @@ const TANK_MODELS = [
     style: 'Tối giản Hiện đại - Đá Tự Nhiên & Cây Dễ Chăm',
     water: 'Nước ngọt (pH 6.5 - 7.2)',
     fishSuggest: 'Tép Vàng Đài Loan, Cá Bảy Màu Guppy thuần chủng, Cá Trâm Boraras',
-    fishLink: '/tep',
+    fishLink: '/products?subCategory=tep',
     priceEstimate: '1.200.000đ - 2.200.000đ',
     desc: 'Kích thước nhỏ gọn lý tưởng cho bàn làm việc công sở, quầy lễ tân hoặc kệ sách. Cây phát triển chậm, dễ chăm sóc mà không cần bình CO2 phức tạp.',
     equipment: [
@@ -165,7 +165,7 @@ const TANK_MODELS = [
     style: 'Biotop Rio Negro - Lũa Rừng, Cát Vàng & Lá Bàng Rừng',
     water: 'Nước ngọt ấm (28 - 30°C, pH 5.8 - 6.5)',
     fishSuggest: 'Cá Dĩa Đỏ Heckel, Cá Thần Tiên Manacapuru, Cá Chuột Sterbai',
-    fishLink: '/ca-dia',
+    fishLink: '/products?subCategory=ca-dia',
     priceEstimate: '8.500.000đ - 15.000.000đ',
     desc: 'Mô phỏng nguyên bản lòng sông Rio Negro xứ Amazon. Nước ngả màu trà tự nhiên giàu tannin giúp cá Dĩa và Thần Tiên căng màu rực rỡ, đề kháng cực cao.',
     equipment: [
@@ -190,7 +190,7 @@ const TANK_MODELS = [
     style: 'Khe Suối Thượng Nguồn - Cuội Sông & Luồng Chảy Năng Động',
     water: 'Nước ngọt mát giàu Oxy (pH 6.8 - 7.5, DO cao)',
     fishSuggest: 'Cá Tỳ Bà Bướm Hút Kính, Cá Kìm Lục Bảo, Cá Lòng Tong Suối, Cá Heo Nước Ngọt',
-    fishLink: '/ca-chuot',
+    fishLink: '/products?subCategory=ca-chuot',
     priceEstimate: '5.500.000đ - 9.000.000đ',
     desc: 'Tái hiện sinh cảnh suối nguồn trong vắt với luồng nước tuần hoàn mát rượi, cá thích bơi ngược dòng và bám vào các phiến cuội nhẵn mịn.',
     equipment: [
@@ -391,7 +391,7 @@ const TANK_MODELS = [
     style: 'Thiên Đường Tép Cảnh - Thảm Rêu & Ống Trú Ẩn Gốm Sứ',
     water: 'Nước ngọt mát (pH 6.0 - 6.5, TDS 100 - 130, gH 4-5)',
     fishSuggest: 'Tép Màu Pure Red Line, Tép Blue Dream, Tép Ong Đen, Cá Trâm Bơi Đàn',
-    fishLink: '/tep',
+    fishLink: '/products?subCategory=tep',
     priceEstimate: '2.400.000đ - 3.800.000đ',
     desc: 'Hồ nuôi tép cảnh chuyên sâu được kiểm soát TDS và khoáng chất tối ưu giúp tép lột vỏ dễ dàng, sinh sản nhanh và ôm trứng liên tục.',
     equipment: [

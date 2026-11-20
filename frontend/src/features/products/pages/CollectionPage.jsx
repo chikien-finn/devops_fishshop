@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useParams, useLocation, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useLocation, useSearchParams, Link, Navigate } from 'react-router-dom';
 import {
   ChevronRight,
   Search,
@@ -34,6 +34,8 @@ export default function CollectionPage() {
   } else if (!FISH_SUBCATEGORIES.some((c) => c.value === colKey)) {
     colKey = 'ca-chuot';
   }
+
+  return <Navigate to={`/products?subCategory=${colKey}`} replace />;
 
   const collection = collectionsData[colKey] || {
     title: getSubCategoryLabel(colKey),
@@ -394,7 +396,7 @@ export default function CollectionPage() {
                       style={{ display: 'block', width: '100%', height: '100%' }}
                     >
                       <img
-                        src={p.image}
+                        src={p.image || '/fish_neon.jpg'}
                         alt={p.name}
                         loading="lazy"
                         style={{
@@ -403,6 +405,10 @@ export default function CollectionPage() {
                           objectFit: 'cover',
                           display: 'block',
                           transition: 'transform 0.3s ease',
+                        }}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/fish_neon.jpg';
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.06)')}
                         onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
@@ -638,9 +644,13 @@ export default function CollectionPage() {
             <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
               <div style={{ width: '220px', height: '220px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0 }}>
                 <img
-                  src={quickViewProduct.image}
+                  src={quickViewProduct.image || '/fish_neon.jpg'}
                   alt={quickViewProduct.name}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/fish_neon.jpg';
+                  }}
                 />
               </div>
 

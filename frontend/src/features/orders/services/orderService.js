@@ -16,6 +16,11 @@ export const orderService = {
     return response.data?.data || {};
   },
 
+  async getActiveCoupons() {
+    const response = await api.get('/coupons/active');
+    return response.data?.data || [];
+  },
+
   async getMyOrders(params = {}) {
     const response = await api.get('/orders/my-orders', { params });
     const payload = response.data?.data;

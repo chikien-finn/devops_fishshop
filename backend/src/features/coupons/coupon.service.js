@@ -28,6 +28,17 @@ export const getValidCoupon = async (code, subtotal) => {
 
 export const listCoupons = () => Coupon.find().sort({ createdAt: -1 }).lean();
 
+export const listActiveCoupons = async () => {
+  const now = new Date();
+  return Coupon.find({
+    active: true,
+    validFrom: { $lte: now },
+    $or: [{ validUntil: null }, { validUntil: { $gte: now } }],
+  })
+    .sort({ discountValue: -1 })
+    .lean();
+};
+
 export const createCoupon = async (data) => {
   try {
     return await Coupon.create({ ...data, code: String(data.code || '').trim().toUpperCase() });

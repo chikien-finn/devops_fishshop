@@ -619,6 +619,10 @@ export default function CartPage() {
                   objectFit: 'cover',
                   backgroundColor: '#f1f5f9',
                 }}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/logo.png';
+                }}
               />
 
               <div style={{ flex: 1 }}>
